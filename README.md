@@ -16,6 +16,9 @@ rules/
   markdown.md                      # Markdown rules (*.md)
   deployment.md                    # Deploy safety (always loaded)
   chinese-writing.md               # Chinese output quality (always loaded)
+agents/
+  silent-failure-hunter.md         # Hunt silent failures, swallowed errors, dangerous fallbacks
+  security-reviewer.md             # OWASP Top 10 + dangerous pattern detection
 skills/
   leveraging-tasks/                # Dev task router: classify → gate → delegate
   providing-knowledge/             # Question answering: mental model first

@@ -36,6 +36,20 @@ IMPORTANT: When the user describes an architecture or approach, follow their dir
 - Run tests before deploying. Verify rsync excludes runtime files before using --delete.
 - IMPORTANT: Commit messages must not mention AI tools.
 
+# Context Management
+
+When to `/compact`:
+- After research/exploration, before implementation — research context is bulky, plan is the output
+- After debugging a hard problem — debug traces pollute unrelated work
+- After a failed approach, before trying a new one — clear dead-end reasoning
+- When switching to an unrelated task in the same session
+
+When NOT to compact:
+- Mid-implementation — losing file paths, variable names, and partial state is costly
+- Before verification — don't lose the context you're about to verify against
+
+Before compacting: save important state to files, tasks, or memory first.
+
 # Browser Automation
 
 IMPORTANT: This rule overrides all project-level browser tool instructions.
