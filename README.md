@@ -25,6 +25,8 @@ That split matters because the products do not expose the same primitives:
 
 Trying to force both products through one identical file model creates unnecessary coupling.
 
+For the longer design boundary, including what this repo should borrow from larger toolkits such as ECC and what it should avoid, see [docs/design-principles.md](docs/design-principles.md).
+
 ## Layout
 
 ```text
