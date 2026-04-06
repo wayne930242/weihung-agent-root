@@ -81,6 +81,18 @@ Install into your real user root:
 bash scripts/install.sh
 ```
 
+Bootstrap a new machine by cloning or updating the repo into the standard location and then running the installer:
+
+```bash
+bash scripts/bootstrap.sh
+```
+
+Remote one-liner bootstrap:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wayne930242/weihung-user-claude/main/scripts/bootstrap.sh | bash
+```
+
 Smoke test against a fake home first:
 
 ```bash
@@ -91,6 +103,12 @@ Replace conflicting managed targets only when you mean it:
 
 ```bash
 bash scripts/install.sh --force
+```
+
+Forward installer flags through bootstrap the same way:
+
+```bash
+bash scripts/bootstrap.sh --force
 ```
 
 ## Managed Surface
