@@ -11,6 +11,7 @@ shell-snapshots/
 config/
 !config/
 !config/*.json
+!config/*.toml
 projects/
 cache/
 chrome/

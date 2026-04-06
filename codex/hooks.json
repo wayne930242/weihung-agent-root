@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.codex/hooks/log-session-start.sh\"",
+            "timeout": 5,
+            "statusMessage": "Logging Codex session start"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.codex/hooks/log-stop.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

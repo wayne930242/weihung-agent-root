@@ -10,42 +10,21 @@ IMPORTANT: Before responding to any significant request, classify and route:
 - Investigation (research, find out, current state of) -> `investigating` skill
 - Inspection (check, audit, verify, review) -> `inspecting` skill
 
-# Communication
+# Working Agreements
 
 - Show your reasoning. When making decisions, explain the logic so the user can verify your thinking.
 - Proactively report problems. If you see something suboptimal, say it immediately, even if the user did not ask.
-- Be direct. State what you think, not what you think the user wants to hear.
-
-# Working Style
-
-IMPORTANT: When the user describes an architecture or approach, follow their direction. Ask questions instead of proposing alternatives.
-
-- When you spot poor architecture (mixed responsibilities, circular dependencies, God objects, wrong abstraction levels), immediately suggest refactoring. Do not silently work around it.
-- Read before write. Read any file before modifying it. Understand existing patterns first.
-- Do only what is asked. No unsolicited docstrings, no drive-by refactoring, no "improvements".
-
-# Architecture Principles
-
-- Prefer composition over inheritance, explicit dependencies over implicit coupling, fail-fast over silent degradation.
-- Functions do one thing. Organize files by domain, not by file type.
-- Do not design for hypothetical requirements. Three duplicate lines beat a premature abstraction.
-
-# Quality Baseline
-
-- No TODOs, no stubs, no mocks in delivered code. Start it, finish it.
-- Run tests before deploying. Verify rsync excludes runtime files before using `--delete`.
+- Read before write. Understand existing patterns before editing.
+- Do only what is asked. No unrelated cleanup.
+- Run relevant verification before claiming success.
 - Commit messages must not mention AI tools.
 
-# Context Management
+# Scope Boundaries
 
-When context is getting noisy, summarize and checkpoint before continuing:
-
-- After research or exploration, before implementation
-- After debugging a hard problem
-- After a failed approach, before trying a new one
-- When switching to a different task in the same session
-
-Do not discard live implementation context right before verification.
+- Keep general working agreements here in `AGENTS.md`.
+- Put approval policy in Codex `rules/*.rules`, not in prose.
+- Put automation behavior in Codex `hooks.json` and `hooks/`, not in prose.
+- Put specialized delegation behavior in Codex `agents/*.toml`, not in prose.
 
 # Browser Automation
 

@@ -38,9 +38,19 @@ fresh_install_creates_expected_symlinks() {
 
   assert_symlink_target "$fake_home/.claude/CLAUDE.md" "$REPO_ROOT/CLAUDE.md"
   assert_symlink_target "$fake_home/.codex/AGENTS.md" "$REPO_ROOT/AGENTS.md"
-  assert_symlink_target "$fake_home/.claude/hooks" "$REPO_ROOT/hooks"
-  assert_symlink_target "$fake_home/.claude/agents/security-reviewer.md" "$REPO_ROOT/agents/security-reviewer.md"
-  assert_symlink_target "$fake_home/.claude/agents/silent-failure-hunter.md" "$REPO_ROOT/agents/silent-failure-hunter.md"
+  assert_symlink_target "$fake_home/.claude/shared/communication.md" "$REPO_ROOT/shared/communication.md"
+  assert_symlink_target "$fake_home/.claude/shared/engineering.md" "$REPO_ROOT/shared/engineering.md"
+  assert_symlink_target "$fake_home/.claude/shared/context-management.md" "$REPO_ROOT/shared/context-management.md"
+  assert_symlink_target "$fake_home/.claude/hooks/log-notification.sh" "$REPO_ROOT/claude/hooks/log-notification.sh"
+  assert_symlink_target "$fake_home/.claude/hooks/log-stop.sh" "$REPO_ROOT/claude/hooks/log-stop.sh"
+  assert_symlink_target "$fake_home/.claude/agents/security-reviewer.md" "$REPO_ROOT/claude/agents/security-reviewer.md"
+  assert_symlink_target "$fake_home/.claude/agents/silent-failure-hunter.md" "$REPO_ROOT/claude/agents/silent-failure-hunter.md"
+  assert_symlink_target "$fake_home/.codex/agents/docs-researcher.toml" "$REPO_ROOT/codex/agents/docs-researcher.toml"
+  assert_symlink_target "$fake_home/.codex/agents/safety-reviewer.toml" "$REPO_ROOT/codex/agents/safety-reviewer.toml"
+  assert_symlink_target "$fake_home/.codex/rules/default.rules" "$REPO_ROOT/codex/rules/default.rules"
+  assert_symlink_target "$fake_home/.codex/hooks/log-session-start.sh" "$REPO_ROOT/codex/hooks/log-session-start.sh"
+  assert_symlink_target "$fake_home/.codex/hooks/log-stop.sh" "$REPO_ROOT/codex/hooks/log-stop.sh"
+  assert_symlink_target "$fake_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
 
   python3 - <<PY
 import json
@@ -50,6 +60,8 @@ assert "hooks" in settings, settings
 assert "Stop" in settings["hooks"], settings
 assert "Notification" in settings["hooks"], settings
 PY
+
+  [[ ! -e "$fake_home/.codex/config.toml" ]] || fail "did not expect installer to rewrite ~/.codex/config.toml in the light layout"
 
   rm -rf "$temp_dir"
 }

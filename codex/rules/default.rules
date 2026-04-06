@@ -1,0 +1,6 @@
+# Keep high-impact publishing actions explicit.
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "Pushes publish local history to a remote repository."
+)

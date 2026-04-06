@@ -13,7 +13,7 @@ notification_hook_logs_payload() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
-  HOME="$temp_dir/home" bash "$REPO_ROOT/hooks/log-notification.sh" <<'EOF'
+  HOME="$temp_dir/home" bash "$REPO_ROOT/claude/hooks/log-notification.sh" <<'EOF'
 {
   "hook_event_name": "Notification",
   "session_id": "session-123",
@@ -46,7 +46,7 @@ stop_hook_logs_payload() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
-  HOME="$temp_dir/home" bash "$REPO_ROOT/hooks/log-stop.sh" <<'EOF'
+  HOME="$temp_dir/home" bash "$REPO_ROOT/claude/hooks/log-stop.sh" <<'EOF'
 {
   "hook_event_name": "Stop",
   "session_id": "session-456",

@@ -5,6 +5,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
+CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
+CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
+CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
+CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
+CODEX_HOOKS_DIR="$REPO_ROOT/codex/hooks"
+SHARED_DIR="$REPO_ROOT/shared"
 
 TARGET_HOME="${HOME}"
 FORCE=0
@@ -16,8 +22,14 @@ Usage: bash scripts/install.sh [--home PATH] [--force]
 
 Installs this repository as the source of truth for:
   - ~/.claude/CLAUDE.md
+  - ~/.claude/shared/*.md
   - ~/.claude/agents/*.md
+  - ~/.claude/hooks/*.sh
   - ~/.codex/AGENTS.md
+  - ~/.codex/agents/*.toml
+  - ~/.codex/rules/*.rules
+  - ~/.codex/hooks.json
+  - ~/.codex/hooks/*.sh
 
 Defaults to failing on conflicts. Pass --force to back up conflicting targets
 before replacing them with symlinks.
@@ -136,14 +148,36 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
+mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared"
+mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
-install_link "$REPO_ROOT/hooks" "$TARGET_HOME/.claude/hooks"
+install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json"
 
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.claude/agents/$(basename "$agent_file")"
-done < <(find "$REPO_ROOT/agents" -maxdepth 1 -type f -name '*.md' | sort)
+done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+while IFS= read -r hook_file; do
+  install_link "$hook_file" "$TARGET_HOME/.claude/hooks/$(basename "$hook_file")"
+done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
+
+while IFS= read -r shared_file; do
+  install_link "$shared_file" "$TARGET_HOME/.claude/shared/$(basename "$shared_file")"
+done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+while IFS= read -r agent_file; do
+  install_link "$agent_file" "$TARGET_HOME/.codex/agents/$(basename "$agent_file")"
+done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
+
+while IFS= read -r rule_file; do
+  install_link "$rule_file" "$TARGET_HOME/.codex/rules/$(basename "$rule_file")"
+done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
+
+while IFS= read -r hook_file; do
+  install_link "$hook_file" "$TARGET_HOME/.codex/hooks/$(basename "$hook_file")"
+done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 log "Install complete."
