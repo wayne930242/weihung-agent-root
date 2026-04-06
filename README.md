@@ -68,6 +68,8 @@ skills/
   reflecting-to-root/
 scripts/
   install.sh
+  uninstall.sh
+  bootstrap.sh
 config/
   claude-hooks.json
   codex-config.toml                # optional snippet, not auto-merged
@@ -111,6 +113,12 @@ Forward installer flags through bootstrap the same way:
 bash scripts/bootstrap.sh --force
 ```
 
+Uninstall managed assets and restore from the latest backup when available:
+
+```bash
+bash scripts/uninstall.sh
+```
+
 ## Managed Surface
 
 The installer manages only these user-root surfaces.
@@ -151,6 +159,14 @@ This is especially important for Codex. `config.toml` often carries machine-loca
 - `--force` moves conflicting files into `~/.local/state/weihung-user-claude/backups/<timestamp>/` before replacing them.
 - Claude `settings.json` is merged, not symlinked, so existing non-hook settings remain intact.
 - Codex `config.toml` is left untouched in the light layout.
+
+## Uninstall Behavior
+
+- `scripts/uninstall.sh` looks for the latest backup under `~/.local/state/weihung-user-claude/backups/`.
+- If a backup exists for a managed path, that file is restored.
+- If no backup exists for a managed path, the managed symlink is removed.
+- Managed Claude hooks are removed from `~/.claude/settings.json`.
+- `~/.codex/config.toml` is still left untouched, because it is not installer-managed.
 
 ## Claude Notes
 
@@ -202,6 +218,8 @@ The repo currently verifies:
 - installer behavior with `tests/install.sh`
 - Claude hook scripts with `tests/hooks.sh`
 - Codex hook scripts with `tests/codex_hooks.sh`
+- bootstrap clone/update behavior with `tests/bootstrap.sh`
+- uninstall restore/remove behavior with `tests/uninstall.sh`
 
 ## Not Tracked
 
