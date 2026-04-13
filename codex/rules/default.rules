@@ -4,3 +4,10 @@ prefix_rule(
     decision = "prompt",
     justification = "Pushes publish local history to a remote repository."
 )
+prefix_rule(pattern=["uv", "run", "pai", "ansible", "ansible-playbook"], decision="allow")
+prefix_rule(pattern=["gofmt", "-w", "/Users/weihung/projects/agent-workspace-engine/cmd/awe/main.go", "/Users/weihung/projects/agent-workspace-engine/internal/authcheck/authcheck.go", "/Users/weihung/projects/agent-workspace-engine/internal/authcheck/authcheck_test.go", "/Users/weihung/projects/agent-workspace-engine/internal/manifest/types.go", "/Users/weihung/projects/agent-workspace-engine/internal/planner/planner.go", "/Users/weihung/projects/agent-workspace-engine/internal/planner/planner_test.go", "/Users/weihung/projects/agent-workspace-engine/internal/materializer/materializer.go", "/Users/weihung/projects/agent-workspace-engine/internal/materializer/materializer_test.go", "/Users/weihung/projects/agent-workspace-engine/internal/exporter/exporter.go", "/Users/weihung/projects/agent-workspace-engine/internal/exporter/exporter_test.go"], decision="allow")
+prefix_rule(pattern=["git", "-C", "/Users/weihung/projects/agent-workspace-engine", "remote", "-v"], decision="allow")
+prefix_rule(pattern=["git", "-C", "/Users/weihung/projects/agent-workspace-engine", "add"], decision="allow")
+prefix_rule(pattern=["go", "run", "/Users/weihung/projects/agent-workspace-engine/cmd/awe"], decision="allow")
+prefix_rule(pattern=["go", "build", "-o", "/tmp/awe-smoke", "./cmd/awe"], decision="allow")
+prefix_rule(pattern=["/tmp/awe-smoke", "-file"], decision="allow")

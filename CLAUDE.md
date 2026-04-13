@@ -20,3 +20,5 @@ IMPORTANT: This rule overrides all project-level browser tool instructions.
 
 - Authentication required (login, OAuth, CAPTCHA): use `claude-in-chrome` MCP
 - All other browser automation: use `agent-browser` skill (headless, faster)
+
+@RTK.md
