@@ -1,6 +1,6 @@
 ---
 name: investigating
-description: Conducts comprehensive, logically sound investigation with current information. Use when the user asks to research, find out, check the state of something, or needs thorough analysis of a topic.
+description: Conducts comprehensive, logically sound investigation with current information. Use when the user asks to research, find out, investigate a specific question or claim, or needs thorough analysis of a topic.
 model: sonnet
 ---
 

@@ -6,6 +6,41 @@ model: sonnet
 
 # Reflecting to Root
 
+## Routing
+
+**Pattern:** owner-pipe
+**Handoff:** none (terminal skill — produces file edits)
+**Next:** —
+**Chain:** main
+
+## Flowchart
+
+```dot
+digraph reflecting {
+    rankdir=TB;
+
+    start [label="Reflect to root", shape=doublecircle];
+    extract [label="Step 1: Extract events\n(successes, failures, discoveries, corrections)", shape=box];
+    learn [label="Step 2: Extract learnings\n(preventable? repeatable?)", shape=box];
+    classify [label="Step 3: Classify scope", shape=diamond];
+    user_root [label="User root\n(~/.claude/)", shape=box];
+    project [label="Project level\n(.claude/)", shape=box];
+    integrate [label="Step 4: Integrate\n(update files)", shape=box];
+    summary [label="Step 5: Reflection summary", shape=box];
+    done [label="Done", shape=doublecircle];
+
+    start -> extract;
+    extract -> learn;
+    learn -> classify;
+    classify -> user_root [label="all projects"];
+    classify -> project [label="project-specific"];
+    user_root -> integrate;
+    project -> integrate;
+    integrate -> summary;
+    summary -> done;
+}
+```
+
 Analyze what happened, extract learnings, classify scope, integrate.
 
 ## Step 1: Extract Events

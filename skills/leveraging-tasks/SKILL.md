@@ -5,6 +5,13 @@ description: Thin router that classifies tasks and applies quality gates before 
 
 # Leveraging Tasks
 
+## Routing
+
+**Pattern:** owner-pipe
+**Handoff:** auto-invoke (internal steps)
+**Next:** `reflecting-to-root` (suggested at completion)
+**Chain:** main
+
 Classify the task, apply quality gates, delegate to project-level skills or execute directly.
 
 ## Step 1: Classify
@@ -77,11 +84,7 @@ This is not an entry gate. Maintain this awareness throughout execution:
 
 ### Deploy
 
-**Entry gate:**
-1. Run the project test suite. Stop if any test fails.
-2. If using rsync --delete: verify exclusion of runtime files.
-3. If Ansible on production: `--check` first.
-4. Verify target directory exists and is non-empty.
+**Entry gate:** Apply all requirements in `~/.claude/rules/deployment.md`.
 
 Deploy does not trigger refactoring. It consumes quality, does not produce it.
 

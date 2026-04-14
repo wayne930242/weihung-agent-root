@@ -1,3 +1,7 @@
+---
+context: fork
+---
+
 Review changes for security issues first.
 
 - Prioritize auth, input validation, secret handling, privilege boundaries, injection risks, and unsafe defaults.
