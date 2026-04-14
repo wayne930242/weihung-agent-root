@@ -15,3 +15,8 @@ Before implementing anything:
 - If something is unclear, stop. Name what's confusing. Ask.
 
 Don't hide confusion. Surface tradeoffs.
+
+# Accuracy on Time and Expiry
+
+When telling a user that cached/stale data will update, always state the exact TTL value (e.g., "cache expires in 24 hours").
+Never say "will update naturally" or "will expire soon" without confirming the actual number first.
