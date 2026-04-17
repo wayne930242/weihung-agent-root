@@ -25,6 +25,7 @@ Installs this repository as the source of truth for:
   - ~/.claude/shared/*.md
   - ~/.claude/agents/*.md
   - ~/.claude/hooks/*.sh
+  - ~/.claude/statusline.sh
   - ~/.codex/AGENTS.md
   - ~/.codex/agents/*.toml
   - ~/.codex/rules/*.rules
@@ -152,6 +153,7 @@ mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared"
 mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
+install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
 install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json"

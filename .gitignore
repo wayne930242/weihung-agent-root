@@ -28,6 +28,7 @@ plans/
 sessions/
 stats-cache.json
 statusline.sh
+!claude/statusline.sh
 tasks/
 telemetry/
 usage-data/

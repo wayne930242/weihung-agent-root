@@ -110,27 +110,29 @@ fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
 
 fragment_hooks = fragment.get("hooks", {})
 current_hooks = settings.get("hooks")
-if not isinstance(current_hooks, dict):
-    raise SystemExit(0)
+if isinstance(current_hooks, dict):
+    for event_name, fragment_entries in fragment_hooks.items():
+        current_entries = current_hooks.get(event_name)
+        if not isinstance(current_entries, list):
+            continue
 
-for event_name, fragment_entries in fragment_hooks.items():
-    current_entries = current_hooks.get(event_name)
-    if not isinstance(current_entries, list):
-        continue
+        fragment_serialized = {json.dumps(entry, sort_keys=True) for entry in fragment_entries}
+        filtered_entries = [
+            entry for entry in current_entries
+            if json.dumps(entry, sort_keys=True) not in fragment_serialized
+        ]
 
-    fragment_serialized = {json.dumps(entry, sort_keys=True) for entry in fragment_entries}
-    filtered_entries = [
-        entry for entry in current_entries
-        if json.dumps(entry, sort_keys=True) not in fragment_serialized
-    ]
+        if filtered_entries:
+            current_hooks[event_name] = filtered_entries
+        else:
+            current_hooks.pop(event_name, None)
 
-    if filtered_entries:
-        current_hooks[event_name] = filtered_entries
-    else:
-        current_hooks.pop(event_name, None)
+    if not current_hooks:
+        settings.pop("hooks", None)
 
-if not current_hooks:
-    settings.pop("hooks", None)
+fragment_status = fragment.get("statusLine")
+if fragment_status is not None and settings.get("statusLine") == fragment_status:
+    settings.pop("statusLine", None)
 
 if settings:
     settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -165,6 +167,7 @@ if [[ -n "$LATEST_BACKUP_DIR" ]]; then
 fi
 
 restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"
+restore_or_remove "$TARGET_HOME/.claude/statusline.sh"
 restore_or_remove "$TARGET_HOME/.codex/AGENTS.md"
 restore_or_remove "$TARGET_HOME/.codex/hooks.json"
 
