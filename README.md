@@ -190,6 +190,8 @@ Color and a `⚠` icon scale to the model's compact-recommendation threshold.
 1M-context models warn at 30% (≈300K tokens); 200K models warn at 70% (≈140K tokens).
 Detection keys off `display_name` containing `1M`/`1m`.
 
+![Claude Code statusline](docs/images/statusline.png)
+
 ## Codex Notes
 
 Codex now has first-class support for:
