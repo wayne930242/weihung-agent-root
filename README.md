@@ -43,6 +43,7 @@ claude/
   hooks/
     log-notification.sh
     log-stop.sh
+  statusline.sh
 codex/
   agents/
     docs-researcher.toml
@@ -131,7 +132,8 @@ The installer manages only these user-root surfaces.
 - `~/.claude/shared/*.md`
 - `~/.claude/agents/*.md`
 - `~/.claude/hooks/*.sh`
-- merge into `~/.claude/settings.json` using `config/claude-hooks.json`
+- `~/.claude/statusline.sh`
+- merge into `~/.claude/settings.json` using `config/claude-hooks.json` (hooks + `statusLine` block)
 
 ### Codex
 
@@ -182,6 +184,11 @@ Current Claude hooks are deliberately minimal:
 
 - `Notification` logs to `~/.claude/state/weihung-user-claude/hooks.jsonl`
 - `Stop` logs to the same file
+
+The statusline (`claude/statusline.sh`) is also managed.
+Color and a `⚠` icon scale to the model's compact-recommendation threshold.
+1M-context models warn at 30% (≈300K tokens); 200K models warn at 70% (≈140K tokens).
+Detection keys off `display_name` containing `1M`/`1m`.
 
 ## Codex Notes
 
