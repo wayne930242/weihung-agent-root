@@ -1,6 +1,6 @@
 ---
 name: leveraging-tasks
-description: Thin router that classifies tasks and applies quality gates before delegation. Routes to implement, design, debug, or deploy flows with cross-cutting refactor awareness. Use when starting any significant development task.
+description: Use when user requests any development task — implementing features, adding/building/writing code, fixing bugs, debugging errors, designing architecture, planning approaches, or deploying/releasing. Classifies the task type (implement/design/debug/deploy) and applies quality gates before delegating to sub-skills. MUST be invoked as the entry point for development work, before any implementation, debugging, or design sub-skill.
 ---
 
 # Leveraging Tasks
@@ -70,17 +70,18 @@ This is not an entry gate. Maintain this awareness throughout execution:
 
 ### Debug
 
-**Entry gate:**
-1. Reproduce the issue. If you cannot reproduce, say so.
-2. Read the error message. Fully.
-3. Form a hypothesis before changing any code.
+Five-step sequence. Do not skip or reorder.
+
+1. **探勘資料**：重現問題、讀完錯誤訊息、trace data flow 找根因。不可重現就先補 logging/diagnostics，不猜。
+2. **寫紅燈**：用最小的失敗測試釘住 bug。無測試框架就寫一次性 repro script。紅燈先於任何修正。
+3. **確認實作計畫**：對使用者陳述 root cause + 修正方向 + 影響範圍，取得同意再動 code。
+4. **寫綠燈**：最小改動讓紅燈變綠。一次一個變數，不夾帶 refactor、不順手改其他東西。
+5. **回歸測試**：跑整套測試，確認沒連帶破壞。新 bug 出現 → 回 step 1。
 
 **During execution:**
-- Root cause is architectural? Switch to **refactor**, not a patch.
-- Found related smells while investigating? Small/medium refactor on the spot.
-- Before finishing: did the fix introduce new problems?
-
-**Delegate:** If project has a debug skill → `REQUIRED SUB-SKILL: [project skill]` (model: opus)
+- Root cause 是架構問題 → 停，切到 **design**，不要貼 patch。
+- 連續 3 次紅燈修不綠 → 停，質疑假設或架構，不要嘗試第 4 次。
+- 調查中發現相關 smell？小/中重構就地做；大重構 → 切 design。
 
 ### Deploy
 
@@ -109,7 +110,7 @@ digraph leveraging {
 
     implement [label="Implement\n1. Read existing code\n2. Follow patterns\n3. Check dependencies"];
     design [label="Design\n1. Clarify requirements\n2. Read affected code\n3. 2-3 approaches"];
-    debug [label="Debug\n1. Reproduce\n2. Read error\n3. Hypothesize"];
+    debug [label="Debug\n1. 探勘資料\n2. 寫紅燈\n3. 確認計畫\n4. 寫綠燈\n5. 回歸測試"];
     deploy [label="Deploy\n1. Run tests\n2. Verify excludes\n3. Dry-run first"];
 
     new_context [label="New context\ndiscovered?", shape=diamond];

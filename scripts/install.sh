@@ -11,6 +11,7 @@ CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
 CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
 CODEX_HOOKS_DIR="$REPO_ROOT/codex/hooks"
 SHARED_DIR="$REPO_ROOT/shared"
+SKILLS_DIR="$REPO_ROOT/skills"
 
 TARGET_HOME="${HOME}"
 FORCE=0
@@ -23,6 +24,7 @@ Usage: bash scripts/install.sh [--home PATH] [--force]
 Installs this repository as the source of truth for:
   - ~/.claude/CLAUDE.md
   - ~/.claude/shared/*.md
+  - ~/.claude/skills/*/
   - ~/.claude/agents/*.md
   - ~/.claude/hooks/*.sh
   - ~/.claude/statusline.sh
@@ -149,7 +151,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
-mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared"
+mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills"
 mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
@@ -169,6 +171,10 @@ done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 while IFS= read -r shared_file; do
   install_link "$shared_file" "$TARGET_HOME/.claude/shared/$(basename "$shared_file")"
 done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+while IFS= read -r skill_dir; do
+  install_link "$skill_dir" "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.codex/agents/$(basename "$agent_file")"
