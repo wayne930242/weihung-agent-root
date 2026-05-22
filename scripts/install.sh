@@ -29,6 +29,7 @@ Installs this repository as the source of truth for:
   - ~/.claude/hooks/*.sh
   - ~/.claude/statusline.sh
   - ~/.codex/AGENTS.md
+  - ~/.codex/skills/*/
   - ~/.codex/agents/*.toml
   - ~/.codex/rules/*.rules
   - ~/.codex/hooks.json
@@ -152,7 +153,7 @@ done
 
 mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
 mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills"
-mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks"
+mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.codex/skills"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
@@ -174,6 +175,10 @@ done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r skill_dir; do
   install_link "$skill_dir" "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+
+while IFS= read -r skill_dir; do
+  install_link "$skill_dir" "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
 while IFS= read -r agent_file; do

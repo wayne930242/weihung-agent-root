@@ -11,6 +11,7 @@ CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
 CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
 CODEX_HOOKS_DIR="$REPO_ROOT/codex/hooks"
 SHARED_DIR="$REPO_ROOT/shared"
+SKILLS_DIR="$REPO_ROOT/skills"
 
 TARGET_HOME="${HOME}"
 BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
@@ -83,6 +84,7 @@ cleanup_empty_dirs() {
     "$TARGET_HOME/.codex/agents"
     "$TARGET_HOME/.codex/rules"
     "$TARGET_HOME/.codex/hooks"
+    "$TARGET_HOME/.codex/skills"
   )
 
   for dir in "${dirs[@]}"; do
@@ -182,6 +184,10 @@ done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/shared/$(basename "$file")"
 done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+while IFS= read -r skill_dir; do
+  restore_or_remove "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.codex/agents/$(basename "$file")"

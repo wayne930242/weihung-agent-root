@@ -48,6 +48,7 @@ EOF
   [[ "$(cat "$fake_home/.codex/AGENTS.md")" == "old codex agents" ]] || fail "expected AGENTS.md to be restored from backup"
   [[ "$(cat "$fake_home/.codex/rules/default.rules")" == "old rule" ]] || fail "expected default.rules to be restored from backup"
   [[ ! -e "$fake_home/.claude/shared/communication.md" ]] || fail "expected managed shared file to be removed"
+  [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected managed codex skill to be removed"
   [[ ! -e "$fake_home/.codex/agents/docs-researcher.toml" ]] || fail "expected managed codex agent to be removed"
   [[ ! -e "$fake_home/.codex/hooks.json" ]] || fail "expected managed codex hooks.json to be removed"
 
@@ -75,6 +76,7 @@ fresh_install_uninstall_removes_managed_files() {
 
   [[ ! -e "$fake_home/.claude/CLAUDE.md" ]] || fail "expected CLAUDE.md to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/AGENTS.md" ]] || fail "expected AGENTS.md to be removed when no backup exists"
+  [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected codex skill to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/rules/default.rules" ]] || fail "expected default.rules to be removed when no backup exists"
 
   python3 - <<PY

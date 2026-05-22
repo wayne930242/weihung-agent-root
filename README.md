@@ -138,6 +138,7 @@ The installer manages only these user-root surfaces.
 ### Codex
 
 - `~/.codex/AGENTS.md`
+- `~/.codex/skills/*/`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/*.rules`
 - `~/.codex/hooks/*.sh`
