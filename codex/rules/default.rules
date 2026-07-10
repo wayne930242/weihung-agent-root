@@ -11,3 +11,7 @@ prefix_rule(pattern=["git", "-C", "/Users/weihung/projects/agent-workspace-engin
 prefix_rule(pattern=["go", "run", "/Users/weihung/projects/agent-workspace-engine/cmd/awe"], decision="allow")
 prefix_rule(pattern=["go", "build", "-o", "/tmp/awe-smoke", "./cmd/awe"], decision="allow")
 prefix_rule(pattern=["/tmp/awe-smoke", "-file"], decision="allow")
+prefix_rule(pattern=["uv", "run", "openspec"], decision="allow")
+prefix_rule(pattern=["uv", "run", "sed"], decision="allow")
+prefix_rule(pattern=["uv", "run", "rg"], decision="allow")
+prefix_rule(pattern=["uv", "run", "git"], decision="allow")
