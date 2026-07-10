@@ -43,7 +43,7 @@ This is not an entry gate. Maintain this awareness throughout execution:
 ### Implement
 
 **Entry gate:**
-1. Read target files and surrounding code. No exceptions.
+1. Locate targets with codebase-memory-mcp first: `search_graph` to find symbols, `trace_path` for callers/callees; `index_repository` if the project is not indexed. Then Read target files and surrounding code. No exceptions.
 2. Identify existing patterns. Follow them.
 3. Check for circular dependencies in the planned approach.
 
@@ -58,7 +58,7 @@ This is not an entry gate. Maintain this awareness throughout execution:
 
 **Entry gate:**
 1. Requirements clear? If not, ask. One question at a time.
-2. Read existing code in the affected area.
+2. Read existing code in the affected area (`get_architecture` / `search_graph` first to map it, then Read).
 3. Prepare 2-3 approaches with trade-offs.
 
 **During execution:**
@@ -72,7 +72,7 @@ This is not an entry gate. Maintain this awareness throughout execution:
 
 Five-step sequence. Do not skip or reorder.
 
-1. **探勘資料**：重現問題、讀完錯誤訊息、trace data flow 找根因。不可重現就先補 logging/diagnostics，不猜。
+1. **探勘資料**：重現問題、讀完錯誤訊息、trace data flow 找根因。呼叫鏈與影響範圍先用 codebase-memory-mcp 的 `trace_path`/`search_graph` 查，再讀檔。不可重現就先補 logging/diagnostics，不猜。
 2. **寫紅燈**：用最小的失敗測試釘住 bug。無測試框架就寫一次性 repro script。紅燈先於任何修正。
 3. **確認實作計畫**：對使用者陳述 root cause + 修正方向 + 影響範圍，取得同意再動 code。
 4. **寫綠燈**：最小改動讓紅燈變綠。一次一個變數，不夾帶 refactor、不順手改其他東西。

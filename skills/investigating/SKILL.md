@@ -12,7 +12,7 @@ Investigate thoroughly. Every claim must be traceable to a source.
 
 1. **Scope.** What exactly are we investigating? Restate in one sentence.
 2. **Gather.** Collect evidence from all relevant sources:
-   - Code: read files, grep patterns, check git history
+   - Code: codebase-memory-mcp graph tools FIRST (`search_graph` to find symbols, `trace_path` for call chains, `get_code_snippet` for source, `get_architecture` for structure; run `index_repository` if the project is not indexed) — fall back to grep/read for text, configs, and non-code files; check git history
    - External: web search, documentation, API references
    - Runtime: logs, error messages, test output
 3. **Verify.** Cross-check findings. If two sources conflict, investigate the conflict.
@@ -34,6 +34,22 @@ Investigate thoroughly. Every claim must be traceable to a source.
 ### Sources
 [Where each finding came from]
 ```
+
+## Scout Pattern (Optional, for Unfamiliar Territory)
+
+When the question is in code or systems you have not touched, send a scout agent before doing the real investigation.
+
+**How:**
+
+1. Launch one Agent (`Explore` or `general-purpose`) with a deliberately loose prompt — "explore X, report what you found, what's confusing, where you'd dig next."
+   Subagents do NOT receive the session code-discovery reminder, so the prompt MUST include: "Use codebase-memory-mcp tools first (`search_graph`, `trace_path`, `get_code_snippet`, `search_code`) before grep/file-read."
+2. **Discard the scout's conclusions.** They are not the answer.
+3. Read the scout's findings for: which files matter, which terms appear, where the dead ends are.
+4. Use that intel to write a precise prompt for the real investigation (Step 1 below).
+
+**Why this beats jumping straight in:** the scout pays the discovery cost in parallel with whatever else you're doing, and the precise prompt that follows hits its target on the first try instead of meandering.
+
+**Skip the scout when:** the territory is familiar, the question is narrow (one file, one symbol), or the answer is in obvious places (`git log`, a known doc).
 
 ## Principles
 

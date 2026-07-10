@@ -1,28 +1,37 @@
 {
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup|resume",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.codex/hooks/log-session-start.sh\"",
-            "timeout": 5,
-            "statusMessage": "Logging Codex session start"
-          }
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"$HOME/.codex/hooks/log-session-start.sh\"",
+                        "timeout": 5,
+                        "statusMessage": "Logging Codex session start"
+                    }
+                ]
+            },
+            {
+                "matcher": "startup",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "echo \"Code discovery: prefer codebase-memory-mcp (search_graph, trace_path, get_code_snippet, query_graph, search_code) over grep/file-read; run index_repository first if the project is not indexed.\""
+                    }
+                ]
+            }
+        ],
+        "Stop": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash \"$HOME/.codex/hooks/log-stop.sh\"",
+                        "timeout": 5
+                    }
+                ]
+            }
         ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$HOME/.codex/hooks/log-stop.sh\"",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
-  }
+    }
 }
