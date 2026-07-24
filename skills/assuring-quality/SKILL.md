@@ -1,6 +1,6 @@
 ---
 name: assuring-quality
-description: Use when user requests final QA, pre-release verification, end-to-end quality assurance, or "上線前驗證 / 最終品質保證" — anywhere "final QA" is the named goal.
+description: Use when the user names final QA as the goal — pre-release verification, "上線前驗證 / 最終品質保證".
 ---
 
 # Assuring Quality
@@ -8,7 +8,7 @@ description: Use when user requests final QA, pre-release verification, end-to-e
 Final QA pipeline.
 Exploratory testing surfaces issues; TDD fixes them; loop until every discovered item is green.
 
-The discovery doc is the source of truth for progress.
+The discovery doc is the single source of truth for progress.
 If working memory disagrees with the doc, trust the doc.
 
 ## Phase 1: Exploratory Testing
@@ -39,8 +39,7 @@ Locate or create the discovery doc before probing anything.
 5. Append every unexpected behaviour as a new finding immediately.
    Do not filter — record first, judge later.
 
-Do not advance to Phase 2 while any unrecorded observation remains in working memory.
-Stop exploring only after the planned scope is covered.
+Phase 1 is complete only when every observation is recorded in the doc and the planned scope is covered.
 
 ## Phase 2: Infer Bug Location
 
@@ -55,7 +54,8 @@ Do not modify production code in this phase.
 
 ## Phase 3: Red-Light Test
 
-1. Write the smallest unit or integration test that fails because of the hypothesised bug.
+1. Write the smallest failing test at a correct seam — a public boundary that exercises the real bug pattern as it occurs at the call site.
+   If no correct seam exists, that is itself a finding: record it in the doc and flag the architecture.
 2. Run it.
    The failure message must implicate the hypothesised location.
    If it does not, the hypothesis is wrong — return to Phase 2.

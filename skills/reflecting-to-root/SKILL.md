@@ -1,6 +1,6 @@
 ---
 name: reflecting-to-root
-description: Analyzes session learnings and routes them to user-root or project-level components. Captures cross-project patterns into ~/.claude/ rules or CLAUDE.md. Use when completing significant work, resolving difficult bugs, or at session end.
+description: Use when completing significant work, resolving a difficult bug, or ending a session. Routes session learnings to user-root (~/.claude/) or project-level components.
 model: sonnet
 ---
 

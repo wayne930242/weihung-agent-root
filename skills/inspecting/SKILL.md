@@ -1,12 +1,12 @@
 ---
 name: inspecting
-description: Builds a comprehensive check plan then verifies each item systematically using the investigating skill. Use when the user asks to check, audit, verify, review, or validate something thoroughly.
+description: Use when the user asks to check, audit, or review something thoroughly. Builds a check plan, then verifies each item with the investigating skill.
 model: sonnet
 ---
 
 # Inspecting
 
-Build a plan. Verify every item. No shortcuts.
+Build a plan. Verify every item, relentlessly.
 
 ## Inspection Flow
 
@@ -66,7 +66,7 @@ For each check item:
 
 ## Principles
 
-- **Plan first, check second.** Never start checking without a plan.
+- **Plan first, check second.** The plan is the completion criterion: inspection is done when every item on it has a verdict.
 - **Exhaustive.** Missing a check item is worse than a false alarm.
-- **Each item gets a real investigation.** No "looks fine" without evidence.
+- **Each item gets a real investigation.** Evidence decides the verdict.
 - **User controls scope.** Present the plan, let the user add/remove items.

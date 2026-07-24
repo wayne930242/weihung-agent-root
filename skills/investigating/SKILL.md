@@ -1,6 +1,6 @@
 ---
 name: investigating
-description: Conducts comprehensive, logically sound investigation with current information. Use when the user asks to research, find out, investigate a specific question or claim, or needs thorough analysis of a topic.
+description: Use when the user asks to research or investigate a question, claim, or topic in depth. Comprehensive investigation with current information, every claim traceable to a source.
 model: sonnet
 ---
 
@@ -56,5 +56,5 @@ When the question is in code or systems you have not touched, send a scout agent
 - **Comprehensive over fast.** Check all relevant sources before concluding.
 - **Logic chain visible.** Show how you got from evidence to conclusion.
 - **Current information.** Use web search and documentation tools to verify — do not rely solely on training data.
-- **No premature conclusions.** If evidence is insufficient, say "insufficient evidence" not "probably X".
+- **Insufficient evidence is itself a finding.** Report it as "insufficient evidence", never dressed up as "probably X".
 - **Distinguish fact from inference.** Label which is which.
