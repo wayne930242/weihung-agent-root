@@ -57,7 +57,7 @@ This is not an entry gate. Maintain this awareness throughout execution:
 ### Design
 
 **Entry gate:**
-1. Unresolved decisions in the requirements or plan? Run the `grilling` skill: facts are looked up, decisions go to the user one at a time, each with a recommended answer.
+1. Unresolved decisions in the requirements or plan? Run the `grilling` skill: facts are looked up, decisions go to the user one at a time, each with a recommended answer. For project code-improvement work (refactor, architecture), run `grill-with-docs` instead — the resolved decisions land as ADRs and glossary terms.
 2. Read existing code in the affected area (`get_architecture` / `search_graph` first to map it, then Read). Read `CONTEXT.md` and `docs/adr/` if they exist; use the project's domain language.
 3. Prepare 2-3 approaches with trade-offs.
 

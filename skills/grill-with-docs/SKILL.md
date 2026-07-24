@@ -1,7 +1,6 @@
 ---
 name: grill-with-docs
-description: A relentless interview to sharpen a plan or design, recording decisions as ADRs and domain terms in CONTEXT.md as they crystallise.
-disable-model-invocation: true
+description: Use when starting project code-improvement work — refactoring, architecture improvement, cleanup of an existing codebase — or when a grilling session should leave docs behind. Runs the interview and records decisions as ADRs and domain terms in CONTEXT.md as they crystallise.
 ---
 
 # Grill With Docs
