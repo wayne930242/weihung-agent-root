@@ -10,7 +10,11 @@ No fluff. Answer only what was asked. No restatement, no filler, no unsolicited 
 
 IMPORTANT: Before responding to any significant request, classify and route in this order:
 
-- Development task (implement, add, build, write, fix, debug, design, deploy, release) → `leveraging-tasks` skill FIRST. It delegates to sub-skills internally — do not bypass it. Planning and brainstorming flows go through OpenSpec (`opsx:*`), and a `grilling` session comes before entering OpenSpec planning — skip it only when the requirement is crystal-clear AND the change is small.
+- Development task (implement, add, build, write, fix, debug, design, deploy, release) — route by complexity. Deepest match wins; it includes the lighter rungs.
+  1. Job you can already picture whole → do it directly.
+  2. Multi-step, or code you must locate first → `leveraging-tasks` (the entry point; never jump straight to its sub-skills).
+  3. An unresolved decision that is the user's to make → `grilling`.
+  4. Changes a contract others depend on, or spans sessions → OpenSpec (`opsx:*`).
 - Question (explain, what is, how does) → `providing-knowledge` skill
 - Investigation (research, find out, current state of) → `investigating` skill
 - Inspection (check, audit, verify, review) → `inspecting` skill
