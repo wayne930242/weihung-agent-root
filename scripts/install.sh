@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
+SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
 CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
@@ -34,6 +35,10 @@ Installs this repository as the source of truth for:
   - ~/.codex/rules/*.rules
   - ~/.codex/hooks.json
   - ~/.codex/hooks/*.sh
+
+It also merges two fragments into ~/.claude/settings.json:
+  - config/claude-hooks.json    hooks and statusLine
+  - config/claude-settings.json main model and advisor pairing
 
 Defaults to failing on conflicts. Pass --force to back up conflicting targets
 before replacing them with symlinks.
@@ -94,8 +99,9 @@ install_link() {
 
 merge_claude_settings() {
   local settings_path="$1"
+  local fragment_path="$2"
 
-  python3 - "$settings_path" "$HOOKS_CONFIG" <<'PY'
+  python3 - "$settings_path" "$fragment_path" <<'PY'
 import json
 import sys
 from copy import deepcopy
@@ -127,7 +133,32 @@ merged = deep_merge(current, fragment)
 settings_path.parent.mkdir(parents=True, exist_ok=True)
 settings_path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
-  log "Merged Claude hooks into $settings_path"
+  log "Merged $(basename "$fragment_path") into $settings_path"
+}
+
+report_optional_plugins() {
+  local settings_path="$TARGET_HOME/.claude/settings.json"
+
+  if [[ -f "$settings_path" ]] && python3 -c '
+import json
+import sys
+
+settings = json.load(open(sys.argv[1], encoding="utf-8"))
+sys.exit(0 if settings.get("enabledPlugins", {}).get("codex@openai-codex") else 1)
+' "$settings_path" 2>/dev/null; then
+    return
+  fi
+
+  cat <<'EOF'
+
+Optional: the Codex plugin backs the cross-model routing in CLAUDE.md.
+Install it from a Claude Code session:
+
+  /plugin marketplace add openai/codex-plugin-cc
+  /plugin install codex@openai-codex
+  /reload-plugins
+  /codex:setup
+EOF
 }
 
 while [[ $# -gt 0 ]]; do
@@ -159,7 +190,8 @@ install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
 install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
-merge_claude_settings "$TARGET_HOME/.claude/settings.json"
+merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
+merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
 
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.claude/agents/$(basename "$agent_file")"
@@ -194,3 +226,4 @@ while IFS= read -r hook_file; do
 done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 log "Install complete."
+report_optional_plugins

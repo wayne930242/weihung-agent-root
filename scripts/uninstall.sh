@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
+SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
 CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
@@ -24,6 +25,7 @@ Uninstall flow:
   - restore managed files from the latest backup directory when a backup exists
   - otherwise remove repo-managed symlinks
   - remove repo-managed Claude hook entries from ~/.claude/settings.json
+  - drop managed model settings when they still hold the installed value
 
 This script does not modify ~/.codex/config.toml.
 EOF
@@ -81,6 +83,7 @@ cleanup_empty_dirs() {
     "$TARGET_HOME/.claude/agents"
     "$TARGET_HOME/.claude/hooks"
     "$TARGET_HOME/.claude/shared"
+    "$TARGET_HOME/.claude/skills"
     "$TARGET_HOME/.codex/agents"
     "$TARGET_HOME/.codex/rules"
     "$TARGET_HOME/.codex/hooks"
@@ -145,6 +148,38 @@ PY
   log "Cleaned managed Claude hooks from $settings_path"
 }
 
+clean_scalar_settings() {
+  local settings_path="$1"
+  local fragment_path="$2"
+
+  if [[ ! -f "$settings_path" || ! -f "$fragment_path" ]]; then
+    return
+  fi
+
+  python3 - "$settings_path" "$fragment_path" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+settings_path = Path(sys.argv[1])
+fragment_path = Path(sys.argv[2])
+
+settings = json.loads(settings_path.read_text(encoding="utf-8"))
+fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
+
+for key, value in fragment.items():
+    if settings.get(key) == value:
+        settings.pop(key, None)
+
+if settings:
+    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+else:
+    settings_path.unlink()
+PY
+
+  log "Cleaned managed model settings from $settings_path"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home)
@@ -186,6 +221,7 @@ while IFS= read -r file; do
 done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r skill_dir; do
+  restore_or_remove "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
   restore_or_remove "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
@@ -201,6 +237,7 @@ while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.codex/hooks/$(basename "$file")"
 done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
+clean_scalar_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
 clean_claude_settings "$TARGET_HOME/.claude/settings.json"
 cleanup_empty_dirs
 

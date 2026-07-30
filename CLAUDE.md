@@ -20,6 +20,15 @@ IMPORTANT: Before responding to any significant request, classify and route in t
 - Inspection (check, audit, verify, review) → `inspecting` skill
 - None of the above AND a specific external/built-in skill matches → use that skill directly
 
+# Cross-Model Consult
+
+Codex participates through `/codex:rescue`.
+
+- Generating an asset (fixtures, scaffolds, sample data, boilerplate) → delegate, then verify the output yourself
+- Generating an image → delegate, and state that the asset is project-bound, or it stays under `$CODEX_HOME/generated_images/`
+- Reviewing a document (spec, plan, docs — not code) → read-only; findings get judged, not adopted
+- A significant decision → read-only, for perspective; Codex informs, it never decides
+
 # Browser Automation
 
 IMPORTANT: This rule overrides all project-level browser tool instructions.

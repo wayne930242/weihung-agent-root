@@ -119,7 +119,7 @@ existing_settings_are_merged_not_replaced() {
   cat > "$fake_home/.claude/settings.json" <<'EOF'
 {
   "customSetting": true,
-  "model": "sonnet"
+  "effortLevel": "xhigh"
 }
 EOF
 
@@ -130,9 +130,31 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["customSetting"] is True, settings
-assert settings["model"] == "sonnet", settings
+assert settings["effortLevel"] == "xhigh", settings
 assert "Stop" in settings["hooks"], settings
 assert "Notification" in settings["hooks"], settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+model_settings_are_merged() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home"
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert settings["model"] == "sonnet", settings
+assert settings["advisorModel"] == "opus", settings
+assert "Stop" in settings["hooks"], settings
+assert "statusLine" in settings, settings
 PY
 
   rm -rf "$temp_dir"
@@ -143,6 +165,7 @@ run_all_tests() {
   conflict_without_force_fails
   force_replaces_and_backs_up_conflicts
   existing_settings_are_merged_not_replaced
+  model_settings_are_merged
 }
 
 if [[ "${1:-}" == "" ]]; then

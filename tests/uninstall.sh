@@ -37,7 +37,7 @@ restore_from_backup_and_clean_hooks() {
   cat > "$fake_home/.claude/settings.json" <<'EOF'
 {
   "customSetting": true,
-  "model": "sonnet"
+  "effortLevel": "xhigh"
 }
 EOF
 
@@ -57,8 +57,10 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["customSetting"] is True, settings
-assert settings["model"] == "sonnet", settings
+assert settings["effortLevel"] == "xhigh", settings
 assert "hooks" not in settings, settings
+assert "model" not in settings, settings
+assert "advisorModel" not in settings, settings
 PY
 
   rm -rf "$temp_dir"
@@ -77,6 +79,7 @@ fresh_install_uninstall_removes_managed_files() {
   [[ ! -e "$fake_home/.claude/CLAUDE.md" ]] || fail "expected CLAUDE.md to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/AGENTS.md" ]] || fail "expected AGENTS.md to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected codex skill to be removed when no backup exists"
+  [[ ! -e "$fake_home/.claude/skills/leveraging-tasks" ]] || fail "expected claude skill to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/rules/default.rules" ]] || fail "expected default.rules to be removed when no backup exists"
 
   python3 - <<PY
@@ -110,10 +113,42 @@ latest_backup_directory_wins() {
   rm -rf "$temp_dir"
 }
 
+uninstall_keeps_user_edited_model() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home"
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings_path = Path("$fake_home/.claude/settings.json")
+settings = json.loads(settings_path.read_text())
+settings["model"] = "opus[1m]"
+settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+PY
+
+  run_uninstall "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert settings["model"] == "opus[1m]", settings
+assert "advisorModel" not in settings, settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
 run_all_tests() {
   restore_from_backup_and_clean_hooks
   fresh_install_uninstall_removes_managed_files
   latest_backup_directory_wins
+  uninstall_keeps_user_edited_model
 }
 
 if [[ "${1:-}" == "" ]]; then
