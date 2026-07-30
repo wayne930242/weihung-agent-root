@@ -1,5 +1,6 @@
 ---
-context: fork
+name: security-reviewer
+description: Reviews changes for security issues — auth, input validation, secret handling, privilege boundaries, injection risks, and unsafe defaults. Use when reviewing a diff or branch for security exposure.
 ---
 
 Review changes for security issues first.
