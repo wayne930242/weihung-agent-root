@@ -4,32 +4,47 @@
 # partial jq/git failures must not blank the statusline.
 input=$(cat)
 
-# Single jq pass, newline-separated
-{
-  IFS= read -r MODEL
-  IFS= read -r CUR_DIR
-  IFS= read -r PCT
-  IFS= read -r RL_5H
-  IFS= read -r RL_7D
-  IFS= read -r LINES_ADDED
-  IFS= read -r LINES_REMOVED
-  IFS= read -r SESS_NAME
-  IFS= read -r GIT_WT
-  IFS= read -r AGENT
-  IFS= read -r OUT_STYLE
-} < <(echo "$input" | jq -r '
-  .model.display_name // "?",
-  .workspace.current_dir // "~",
-  (.context_window.used_percentage // 0 | floor),
-  (.rate_limits.five_hour.used_percentage // -1 | floor),
-  (.rate_limits.seven_day.used_percentage // -1 | floor),
-  (.cost.total_lines_added // 0),
-  (.cost.total_lines_removed // 0),
-  (.session_name // "" | gsub("\n"; " ")),
-  (.workspace.git_worktree // ""),
-  (.agent.name // ""),
-  (.output_style.name // "default")
-')
+# Single jq pass, newline-separated. Without jq there is nothing to parse,
+# so fall back to inert values and still render the git/dir half of the row.
+if command -v jq > /dev/null 2>&1; then
+  {
+    IFS= read -r MODEL
+    IFS= read -r CUR_DIR
+    IFS= read -r PCT
+    IFS= read -r RL_5H
+    IFS= read -r RL_7D
+    IFS= read -r LINES_ADDED
+    IFS= read -r LINES_REMOVED
+    IFS= read -r SESS_NAME
+    IFS= read -r GIT_WT
+    IFS= read -r AGENT
+    IFS= read -r OUT_STYLE
+  } < <(echo "$input" | jq -r '
+    .model.display_name // "?",
+    .workspace.current_dir // "~",
+    (.context_window.used_percentage // 0 | floor),
+    (.rate_limits.five_hour.used_percentage // -1 | floor),
+    (.rate_limits.seven_day.used_percentage // -1 | floor),
+    (.cost.total_lines_added // 0),
+    (.cost.total_lines_removed // 0),
+    (.session_name // "" | gsub("\n"; " ")),
+    (.workspace.git_worktree // ""),
+    (.agent.name // ""),
+    (.output_style.name // "default")
+  ')
+else
+  MODEL="jq missing"
+  CUR_DIR="$PWD"
+  PCT=0
+  RL_5H=-1
+  RL_7D=-1
+  LINES_ADDED=0
+  LINES_REMOVED=0
+  SESS_NAME=""
+  GIT_WT=""
+  AGENT=""
+  OUT_STYLE="default"
+fi
 
 DIR_NAME="${CUR_DIR##*/}"
 
