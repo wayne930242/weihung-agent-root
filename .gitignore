@@ -39,6 +39,9 @@ plugins/
 # Backups
 backups/
 
+# Local tooling scratch
+.superpowers/
+
 # OS
 .DS_Store
 
