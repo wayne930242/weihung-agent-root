@@ -1,63 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSocket } from "./SocketProvider";
 import TreeSpine from "./TreeSpine";
 import NodeDetail from "./NodeDetail";
 import ThemeToggle from "./ThemeToggle";
 
-// Depth-first spine order computed directly from a TreeDoc, standalone from
-// the memoized `flatIds` below — needed inside the tree:update handler,
-// where the new tree hasn't gone through a render/memo cycle yet.
-function computeFlatIds(treeDoc) {
-  const nodes = treeDoc?.nodes ?? [];
-  const ids = new Set(nodes.map((n) => n.id));
-  const childrenByParent = new Map();
-  const roots = [];
-  for (const node of nodes) {
-    const hasKnownParent = node.parent !== null && ids.has(node.parent);
-    if (hasKnownParent) {
-      if (!childrenByParent.has(node.parent)) childrenByParent.set(node.parent, []);
-      childrenByParent.get(node.parent).push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-  const order = [];
-  const visit = (list) => {
-    for (const node of list) {
-      order.push(node.id);
-      const children = childrenByParent.get(node.id) ?? [];
-      if (children.length > 0) visit(children);
-    }
-  };
-  visit(roots);
-  return order;
-}
-
-// "The thing to look at right now": the first still-open decision/question
-// in spine order, since a grilling interview isn't strictly append-then-
-// resolve-in-array-order — branches can resolve out of sequence (observed
-// live: the last-added node resolved before an earlier one did). Array
-// position alone is not a reliable proxy for "currently active." Falls back
-// to the newest node (last in spine order) once nothing is open.
-function findFrontierId(treeDoc, flatIds) {
-  const nodesById = new Map((treeDoc?.nodes ?? []).map((n) => [n.id, n]));
-  for (const id of flatIds) {
-    if (nodesById.get(id)?.status === "open") return id;
-  }
-  return flatIds.length > 0 ? flatIds[flatIds.length - 1] : null;
-}
-
 export default function TreePanel() {
   const { addListener } = useSocket();
   const [tree, setTree] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  // Refs mirroring selectedId/the current frontier for the tree:update
-  // listener below, which is registered once (addListener runs in an effect
-  // keyed only on `addListener`) and would otherwise close over stale values.
-  const selectedIdRef = useRef(null);
-  const frontierIdRef = useRef(null);
   // nodeId -> JSON.stringify(node) snapshot taken at submission time. Purely
   // client-side "pending" tracking (spec: "Optimistic pending indicator for
   // in-flight submissions") — never written to TREE.json. Cleared once a
@@ -67,21 +19,6 @@ export default function TreePanel() {
   useEffect(
     () =>
       addListener("tree:update", (msg) => {
-        // Auto-advance: if the user was looking at the frontier (the first
-        // open node, or the newest node if nothing's open) when this update
-        // arrives, follow the new frontier — that's "the next thing" in a
-        // live interview. If they'd navigated away to an earlier node, leave
-        // the selection alone; don't yank them off something they're
-        // deliberately reviewing.
-        const wasAtFrontier =
-          selectedIdRef.current !== null && selectedIdRef.current === frontierIdRef.current;
-        if (wasAtFrontier) {
-          const newFlatIds = computeFlatIds(msg.tree);
-          const newFrontier = findFrontierId(msg.tree, newFlatIds);
-          if (newFrontier && newFrontier !== selectedIdRef.current) {
-            setSelectedId(newFrontier);
-          }
-        }
         setTree(msg.tree);
         setPendingSnapshots((prev) => {
           if (prev.size === 0) return prev;
@@ -139,27 +76,17 @@ export default function TreePanel() {
     return order;
   }, [roots, childrenByParent]);
 
-  // Auto-select the frontier (first open node, else the newest) the first
-  // time any node exists — on load/reload this is "whatever the interview
-  // is currently doing," not just the first thing chronologically, so the
-  // detail pane opens on the live question rather than old history. Once
-  // the user (or this effect) has made a selection, this never re-fires;
-  // staying on the frontier as further nodes arrive is the tree:update
-  // handler's job (the auto-advance logic above), not this one.
+  // Auto-select the newest node the first time any node exists, so the
+  // detail pane opens on something rather than an empty placeholder. Once
+  // the user (or this effect) has made a selection, this never re-fires —
+  // design.md D11: there's no "live/urgent" node to chase anymore (questions
+  // live in the transcript pane, not the tree), so unlike the old frontier
+  // logic this never re-selects on later tree:update events.
   useEffect(() => {
     if (selectedId === null && flatIds.length > 0) {
-      setSelectedId(findFrontierId(tree, flatIds));
+      setSelectedId(flatIds[flatIds.length - 1]);
     }
-  }, [tree, flatIds, selectedId]);
-
-  // Keep the refs the tree:update listener reads in sync with actual state —
-  // that listener is registered once and would otherwise see stale values.
-  useEffect(() => {
-    selectedIdRef.current = selectedId;
-  }, [selectedId]);
-  useEffect(() => {
-    frontierIdRef.current = flatIds.length > 0 ? findFrontierId(tree, flatIds) : null;
-  }, [tree, flatIds]);
+  }, [flatIds, selectedId]);
 
   // Spec: "SHALL NOT intercept these keys while focus is inside a text input
   // or textarea" — a document-level listener is simpler and more robust here

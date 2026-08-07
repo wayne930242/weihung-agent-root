@@ -15,6 +15,11 @@
 
 ## 2. `skills/open-gui/server/sidecar/`: Node.js sidecar (owns the PTY)
 
+**Superseded by section 11 (design.md D11, 2026-08-07): the sidecar and every file
+under `server/sidecar/` were deleted.** The Agent SDK removed the PTY (and with it, the
+reason a sidecar existed at all) — kept below as the historical record of what was built
+and verified at the time.
+
 - [x] 2.1 Scaffolded `skills/open-gui/server/sidecar/` with `package.json` declaring
       `node-pty@1.1.0-beta37`. `postinstall` runs `fix-spawn-helper-permissions.js`,
       which `chmod +x`s any `spawn-helper` binaries under
@@ -37,6 +42,10 @@
       `data` before writing" readiness rule (Task 4.1a) — both passed.
 
 ## 3. `skills/open-gui/server/`: Deno backend (serving + sidecar supervision) — done
+
+**Superseded by section 11 (design.md D11, 2026-08-07): `sidecar_client.ts` and
+`line_framer.ts`/`line_framer_test.ts` were deleted along with the sidecar; `main.ts` was
+rewritten to drive the Agent SDK directly.** Kept below as the historical record.
 
 - [x] 3.1 Scaffolded `skills/open-gui/server/` (`deno.json`, `main.ts`,
       `sidecar_client.ts`, `state.ts`, `line_framer.ts`, `schema.ts`). On startup,
@@ -100,6 +109,10 @@
 
 ## 5. `skills/open-gui/web/`: frontend scaffold and terminal panel — done
 
+**5.2 superseded by section 11 (design.md D11, 2026-08-07): `Terminal.js`/`@xterm/xterm`/
+`@xterm/addon-fit` were deleted, replaced by `TranscriptPane.js`.** 5.1/5.3 stand
+unchanged (scaffold and theme tokens don't depend on the terminal mechanism).
+
 - [x] 5.1 Scaffolded the Next.js project under `skills/open-gui/web/` with
       `output: 'export'` (static build, no Next.js runtime server, Next 16.3.0/Turbopack).
 - [x] 5.2 Integrated `@xterm/xterm` + `@xterm/addon-fit`, wired to the WebSocket for PTY
@@ -109,6 +122,11 @@
       preference (`app/globals.css`).
 
 ## 6. `skills/open-gui/web/`: generic tree panel — done, redesigned once per live UX feedback
+
+**6.4 superseded by section 11: `question`-node submissions now send a plain
+`message:send` (no PTY, no keystroke protocol) — see `10.13`'s raw-mode-menu finding for
+why that protocol existed in the first place, and 11's entry for the replacement.** 6.1–
+6.3/6.5–6.7 stand unchanged.
 
 - [x] 6.1 Split-view layout (`SplitView.js`) with a draggable divider; both panels
       visible by default. **Ratio revised after live user feedback** from the original
@@ -184,16 +202,24 @@
       based). **Not yet exercised**: reconnect against a real `claude` session's
       alternate-screen buffer specifically (flagged as an open risk in design.md) —
       everything else in this scenario is now confirmed working, this one path isn't.
-- [ ] 9.3 Manual smoke test — `grill-with-web` end to end: **in progress (2026-08-07).**
-      A real session (real `claude` binary, topic "Greeting casing convention" against a
-      throwaway scratch project) is live — seed delivery confirmed working (see 10.15)
-      and the interview has started. Still open: reaching `TREE.json` `status: complete`,
-      `docs/grill/<slug>.md` actually being written, and the completion-poll →
-      `SIGTERM` → report chain (step 3/4 of `grill-with-web/SKILL.md`) — none of that is
-      confirmed yet, don't mark this done until it is.
-- [ ] 9.4 Manual test: cancel a running `grill-with-web` session from the invoking
-      session and confirm the `open-gui` backend stops immediately. Not run (depends on
-      9.3 existing first).
+- [x] 9.3 Manual smoke test — `grill-with-web` end to end, **re-run on the D11
+      architecture (2026-08-07)**, real `claude` binary against the scratch project
+      (topic: `greet.js` edge-case input handling). Full chain confirmed live via
+      `claude-in-chrome`: seed prompt → Claude explored the code and self-corrected a
+      factual detail in the brief (template literal, not string concat) → a live
+      2-question `AskUserQuestion` card (multi-question, Chinese text, "Other" fields)
+      rendered and was answered → both `decision` nodes resolved in the tree with the
+      "重新考慮" control visible → `CONTEXT.md` written and linked as an `artifact` node
+      → the finalize confirmation fired as a live `AskUserQuestion` (not a `question`
+      tree node — confirmed none were ever written) → `docs/grill/greet-edge-cases.md`
+      written with a correct Mermaid diagram and narrative summary, no ADR produced
+      (correctly — the decisions didn't meet ADR-FORMAT.md's bar) → `TREE.json`
+      `status` reached `complete` → `SIGTERM` to the recorded PID exited the backend
+      cleanly (confirmed via `ps` before/after).
+- [ ] 9.4 Manual test: cancel a running `grill-with-web` session *mid-interview* (before
+      `status: complete`) from the invoking session and confirm the `open-gui` backend
+      stops immediately. Not run — 9.3 exercised `SIGTERM` after completion, not a
+      genuine mid-interview cancel, so this is still open.
 
 ## 10. Post-implementation hardening (not in the original plan — found during Section 9)
 
@@ -357,3 +383,98 @@ delivered, not just the originally-planned 40 tasks.
       ("For other skills invoking open-gui") and `grill-with-web/SKILL.md` step 1: the
       calling skill must compute and embed the literal `TREE.json` path in the seed
       prompt, not just reference the schema doc.
+
+## 11. D11 pivot: Agent SDK replaces the PTY entirely
+
+User re-raised "can't we intercept `claude`'s output directly" three times across this
+session. The first two answers reused D4's transcript-inference rejection — correct but
+answering a bigger question than asked. Investigated directly this time: the Agent SDK's
+`canUseTool` callback receives `AskUserQuestion` calls with their full structured
+`questions` payload and blocks until answered — a narrow, stable, documented integration
+point, not the fragile full-output-parsing D4 rejected. See design.md D11 for the full
+decision record; this section is the implementation log.
+
+- [x] 11.1 **Feasibility spike, before any rewrite.** A ~40-line Deno script imported
+      `npm:@anthropic-ai/claude-agent-sdk`, drove a real session through streaming input,
+      and held `canUseTool` pending for 20 real seconds inside the callback (simulating
+      actual user think-time) before answering. Confirmed live: the session stayed
+      alive throughout (a `rate_limit_event` arrived mid-wait, proving the connection
+      wasn't frozen), the delayed answer was accepted, and the session correctly
+      continued (`result` message, `stop_reason: "end_turn"`). Also confirmed the SDK's
+      `sessionId` option is the mirror of `claude --session-id`/`--resume` (D10's
+      requirement carries over unchanged) via the package's own type declarations. Ran
+      this before writing any rewrite code, specifically to avoid rewriting both
+      directories against an unverified assumption.
+- [x] 11.2 **Backend rewrite** (`skills/open-gui/server/main.ts`): deleted
+      `sidecar_client.ts`, `line_framer.ts`/`_test.ts`, and `server/sidecar/` entirely.
+      `main.ts` now drives `query()` directly: a push-driven async-iterable streaming
+      input (seed prompt is the first pushed message), a `canUseTool` callback that
+      auto-approves every tool except `AskUserQuestion` (matching the project's existing
+      "Claude works autonomously" philosophy rather than adding a permission-prompt UI
+      nobody asked for), and a transcript ring buffer replacing the old PTY output
+      buffer. `deno.json`'s task gained `--allow-sys` (the SDK's `os.homedir()` call
+      needs it under Deno; found by running it, not guessed). Type-checked clean
+      (`deno check`) and live-verified end to end via a raw WS probe script: connect →
+      `transcript:snapshot`/`config`/`tree:update` → assistant text → tool_use summary →
+      `question:ask` → answered → session continues → final assistant text.
+- [x] 11.3 **Fixed a real gap found during 11.2's live test:** `question:ask` only
+      broadcast once, at the moment `AskUserQuestion` fired — a browser connecting
+      *after* that (a real timing case, not contrived) never saw the pending question at
+      all. Fixed by tracking the one currently-outstanding question server-side and
+      replaying it on socket open, the same way `tree:update` already does for
+      `currentTree`. Re-verified live with the probe connecting before the question
+      fired this time — matches PROTOCOL.md's documented behavior.
+- [x] 11.4 **Frontend rewrite**: deleted `Terminal.js` and `@xterm/xterm`/
+      `@xterm/addon-fit` from `package.json`. New `TranscriptPane.js` renders the
+      message stream as cards (assistant text via the existing `Markdown` component,
+      one-line tool-call summaries, system records) with a free-text input box, plus an
+      interactive `QuestionCard` for live `AskUserQuestion` answering (handles up to 4
+      questions per call, `multiSelect`, and an "Other" free-text fallback per
+      question). `lib/submission.js` and the tree panel's `FreeTextBox.js`/
+      `QuestionNode.js` switched from `pty:write` to `message:send` — `QuestionNode.js`
+      in particular got much simpler, since a plain message has no raw-mode-menu
+      protocol to reproduce. `npm run build` passed before any live testing (the
+      project got burned earlier this session by testing an unbuilt bundle — see the
+      note at the top of this file's revision history in design.md).
+- [x] 11.5 **Removed `TreePanel.js`'s `findFrontierId`/auto-advance logic entirely**,
+      not patched again. It existed to guess "which node is the terminal showing right
+      now" from `TREE.json`, which structurally lags a live terminal — confirmed
+      un-fixable live, mid-session, when a new `AskUserQuestion` menu was already on
+      screen with zero corresponding `TREE.json` node yet. D11 removes the need for the
+      guess instead of guessing better: questions no longer live in the tree at all, so
+      there's nothing time-sensitive left for the tree to auto-advance toward. Auto-
+      select-on-load simplified to "select the newest node."
+- [x] 11.6 **Card-based transcript + "加進 tree" promote action** (user-requested: tool-
+      call/permission activity should be visible as cards, not raw text; a card should
+      be promotable into a tree node; kept the two-panel layout rather than a free-form
+      canvas — see the two `AskUserQuestion` decisions this session, both answered
+      toward the faster-to-build option). Promoting a card sends a `message:send` asking
+      Claude to add a `TREE.json` node for it, using Claude's own judgment for
+      type/fields — the frontend never writes `TREE.json` directly (`Requirement:
+      TREE.json is Claude-authored structured data` stays intact). Verified live via
+      `claude-in-chrome`: clicking "加進 tree" on a card with no `TREE.json` path known
+      correctly made Claude run `find`/`pwd` looking for it — the expected behavior for
+      a minimal test seed that (correctly, per this skill's own contract) never
+      mentioned the path; a real `grill-with-web` seed always embeds it.
+- [x] 11.7 **"重新考慮" (reconsider) on resolved tree nodes** (user-requested: allow
+      "retracting" an answer and reconsidering dependent nodes). Corrected from the
+      user's original framing before building: an already-answered `AskUserQuestion`
+      cannot actually be un-sent (the model has moved on) — what's real is a new turn
+      asking Claude to reopen a *persisted* `TREE.json` node and reconcile whatever
+      depended on it. Implemented only on resolved `decision`/`question` tree nodes
+      (`NodeDetail.js`), deliberately not on the transcript's `AskUserQuestion` cards —
+      offering it there would promise a rollback the architecture can't deliver. Told
+      the user this distinction directly rather than building the more literal ask.
+- [x] 11.8 Updated `PROTOCOL.md` (new message set: `message:send`, `question:ask`/
+      `question:answer`, `transcript:snapshot`/`transcript:event`, no more `pty:*`),
+      `NODE-FORMAT.md` (`question` type stays in the schema for non-`grill-with-web`
+      consumers, noted as no longer emitted by this skill), both `SKILL.md` files
+      (dropped the `question`-node seed-prompt instruction — `AskUserQuestion` needs no
+      special handling anymore, it just works — and the finalize-confirmation step now
+      says "call `AskUserQuestion`" instead of "write a question node"), `init.sh`/
+      `init.ps1` (no more Node.js sidecar install step — Node.js is needed only for the
+      frontend's own build tooling now), and `openspec/changes/grill-with-web/specs/`:
+      renamed `open-gui-terminal` → `open-gui-chat` and rewrote its requirements for the
+      SDK-driven mechanism, rewrote `open-gui-tree`'s node-interaction requirement
+      (message, not PTY keystrokes) and added new requirements for the card-based
+      transcript, live question answering, promote-to-tree, and reconsider.

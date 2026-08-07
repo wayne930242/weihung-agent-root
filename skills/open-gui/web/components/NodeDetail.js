@@ -1,9 +1,12 @@
+"use client";
+
 import DecisionNode from "./DecisionNode";
 import QuestionNode from "./QuestionNode";
 import ArtifactNode from "./ArtifactNode";
 import InfoNode from "./InfoNode";
 import NodeTypeIcon from "./NodeTypeIcon";
 import StatusBadge from "./StatusBadge";
+import { useSocket } from "./SocketProvider";
 
 const RENDERERS = {
   decision: DecisionNode,
@@ -12,10 +15,18 @@ const RENDERERS = {
   info: InfoNode,
 };
 
+// Nodes Claude can meaningfully reopen and rewrite (decision/question have a
+// `status: resolved` state to revert). Not offered on the transcript's live
+// AskUserQuestion cards — those are already-sent turns the model has moved
+// past; only a persisted TREE.json node can actually be rewritten (D11).
+const RECONSIDERABLE_TYPES = new Set(["decision", "question"]);
+
 // The full-detail view for whichever node is currently selected in the tree
 // spine. All interaction affordances (reply boxes, option cards, doc/artifact
 // preview buttons) live only here, never in the spine.
 export default function NodeDetail({ node, isPending, markPending }) {
+  const { send } = useSocket();
+
   if (!node) {
     return (
       <div className="detail-placeholder">
@@ -26,6 +37,17 @@ export default function NodeDetail({ node, isPending, markPending }) {
 
   const Renderer = RENDERERS[node.type];
   const onSubmit = () => markPending?.(node.id);
+  const canReconsider = RECONSIDERABLE_TYPES.has(node.type) && node.status === "resolved";
+
+  function reconsider() {
+    send({
+      type: "message:send",
+      text: `I want to reconsider "${node.title}" [${node.id}] — please reopen it in ` +
+        `TREE.json, and update or remove anything else that depended on it, then ask me ` +
+        `again if you need to.`,
+    });
+    onSubmit();
+  }
 
   return (
     <div className="detail-node">
@@ -36,6 +58,11 @@ export default function NodeDetail({ node, isPending, markPending }) {
         </span>
         <span className="node-title">{node.title}</span>
         {isPending && <StatusBadge status="pending" />}
+        {canReconsider && (
+          <button className="reconsider-btn" onClick={reconsider}>
+            重新考慮
+          </button>
+        )}
       </div>
       {Renderer ? (
         // Keyed on node.id so switching the selected node mounts a fresh

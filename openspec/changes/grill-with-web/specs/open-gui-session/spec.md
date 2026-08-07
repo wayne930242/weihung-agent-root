@@ -80,7 +80,8 @@ is a judgment call about whether the task is finished.
 - **WHEN** the spawned `claude` process exits on its own (e.g. `/exit`, a crash) rather
   than being stopped externally
 - **THEN** the backend broadcasts why (so a connected browser can show it) and then
-  shuts itself down shortly after — there is no PTY left for it to usefully serve
+  shuts itself down shortly after — there is no session stream left for it to usefully
+  serve
 
 #### Scenario: Backend shuts down after a sustained idle period with no connections
 - **WHEN** zero browser tabs have been connected to a session for 15 minutes straight
@@ -109,9 +110,9 @@ request, after the `open-gui` backend has been stopped.
 
 #### Scenario: Closing the tab does not trigger a hand-off
 - **WHEN** the user closes the browser tab
-- **THEN** the backend and PTY process keep running exactly as they would for any other
-  disconnect (see `open-gui-terminal`'s reconnect requirement) — no hand-off, pause, or
-  session-id-based action happens automatically
+- **THEN** the backend and its `claude` session keep running exactly as they would for
+  any other disconnect — no hand-off, pause, or session-id-based action happens
+  automatically
 
 #### Scenario: Manual resume from a normal terminal
 - **WHEN** the user has stopped the `open-gui` session and wants to continue it from an

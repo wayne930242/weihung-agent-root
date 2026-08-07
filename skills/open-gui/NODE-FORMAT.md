@@ -56,6 +56,13 @@ renders an "Other" free-text field and a notes field alongside whatever options 
 listed — mirroring the `AskUserQuestion` tool's own interface (custom replies and
 per-selection notes are core to that tool, not edge cases to omit here).
 
+**design.md D11:** `grill-with-web` no longer writes this node type — its
+`AskUserQuestion` calls are answered live, through the transcript pane's own
+`question:ask`/`question:answer` flow (`PROTOCOL.md`), which is both faster (no lag
+waiting for a `TREE.json` write) and avoids showing the same question twice. This type
+stays valid in the schema for other `open-gui` consumers that want a persisted,
+tree-navigable question instead of (or in addition to) a live one.
+
 ```json
 {
   "prompt": "string — the question text",

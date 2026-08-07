@@ -79,6 +79,30 @@ and [vultuk/claude-code-web](https://github.com/vultuk/claude-code-web) both use
 `node-pty` + xterm.js + WebSocket for exactly this pattern, confirming it's a proven
 approach for full-fidelity browser terminals.
 
+**Revision (2026-08-07): reversed. Superseded by D11.** The rejection reason above —
+"permission prompts and interactive behaviors work differently in headless mode" — turned
+out to be wrong about *why* headless was worse, not about whether it was different. Hours
+of live debugging on the PTY path (D5) went into reverse-engineering `AskUserQuestion`'s
+raw-mode keystroke protocol and fighting paste-detection, and the resulting mechanism was
+still fundamentally fragile: `TREE.json`'s node-authoring lags the terminal's live state
+by construction (D4), so no frontend heuristic can reliably tell "which node is the
+terminal showing right now" — confirmed live when a brand-new `AskUserQuestion` menu was
+already on screen with zero corresponding tree node. Separately, the user's own use of the
+GUI surfaced a real product complaint headless was never going to have: the question's
+content rendering twice (once as the live terminal widget, once as the tree's question
+node) once both existed.
+
+What actually motivated D2's rejection was never re-examined until directly researched
+(2026-08-07): the Agent SDK's `canUseTool` callback receives `AskUserQuestion` calls with
+their full structured `questions` payload (same shape as this doc's `question` node type)
+and *blocks* until the callback resolves — meaning "ask a real person, in a browser, who
+might take minutes" is a documented, intended use case, not a hack. This was verified
+live, not assumed: a Deno spike (`npm:@anthropic-ai/claude-agent-sdk`) drove a real session
+through streaming input, held `canUseTool` pending for 20s inside the callback (simulating
+real think time), and confirmed the session stayed alive and correctly continued after the
+delayed answer — including a `rate_limit_event` arriving mid-wait, proof the underlying
+connection was live, not frozen. See D11.
+
 ### D3: Deno process (HTTP/WS + static frontend host) + Node.js sidecar for `node-pty`
 
 **Superseded by smoke test (2026-08-07).** The originally-proposed primary approach —
@@ -134,6 +158,14 @@ Accepted — this is exactly the trade-off the original design flagged as the fa
 cost, now realized. The sidecar is owned by `open-gui`'s `server/`; `grill-with-web`
 never talks to it directly.
 
+**Revision (2026-08-07): removed entirely, superseded by D11.** D2's reversal removes the
+PTY from the picture altogether — no `node-pty`, no Node.js sidecar, no IPC hop. The Deno
+process talks to `@anthropic-ai/claude-agent-sdk` directly via a Deno `npm:` specifier
+(confirmed working: the package is pure ESM with zero runtime dependencies of its own,
+`engines.node >=18`, and the live spike under D11 ran it successfully). This section is
+kept for its record of why `node-pty` under Deno doesn't work — not a live concern anymore
+since nothing here needs a PTY, but worth keeping if a future decision ever needs it again.
+
 ### D4: `TREE.json` is Claude-authored structured data, not inferred from the transcript
 
 The session's Claude writes `TREE.json` incrementally as nodes are added/resolved (same
@@ -147,8 +179,17 @@ second LLM call or heuristic parsing. Rejected — transcript format is an inter
 implementation detail of Claude Code (not a stable contract), PTY output is unstructured
 ANSI, and inference would be lossy and error-prone compared to the source (the session's
 own Claude) simply stating structure as it goes. This principle is why D9's `question`
-node type mirrors `AskUserQuestion` calls via an *explicit instructed second write*
+node type mirrored `AskUserQuestion` calls via an *explicit instructed second write*
 rather than trying to capture the tool's rendered UI from the PTY stream.
+
+**Revision (2026-08-07):** this principle still holds for `decision`/`artifact`/`info`
+nodes — Claude still authors `TREE.json` for those, no change. But D11 removes `question`
+from what Claude has to write at all: `AskUserQuestion` calls now arrive as structured
+data straight from the SDK (see D11), which is *more* reliable than an instructed second
+write, not less — no lag, no chance of the instruction being forgotten or the write racing
+behind the live tool call. `grill-with-web`'s seed prompt stops asking Claude to emit
+`question` nodes; `open-gui`'s schema keeps the type for other, non-`grill-with-web`
+consumers that might still want it.
 
 ### D5: Tree panel's per-node input is a convenience entry point into the single PTY stdin, not a parallel channel
 
@@ -187,6 +228,18 @@ node's keystroke lands on whatever the terminal actually shows. No fix attempted
 staleness risk; `open-gui-tree`'s "Optimistic pending indicator" softens it (a node
 already marked pending is a visual hint it was likely already acted on) but does not
 close it.
+
+**Revision (2026-08-07): superseded entirely by D11.** The "unaddressed risk" above was
+never actually fixable within the PTY model — it's a direct consequence of D4's
+Claude-authors-`TREE.json` principle combined with a terminal that updates in real time
+and a tree that only updates when Claude chooses to write. D11 removes the PTY stdin as
+the answer channel altogether: a `question`-type submission now becomes a WebSocket
+message the backend feeds directly into a pending `canUseTool` resolution for that
+specific tool call, keyed by the SDK's own tool-use id — there is no "which node is live
+on screen" ambiguity to have, because there's no screen. This whole decision (digit
+keystrokes, paste-detection timing, the two-step Other sequence) is now dead code once
+D11 ships; kept here as the record of what was tried and why it was still fragile even
+once correctly implemented.
 
 ### D6: Split-view layout, terminal + tree both always visible
 
@@ -232,8 +285,9 @@ usable standalone (per the user's explicit requirement) instead of grilling
 infrastructure that merely *could* be extracted later.
 
 **Boundary:**
-- `open-gui` owns: PTY spawn + Node sidecar + WebSocket + static frontend serving
-  (`open-gui-terminal`), the generic typed node tree UI/schema/live-push/preview
+- `open-gui` owns: the session/WebSocket/static frontend serving layer (`open-gui-chat`,
+  originally `open-gui-terminal` — a PTY spawn + Node sidecar at the time this decision
+  was written, superseded by D11), the generic typed node tree UI/schema/live-push/preview
   (`open-gui-tree`), and its own thin per-session orchestration — state dir, seed prompt
   delivery, PID/port recording, browser open (`open-gui-session`). It is invocable
   directly by a user for any `claude` session, with no grilling awareness at all.
@@ -320,12 +374,94 @@ different terminal — the same session, not two sessions merged.
 
 **Why not automatic on tab-close:** a closed WebSocket doesn't distinguish "the user is
 done and wants to switch to a terminal" from "accidental close" or "network blip" — the
-existing reconnect-on-disconnect behavior (`open-gui-terminal`) already depends on
+existing reconnect-on-disconnect behavior (`open-gui-chat`) already depends on
 disconnects being non-terminal by default. Auto-triggering a hand-off on disconnect would
 regress that. The hand-off is therefore always an explicit, separate action: stop the
 session, then the user runs `claude --resume <id>` themselves. See
 `open-gui-session`'s "Deterministic claude session id for manual hand-off" requirement
 and `SKILL.md`'s "Switch to a normal terminal" section.
+
+**Revision (2026-08-07): confirmed unchanged under D11.** The Agent SDK's `query()`
+options include `sessionId` (must be a UUID; its own type declaration documents it as
+"resumable via `query({ options: { resume: sessionId } })`" — the SDK-level mirror of the
+CLI's `--session-id`/`--resume` pair this decision already relies on). Verified live in
+the D11 spike (`system/init`'s `session_id` matched what was passed in). No change to this
+decision's requirement or `SKILL.md`'s hand-off instructions — only the spawn mechanism
+underneath changed.
+
+### D11: Agent SDK (`canUseTool` + streaming input) replaces the PTY entirely
+
+**Context:** raised by the user directly ("我們沒辦法直接攔截 claude output 來處理嗎"),
+asked three times across this session before being investigated properly. The first two
+times, the answer given was D4's transcript-inference rejection — correct as far as it
+went, but answering a bigger question than was asked. The actual answer needed one
+targeted fact: does anything let a caller intercept *just* `AskUserQuestion`, structured,
+without reconstructing the rest of the session from output? Direct research (not assumed)
+found yes — the Agent SDK's `canUseTool` callback.
+
+**Mechanism (verified live via a Deno spike, not assumed from docs alone):**
+- The backend drives each session via `@anthropic-ai/claude-agent-sdk`'s `query()`,
+  imported directly under Deno through an `npm:` specifier — no separate Node.js process.
+  The package resolves to pure ESM with no runtime dependencies of its own and an
+  `engines.node >= 18` floor; it spawns the real `claude` CLI binary as a subprocess
+  itself (same binary this design already relies on elsewhere), so `open-gui`'s Deno
+  process needs `--allow-run` for it.
+- Input is a streaming async generator of user messages (not a single string prompt) —
+  this is what keeps the session open indefinitely for a long-lived browser-driven
+  conversation rather than the one-shot examples in the SDK's own docs.
+- A `canUseTool` callback is passed in `query()`'s options. For `toolName ===
+  "AskUserQuestion"`, the callback receives the exact `questions` array structure this
+  doc's `question` node type already mirrors (`question`, `header`, `options[]` with
+  `label`/`description`, `multiSelect`) — and *blocks* until the callback resolves.
+  **Verified live:** the spike held this callback pending for 20 real seconds (simulating
+  a user actually reading and thinking) with no timeout, no dropped connection, and a
+  `rate_limit_event` message arriving mid-wait confirmed the underlying stream was live,
+  not frozen. After answering, the session correctly continued (`result` message,
+  `stop_reason: "end_turn"`).
+- The backend resolves that pending callback from a WebSocket message the browser sends
+  when the user picks an option — keyed by the specific tool-use id, so there is no
+  "which node is currently live" ambiguity of any kind (D5's unfixed risk). Other tools
+  (`Write`, `Edit`, `Bash`, etc.) also flow through `canUseTool`; default policy is
+  auto-approve everything except `AskUserQuestion`, matching this project's existing
+  "Claude works autonomously, the human is only needed for genuine judgment calls"
+  philosophy (D8/D9) rather than reintroducing a permission-prompt UI this design never
+  asked for.
+- **Terminal panel → transcript pane, not a rebuilt chat UI.** The temptation here is to
+  also hand-build a full chat interface (streaming text, tool cards, diffs) now that
+  there's structured data to render — resist it. The bugs this session came from *input*
+  (D5's keystroke protocol) and *staleness* (D4/D5's lag), not from rendering Claude's
+  output, which xterm.js was never broken at. The replacement panel renders the SDK
+  message stream as plain formatted text (assistant text, one-line tool-call summaries) —
+  a scrolling list, no ANSI/xterm dependency, minimal new surface area. A richer chat UI
+  is a future, separately-scoped change if actually requested, not a default that rides
+  along with this pivot.
+- `TREE.json`'s role narrows accordingly (see D4's revision, D9): `decision`/`artifact`/
+  `info` nodes only for `grill-with-web`. The `question` node type stays in `open-gui`'s
+  schema for other consumers, but nothing in `grill-with-web`'s flow writes one anymore —
+  the tree panel's auto-advance/frontier-guessing logic (`findFrontierId`,
+  `open-gui-tree`'s "auto-advance" scenarios) is removed outright, not patched again: it
+  existed only to guess at "the currently live question," and there is no longer a
+  currently-live question for the tree to track at all.
+
+**Alternatives considered:**
+- **Full transcript/PTY-output reconstruction of the tree** (the literal reading of "攔截
+  output"): rejected, unchanged from D4 — no stable contract to parse, still fragile.
+  This is *not* what D11 does; the distinction (narrow structured signal via SDK vs. full
+  output parsing) was the deciding factor once actually researched.
+- **Keep the PTY, add a "menu is currently showing" detector** (a narrower patch discussed
+  before this decision, using the raw-mode menu's fixed footer text as a presence signal):
+  superseded — once the SDK's `canUseTool` was confirmed to deliver the same information
+  structured and pre-parsed, detecting a rendered menu's *existence* became strictly worse
+  than receiving its *content* directly.
+
+**Consequence:** this obsoletes D2 (PTY), D3's Node sidecar, and D5 (keystroke protocol)
+in one pivot — a full rewrite of `open-gui`'s `server/` and the terminal-rendering half of
+`web/`, not an incremental patch. Accepted: the bug category this session spent the most
+time on (staleness, duplicate rendering, keystroke fragility) is structurally eliminated
+by the pivot rather than chased with another heuristic, which is the whole reason it was
+worth the rewrite cost. `tasks.md` tracks the new implementation tasks separately from the
+superseded PTY-era ones (marked, not deleted, per this file's existing practice of keeping
+the record of what was tried).
 
 ## Risks / Trade-offs
 

@@ -5,13 +5,13 @@ description: Use when the user wants a browser-based GUI for a Claude Code sessi
 
 # open-gui
 
-Spin up a fresh, independent `claude` session wrapped in a PTY-backed browser terminal, with a live typed-node tree panel beside it. Full CLI fidelity — permission prompts, tool use, slash commands — not a simplified chat view.
+Spin up a fresh, independent `claude` session driven through the Agent SDK, with a card-based conversation pane and a live typed-node tree panel beside it (design.md D11). `AskUserQuestion` calls render as live interactive cards and are answered structurally — no terminal, no keystroke emulation.
 
 **Passive by default.** Once launched, do not poll it, do not wait for it, do not close it. The session runs until the user or a calling skill stops it. This is the one rule every step below exists to protect — read [Passive lifecycle](#passive-lifecycle) before you do anything that looks like waiting.
 
 ## 1. First-run setup
 
-Run `skills/open-gui/init.sh` (macOS/Linux) or `skills/open-gui/init.ps1` (Windows — best-effort, unverified on a real Windows machine). It's idempotent: installs Deno if missing, checks for Node.js, installs the sidecar's `node-pty` dependency, and builds the frontend — each step skipped if already done. Tell the user this may take a moment on first run (`node-pty`'s native build especially) rather than letting the wait look like a hang.
+Run `skills/open-gui/init.sh` (macOS/Linux) or `skills/open-gui/init.ps1` (Windows — best-effort, unverified on a real Windows machine). It's idempotent: installs Deno if missing, checks for Node.js (needed only for the frontend's own build tooling — the backend itself is pure Deno, including the Agent SDK via an `npm:` specifier), and builds the frontend — each step skipped if already done.
 
 ## 2. Determine session parameters
 
@@ -28,7 +28,7 @@ Run `skills/open-gui/init.sh` (macOS/Linux) or `skills/open-gui/init.ps1` (Windo
 If a seed prompt was determined, write it to a temp file. From `skills/open-gui/server/`, start the backend as a **background process**:
 
 ```
-deno run --allow-net --allow-read --allow-write --allow-run --allow-env main.ts \
+deno run --allow-net --allow-read --allow-write --allow-run --allow-env --allow-sys main.ts \
   --cwd <cwd> --topic <topic> --session-id <session-id> [--seed-file <path>]
 ```
 
@@ -40,7 +40,7 @@ Attempt to auto-open the user's default browser to the session URL, **bringing i
 
 ## 5. Report and stop
 
-Tell the user the session is running, give them the URL, and state plainly that it stays open — you are not going to check back on it or close it. Point at `~/.claude/state/<project-slug>/open-gui/<session-id>/session.json` (`pid`, `port`) as how they (or you, if later asked) can stop it: send that PID `SIGTERM`, which cascades to the sidecar and the PTY child.
+Tell the user the session is running, give them the URL, and state plainly that it stays open — you are not going to check back on it or close it. Point at `~/.claude/state/<project-slug>/open-gui/<session-id>/session.json` (`pid`, `port`) as how they (or you, if later asked) can stop it: send that PID `SIGTERM`, which closes the Agent SDK session (and the `claude` subprocess it spawned) before exiting.
 
 Your turn ends here. Do not add a step that waits for the interview/task inside the session to finish.
 
@@ -60,7 +60,7 @@ This resumes the *same* session's own transcript in a plain terminal, picking up
 
 `open-gui` never reads `TREE.json`'s completion status, never polls, never infers "done" from task content. That is deliberate (design.md D8/D9) — a general-purpose browser-GUI tool that auto-closes sessions the user might still be using is worse than one that just runs until told to stop. If a task needs "wait for completion, then clean up," that behavior belongs in the *calling* skill (see below), layered on top — not here.
 
-**Two exceptions, both mechanical rather than task-completion judgment calls:** the backend shuts itself down if the wrapped `claude` process exits on its own (there's no PTY left to serve — see `PROTOCOL.md`'s `session:ended`), and if zero browsers have been connected for 15 minutes straight (a forgotten tab, or an auto-open that silently failed and nobody ever opened the URL — otherwise it would run forever unattended). Any connection within that 15-minute window cancels the timer, so a quick reconnect after an accidental close is unaffected.
+**Two exceptions, both mechanical rather than task-completion judgment calls:** the backend shuts itself down if the session stream ends on its own (the wrapped `claude` process exited, or the SDK session hit a fatal error — see `PROTOCOL.md`'s `session:ended`), and if zero browsers have been connected for 15 minutes straight (a forgotten tab, or an auto-open that silently failed and nobody ever opened the URL — otherwise it would run forever unattended). Any connection within that 15-minute window cancels the timer, so a quick reconnect after an accidental close is unaffected.
 
 ## For other skills invoking open-gui
 

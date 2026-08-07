@@ -5,7 +5,7 @@ description: Use when the user wants a grilling interview to run in the browser 
 
 # Grill With Web
 
-The GUI version of `grill-with-docs`. You build the seed prompt and manage the session's lifecycle; `open-gui` does everything PTY/browser/tree-rendering. Read `skills/open-gui/SKILL.md` first if you haven't invoked it before — this skill is a thin layer on top of its contract, not a reimplementation.
+The GUI version of `grill-with-docs`. You build the seed prompt and manage the session's lifecycle; `open-gui` does everything session/browser/tree-rendering. Read `skills/open-gui/SKILL.md` first if you haven't invoked it before — this skill is a thin layer on top of its contract, not a reimplementation.
 
 ## 1. Build the seed prompt
 
@@ -26,8 +26,8 @@ paths, and (embedded directly, not referenced by path):
 
 - Populate `TREE.json` **at the literal absolute path you computed** (see `open-gui/SKILL.md`'s "For other skills invoking open-gui" — the target session cannot discover this path itself). State the exact top-level shape: `{"status": "in_progress" | "complete", "nodes": [...]}` — spell out both literal strings (underscore, not hyphen). A condensed re-explanation of `NODE-FORMAT.md` that only covers per-node `status` enums and drops the top-level one is an easy, real gap to leave by accident — say it explicitly, don't assume it's implied.
 - The interview discipline from `grill-with-docs/SKILL.md`: challenge glossary conflicts, sharpen fuzzy language, discuss concrete scenarios, cross-reference against the code, record resolved terms in `CONTEXT.md` inline (per `CONTEXT-FORMAT.md`'s shape) the moment they crystallise, and offer an ADR (per `ADR-FORMAT.md`'s shape, `docs/adr/NNNN-slug.md`) only when a decision is hard to reverse, surprising without context, AND the result of a real trade-off.
-- The `TREE.json` node shape from `NODE-FORMAT.md`: a `decision` node per grilling branch (`recommendation` while open, `resolution` once resolved, `doc` set to the ADR's path whenever one is produced), a `question` node instead when asking an `AskUserQuestion`-backed question.
-- **Before finalizing** (once every branch looks resolved): add one last `question` node — e.g. "Ready to finalize and write the summary doc?" with options to proceed or keep discussing — and wait for it to resolve like any other question. This is the user's explicit confirmation to wrap up, surfaced as a normal tree node like everything else, not a native popup/dialog (`open-gui` has no such mechanism, and shouldn't grow one just for this).
+- The `TREE.json` node shape from `NODE-FORMAT.md`: a `decision` node per grilling branch (`recommendation` while open, `resolution` once resolved, `doc` set to the ADR's path whenever one is produced). Don't mention `question` nodes — `AskUserQuestion` calls render live in the browser and are answered directly (design.md D11); nothing needs to be written to `TREE.json` for them, and no seed-prompt instruction is needed to make that happen.
+- **Before finalizing** (once every branch looks resolved): call `AskUserQuestion` directly — e.g. "Ready to finalize and write the summary doc?" with options to proceed or keep discussing — and wait for the answer like any other question. This is the user's explicit confirmation to wrap up.
 - At completion: write `docs/grill/<slug>.md` — a Mermaid diagram generated from `TREE.json` plus a narrative summary — and set `TREE.json`'s top-level `status` to `complete`.
 
 ## 2. Start the session

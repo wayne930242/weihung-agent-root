@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# One-time environment setup for open-gui: Deno, the Node.js sidecar's
-# node-pty dependency, and the static frontend build. Safe to re-run — every
-# step is skip-if-already-done. macOS/Linux only; see init.ps1 for Windows
-# (untested — this machine has no Windows environment to verify it against).
+# One-time environment setup for open-gui: Deno (runs the backend directly,
+# including the Agent SDK via an npm: specifier — no separate sidecar
+# process, design.md D11) and the static frontend build (needs Node.js only
+# for its own build tooling). Safe to re-run — every step is
+# skip-if-already-done. macOS/Linux only; see init.ps1 for Windows (untested
+# — this machine has no Windows environment to verify it against).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,19 +25,11 @@ else
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "Node.js not found. The sidecar needs it to run node-pty."
+  echo "Node.js not found. The frontend's build tooling (Next.js) needs it."
   echo "Install Node.js yourself (e.g. via nvm): https://nodejs.org/"
   exit 1
 else
   echo "Node.js found: $(node --version)"
-fi
-
-SIDECAR_DIR="$SCRIPT_DIR/server/sidecar"
-if [ ! -d "$SIDECAR_DIR/node_modules" ]; then
-  echo "Installing sidecar dependencies (node-pty native build)..."
-  (cd "$SIDECAR_DIR" && npm install)
-else
-  echo "Sidecar dependencies already installed."
 fi
 
 WEB_DIR="$SCRIPT_DIR/web"

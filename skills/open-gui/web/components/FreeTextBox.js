@@ -13,7 +13,7 @@ export default function FreeTextBox({ node, placeholder = "Reply…", onSubmit }
 
   function submit() {
     if (!text.trim()) return;
-    send({ type: "pty:write", data: buildSubmission(node, text) });
+    send({ type: "message:send", text: buildSubmission(node, text) });
     onSubmit?.();
     setText("");
   }

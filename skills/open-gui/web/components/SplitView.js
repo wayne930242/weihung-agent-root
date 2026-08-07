@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import TerminalPanel from "./Terminal";
+import TranscriptPane from "./TranscriptPane";
 import TreePanel from "./TreePanel";
 
 const MIN_PCT = 30;
@@ -42,8 +42,8 @@ export default function SplitView() {
 
   return (
     <div className="split-view" ref={containerRef}>
-      <div className="pane pane-terminal" style={{ flexBasis: `${leftPct}%` }}>
-        <TerminalPanel />
+      <div className="pane pane-chat" style={{ flexBasis: `${leftPct}%` }}>
+        <TranscriptPane />
       </div>
       <div
         className="split-divider"

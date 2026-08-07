@@ -1,7 +1,9 @@
-// open-gui backend: Deno process for HTTP/WS/static serving + sidecar supervision.
-// See PROTOCOL.md for the wire protocols this file implements.
+// open-gui backend: Deno process for HTTP/WS/static serving + Agent SDK session
+// orchestration. See PROTOCOL.md for the wire protocols this file implements.
+// design.md D11: no PTY, no Node sidecar — the Deno process drives
+// @anthropic-ai/claude-agent-sdk directly via an npm: specifier.
 
-import { SidecarClient, type SidecarMessage } from "./sidecar_client.ts";
+import { query } from "npm:@anthropic-ai/claude-agent-sdk";
 import {
   ensureStateDir,
   readTree,
@@ -43,11 +45,9 @@ const flags = parseArgs(Deno.args);
 const targetCwd = flags.cwd ?? Deno.cwd();
 const topic = flags.topic ?? "open-gui session";
 const sessionId = flags["session-id"] ?? crypto.randomUUID();
-const claudeBin = flags["claude-bin"] ?? "claude";
 const seedPromptFile = flags["seed-file"]; // optional
 const staticDir = flags["static-dir"] ??
   new URL("../web/out", import.meta.url).pathname;
-const sidecarDir = new URL("./sidecar", import.meta.url).pathname;
 
 const dir = stateDir(targetCwd, sessionId);
 await ensureStateDir(dir);
@@ -59,16 +59,30 @@ if (seedPromptFile) {
 }
 await Deno.writeTextFile(seedPromptPath(dir), seedPrompt);
 
-const sidecar = await SidecarClient.start(sidecarDir, Deno.env.toObject());
+// D11: transcript entries are a lightly-summarized view of the SDK message
+// stream, not the raw structured messages — the frontend renders plain text,
+// not a full chat UI (advisor guidance: rendering was never what broke, no
+// need to rebuild it). Ring-buffered the same way the old PTY output was, for
+// transcript:snapshot on (re)connect.
+type TranscriptEntry =
+  | { kind: "assistant"; text: string }
+  | { kind: "tool_use"; tool: string; summary: string }
+  | { kind: "system"; text: string };
 
-// Ring buffer of all PTY output since spawn, for pty:snapshot on (re)connect.
-const MAX_BUFFER = 1024 * 1024;
-let outputBuffer = "";
-function appendToBuffer(chunk: string) {
-  outputBuffer += chunk;
-  if (outputBuffer.length > MAX_BUFFER) {
-    outputBuffer = outputBuffer.slice(outputBuffer.length - MAX_BUFFER);
-  }
+const MAX_TRANSCRIPT = 2000;
+const transcript: TranscriptEntry[] = [];
+function pushTranscript(entry: TranscriptEntry) {
+  transcript.push(entry);
+  if (transcript.length > MAX_TRANSCRIPT) transcript.shift();
+  broadcast({ type: "transcript:event", entry });
+}
+
+function summarizeToolInput(name: string, input: Record<string, unknown>): string {
+  if (name === "Bash" && typeof input.command === "string") return input.command;
+  if (typeof input.file_path === "string") return input.file_path;
+  if (typeof input.path === "string") return input.path;
+  const json = JSON.stringify(input);
+  return json.length > 140 ? json.slice(0, 140) + "…" : json;
 }
 
 const sockets = new Set<WebSocket>();
@@ -85,14 +99,13 @@ function broadcast(msg: unknown) {
 // closed WebSocket isn't a reliable "done" signal, reopening the URL must
 // still reconnect to the live session). But with no timeout at all, a
 // forgotten tab (or a browser auto-open that silently failed, PROTOCOL.md's
-// documented risk — nobody ever connects at all) leaves the backend, its
-// sidecar, and the spawned `claude` process running indefinitely. Neither
-// case is a task-completion judgment call (the thing D8/D9's "never shut
-// down" rule actually protects) — it's "nothing has been connected for a
-// long time," a resource-lifecycle signal. Shut down after a sustained idle
-// period with zero connections; any connection arriving before it fires
-// cancels it, so a quick reconnect (network blip, accidental close) is
-// unaffected.
+// documented risk — nobody ever connects at all) leaves the backend and the
+// spawned `claude` process running indefinitely. Neither case is a
+// task-completion judgment call (the thing D8/D9's "never shut down" rule
+// actually protects) — it's "nothing has been connected for a long time," a
+// resource-lifecycle signal. Shut down after a sustained idle period with
+// zero connections; any connection arriving before it fires cancels it, so a
+// quick reconnect (network blip, accidental close) is unaffected.
 const IDLE_SHUTDOWN_MS = 15 * 60 * 1000;
 let idleShutdownTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -113,98 +126,141 @@ function cancelIdleShutdown() {
   }
 }
 
-let seedSent = false;
-let seedTimer: ReturnType<typeof setTimeout> | undefined;
-const SEED_QUIET_MS = 600;
-// A long single-write burst reliably trips Claude Code's own paste-detection
-// (confirmed live: the seed landed as a collapsed "[Pasted text #1 +1 lines]"
-// chip, never submitted) — the trailing \r sent in the same write gets
-// absorbed into the paste event instead of registering as a distinct
-// "submit" keystroke. Sending \r as its own write, after the paste-detection
-// window has closed, submits it correctly.
-const SEED_SUBMIT_DELAY_MS = 200;
+// D11: streaming input is a push-driven async iterable — the seed prompt is
+// the first pushed message, and further free-text messages (a node's
+// FreeTextBox, or the transcript pane's own input) are pushed as they arrive
+// over WebSocket, potentially hours apart. This replaces the old PTY stdin.
+type SDKUserMsg = {
+  type: "user";
+  message: { role: "user"; content: string };
+  parent_tool_use_id: null;
+};
+let pushMessage: (text: string) => void;
+const inputStream: AsyncIterable<SDKUserMsg> = {
+  [Symbol.asyncIterator]() {
+    const pending: SDKUserMsg[] = [];
+    let waiting: ((r: IteratorResult<SDKUserMsg>) => void) | null = null;
+    pushMessage = (text: string) => {
+      const msg: SDKUserMsg = {
+        type: "user",
+        message: { role: "user", content: text },
+        parent_tool_use_id: null,
+      };
+      if (waiting) {
+        const resolve = waiting;
+        waiting = null;
+        resolve({ value: msg, done: false });
+      } else {
+        pending.push(msg);
+      }
+    };
+    return {
+      next(): Promise<IteratorResult<SDKUserMsg>> {
+        if (pending.length > 0) {
+          return Promise.resolve({ value: pending.shift()!, done: false });
+        }
+        return new Promise((resolve) => {
+          waiting = resolve;
+        });
+      },
+    };
+  },
+};
 
-function scheduleSeedSend() {
-  if (seedSent || !seedPrompt) return;
-  if (seedTimer !== undefined) clearTimeout(seedTimer);
-  // Readiness rule (PROTOCOL.md §3): a TUI emits output (cursor moves, banners,
-  // permission prompts) well before its input box actually mounts — sending on
-  // the very first `data` chunk can land the seed prompt on an intermediate
-  // screen (e.g. Claude Code's one-time "trust this folder?" gate) instead of
-  // the chat input. Wait for a quiet period with no further output instead —
-  // once the process stops producing bytes, its current screen has settled.
-  seedTimer = setTimeout(() => {
-    if (seedSent) return;
-    seedSent = true;
-    // A raw PTY in the target TUI's cooked/raw mode treats an embedded newline
-    // as "insert a line" (multi-line compose), not "submit" — only the final
-    // \r does that. A seed prompt file's trailing/embedded newlines would
-    // otherwise land as an inserted blank line and never actually submit.
-    // Collapse to one logical line, same as the frontend does for node notes.
-    const singleLine = seedPrompt.replace(/\s*\n\s*/g, " ").trim();
-    sidecar.write(singleLine);
-    setTimeout(() => sidecar.write("\r"), SEED_SUBMIT_DELAY_MS);
-  }, SEED_QUIET_MS);
-}
+// D11: AskUserQuestion's `canUseTool` call blocks until this resolves — the
+// browser-mediated answer flow. Only one can be genuinely pending at a time
+// (the SDK's conversation loop can't reach a second AskUserQuestion call
+// while the first's callback hasn't resolved), but keyed by toolUseID anyway
+// since canUseTool exposes it for free and it makes the WS contract
+// (question:ask/question:answer) explicit rather than implicit-singleton.
+const pendingQuestions = new Map<
+  string,
+  (answers: Record<string, string | string[]>) => void
+>();
+// The one currently-outstanding question:ask payload, if any — replayed on
+// socket open the same way currentTree is, so a client connecting *after*
+// AskUserQuestion already fired (a real timing case: nothing forces a
+// browser to be connected the instant Claude asks) still sees it instead of
+// the question silently never appearing.
+let pendingQuestionBroadcast: { requestId: string; questions: unknown } | null = null;
 
-sidecar.onMessage((msg: SidecarMessage) => {
-  switch (msg.type) {
-    case "data": {
-      appendToBuffer(msg.data);
-      broadcast({ type: "pty:data", data: msg.data });
-      scheduleSeedSend();
-      break;
-    }
-    case "exit": {
-      console.error(
-        `[open-gui] session process exited (code=${msg.code} signal=${msg.signal})`,
-      );
-      // The wrapped `claude` process is gone — there is no PTY left to serve,
-      // so keeping the backend (and its browser tabs) alive would just show a
-      // permanently frozen terminal. This is a different signal from D8/D9's
-      // "never shut down" rule: that rule is about not inferring task/content
-      // completion from TREE.json; this is the underlying process itself
-      // exiting, mechanical rather than a content judgment call. Broadcast
-      // first so a connected browser can show why, then shut down — same
-      // `shutdown()` used for SIGINT/SIGTERM, after a short delay so the
-      // broadcast has time to actually reach clients before the socket drops.
-      broadcast({ type: "session:ended", code: msg.code, signal: msg.signal });
-      setTimeout(shutdown, 500);
-      break;
-    }
-    case "error": {
-      console.error(`[open-gui] sidecar error: ${msg.message}`);
-      broadcast({ type: "fatal", message: msg.message });
-      break;
-    }
-  }
-});
-
-// Pin a UUID as this claude session's own id (verified: `claude --session-id
-// <uuid>` accepts this at spawn) so it's known upfront rather than needing to
-// be parsed out of PTY output. This lets a user later resume the SAME session
-// from a normal terminal (`claude --resume <claudeSessionId>`) after this
-// open-gui session is stopped — a deliberate, explicit hand-off, not an
-// automatic one (see SKILL.md's "Switch to a normal terminal" section: WS
-// disconnects are not a reliable "user is done" signal, so this is never
-// triggered by a closed tab on its own). Independent of `sessionId` (this
-// process's own state-dir id, which may be a non-UUID string when a caller
-// overrides it) — only used when spawning the real `claude` binary, since a
-// test stand-in like `/bin/bash` doesn't understand the flag.
+// Pin a UUID as this claude session's own id upfront (Options.sessionId, the
+// SDK-level mirror of `claude --session-id`) rather than needing to be parsed
+// out of anywhere. This lets a user later resume the SAME session from a
+// normal terminal (`claude --resume <claudeSessionId>`) after this open-gui
+// session is stopped — a deliberate, explicit hand-off, not an automatic one
+// (see SKILL.md's "Switch to a normal terminal" section: WS disconnects are
+// not a reliable "user is done" signal, so this is never triggered by a
+// closed tab on its own).
 const claudeSessionId = crypto.randomUUID();
-const usingRealClaude = !flags["claude-bin"];
 
-await sidecar.spawn({
-  file: claudeBin,
-  args: usingRealClaude ? ["--session-id", claudeSessionId] : [],
-  cwd: targetCwd,
-  env: independentSpawnEnv(),
-  cols: 80,
-  rows: 24,
+const sdkQuery = query({
+  prompt: inputStream,
+  options: {
+    cwd: targetCwd,
+    env: independentSpawnEnv(),
+    sessionId: claudeSessionId,
+    canUseTool: async (toolName, input, ctx) => {
+      if (toolName !== "AskUserQuestion") {
+        return { behavior: "allow", updatedInput: input };
+      }
+      const questions = (input.questions ?? []) as Array<{
+        question: string;
+        header: string;
+        options: Array<{ label: string; description?: string }>;
+        multiSelect?: boolean;
+      }>;
+      pendingQuestionBroadcast = { requestId: ctx.toolUseID, questions };
+      broadcast({ type: "question:ask", requestId: ctx.toolUseID, questions });
+      const answers = await new Promise<Record<string, string | string[]>>((resolve) => {
+        pendingQuestions.set(ctx.toolUseID, resolve);
+      });
+      pendingQuestionBroadcast = null;
+      return { behavior: "allow", updatedInput: { questions, answers } };
+    },
+  },
 });
+
+pushMessage!(seedPrompt.replace(/\s*\n\s*/g, " ").trim());
 
 let currentTree: TreeDoc = await readTree(dir);
 if (!currentTree.topic) currentTree.topic = topic;
+
+(async () => {
+  try {
+    for await (const message of sdkQuery) {
+      if (message.type === "assistant") {
+        for (const block of message.message.content) {
+          if (block.type === "text" && block.text.trim()) {
+            pushTranscript({ kind: "assistant", text: block.text });
+          } else if (block.type === "tool_use" && block.name !== "AskUserQuestion") {
+            // AskUserQuestion gets its own interactive question:ask card
+            // instead (see canUseTool below) — a generic tool_use summary
+            // for it would just duplicate that, unhelpfully.
+            pushTranscript({
+              kind: "tool_use",
+              tool: block.name,
+              summary: summarizeToolInput(
+                block.name,
+                block.input as Record<string, unknown>,
+              ),
+            });
+          }
+        }
+      } else if (message.type === "result") {
+        if (message.subtype !== "success") {
+          pushTranscript({ kind: "system", text: `[turn ended: ${message.subtype}]` });
+        }
+      }
+    }
+    console.error(`[open-gui] session stream ended`);
+  } catch (err) {
+    console.error(`[open-gui] session stream error: ${err}`);
+    broadcast({ type: "fatal", message: String(err) });
+  }
+  broadcast({ type: "session:ended" });
+  setTimeout(shutdown, 500);
+})();
 
 (async () => {
   try {
@@ -259,34 +315,47 @@ function handleWebSocket(socket: WebSocket) {
   cancelIdleShutdown();
   socket.onopen = () => {
     socket.send(JSON.stringify({ type: "config", theme: themeMode }));
-    socket.send(JSON.stringify({ type: "pty:snapshot", data: outputBuffer }));
+    socket.send(JSON.stringify({ type: "transcript:snapshot", entries: transcript }));
     socket.send(JSON.stringify({ type: "tree:update", tree: currentTree }));
+    if (pendingQuestionBroadcast) {
+      socket.send(JSON.stringify({ type: "question:ask", ...pendingQuestionBroadcast }));
+    }
   };
-  socket.onmessage = async (event) => {
+  socket.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data as string);
       switch (msg.type) {
-        case "pty:write":
-          await sidecar.write(msg.data);
+        case "message:send":
+          pushTranscript({ kind: "system", text: `> ${msg.text}` });
+          pushMessage(msg.text);
           break;
-        case "pty:resize":
-          await sidecar.resize(msg.cols, msg.rows);
+        case "question:answer": {
+          const resolve = pendingQuestions.get(msg.requestId);
+          if (resolve) {
+            pendingQuestions.delete(msg.requestId);
+            const summary = Object.entries(msg.answers as Record<string, unknown>)
+              .map(([q, a]) => `${q} → ${Array.isArray(a) ? a.join(", ") : a}`)
+              .join("; ");
+            pushTranscript({ kind: "system", text: `Answered: ${summary}` });
+            resolve(msg.answers);
+          }
           break;
+        }
         case "preview:request": {
           const requestId = msg.requestId;
-          try {
-            const filePath = `${targetCwd}/${msg.path}`.replace(/\/+/g, "/");
-            const content = await Deno.readTextFile(filePath);
-            socket.send(JSON.stringify({ type: "preview:response", requestId, content }));
-          } catch (err) {
-            socket.send(
-              JSON.stringify({
-                type: "preview:response",
-                requestId,
-                error: `could not read ${msg.path}: ${err}`,
-              }),
-            );
-          }
+          Deno.readTextFile(`${targetCwd}/${msg.path}`.replace(/\/+/g, "/"))
+            .then((content) => {
+              socket.send(JSON.stringify({ type: "preview:response", requestId, content }));
+            })
+            .catch((err) => {
+              socket.send(
+                JSON.stringify({
+                  type: "preview:response",
+                  requestId,
+                  error: `could not read ${msg.path}: ${err}`,
+                }),
+              );
+            });
           break;
         }
       }
@@ -320,22 +389,20 @@ await writeSessionRecord(dir, {
   pid: Deno.pid,
   port,
   url: sessionUrl,
-  claudeSessionId: usingRealClaude ? claudeSessionId : null,
+  claudeSessionId,
 });
 
 scheduleIdleShutdown();
 
 console.log(`[open-gui] session ready: ${sessionUrl}`);
 console.log(`[open-gui] state dir: ${dir}`);
-if (usingRealClaude) {
-  console.log(`[open-gui] claude session id: ${claudeSessionId}`);
-  console.log(
-    `[open-gui] to switch to a normal terminal later: stop this session, then run \`claude --resume ${claudeSessionId}\``,
-  );
-}
+console.log(`[open-gui] claude session id: ${claudeSessionId}`);
+console.log(
+  `[open-gui] to switch to a normal terminal later: stop this session, then run \`claude --resume ${claudeSessionId}\``,
+);
 
 function shutdown() {
-  sidecar.kill();
+  sdkQuery.close();
   Deno.exit(0);
 }
 Deno.addSignalListener("SIGINT", shutdown);

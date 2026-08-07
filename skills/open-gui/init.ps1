@@ -25,21 +25,11 @@ if (-not (Get-Command deno -ErrorAction SilentlyContinue)) {
 }
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Write-Host "Node.js not found. The sidecar needs it to run node-pty."
+    Write-Host "Node.js not found. The frontend's build tooling (Next.js) needs it."
     Write-Host "Install Node.js yourself: https://nodejs.org/"
     exit 1
 } else {
     Write-Host "Node.js found: $(node --version)"
-}
-
-$SidecarDir = Join-Path $ScriptDir "server\sidecar"
-if (-not (Test-Path (Join-Path $SidecarDir "node_modules"))) {
-    Write-Host "Installing sidecar dependencies (node-pty native build)..."
-    Push-Location $SidecarDir
-    npm install
-    Pop-Location
-} else {
-    Write-Host "Sidecar dependencies already installed."
 }
 
 $WebDir = Join-Path $ScriptDir "web"

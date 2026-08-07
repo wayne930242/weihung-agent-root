@@ -52,14 +52,14 @@ over the same WebSocket connection used for terminal I/O.
   page
 
 ### Requirement: Split-view layout with persistent tree visibility
-The GUI SHALL display the terminal panel and the tree panel simultaneously in a
+The GUI SHALL display the chat/transcript panel and the tree panel simultaneously in a
 resizable split view by default, and SHALL NOT hide or collapse the tree panel by
 default, regardless of whether any nodes have been written yet.
 
 #### Scenario: Both panels visible on load
 - **WHEN** the browser loads the session page
-- **THEN** both the terminal panel and the tree panel are visible without requiring
-  additional user action
+- **THEN** both the chat/transcript panel and the tree panel are visible without
+  requiring additional user action
 
 #### Scenario: Divider is resizable
 - **WHEN** the user drags the divider between the two panels
@@ -79,66 +79,42 @@ different kinds are visually distinguishable.
   shows its recommendation/resolution, an `info` node shows its text, an `artifact`
   node shows an embed/preview affordance, a `question` node shows its prompt and options)
 
-### Requirement: Node interaction forwards into the single PTY stream
+### Requirement: Node interaction sends a message into the session
 The tree panel SHALL render as a master/detail pair: a compact spine listing every node
 as one row, and a detail pane showing the full content of whichever node is currently
 selected. Interaction affordances (reply boxes, option cards, the "Other" field, the
 notes field) SHALL render only in the detail pane for the selected node, not inline for
 every node at once. Each node SHALL provide an interaction affordance whose submitted
-text is sent to the same PTY stdin used by the terminal panel, and SHALL NOT create a
-separate conversation channel. `question`-type nodes SHALL render clickable option
-cards, an "Other" free-text field, and a notes field, mirroring the `AskUserQuestion`
-tool's own interface; other node types SHALL render a plain free-text box where
-applicable. Every submission, regardless of the originating node's `status`, SHALL be
-prefixed with a reference to that node's id and title, so the receiving `claude` process
-can identify which node is being answered even when multiple nodes are open at once —
-except a question node's option-card selection itself, which is a bare positional
-keystroke, not text (see below).
+text is pushed into the session's streaming input as a plain message (`message:send`,
+`PROTOCOL.md`), and SHALL NOT create a separate conversation channel. `question`-type
+nodes (a `TREE.json`-persisted question from a non-`grill-with-web` consumer — see
+`NODE-FORMAT.md`'s D11 note) SHALL render clickable option cards, an "Other" free-text
+field, and a notes field; other node types SHALL render a plain free-text box where
+applicable. Every submission SHALL be prefixed with a reference to that node's id and
+title, so the session can identify which node is being answered even when multiple nodes
+are open at once.
 
-Empirically verified (2026-08-07) against a real `claude` session: `AskUserQuestion`
-renders as a raw-mode menu widget, not a text prompt. Typing an option's label as PTY
-input does nothing useful for it (a long single-write burst instead trips the same
-paste-detection that swallowed the seed prompt, `main.ts`'s `SEED_SUBMIT_DELAY_MS` fix).
-The system SHALL instead send a bare digit keystroke matching the option's 1-based
-position — this selects AND confirms it in one step, with no trailing `\r`. This is a
-known, accepted staleness risk: it assumes the terminal is still showing *this* node's
-menu at the moment of submission; a stale node's keystroke lands on whatever the
-terminal actually shows right now.
+design.md D11 superseded the previous PTY-based version of this requirement (raw-mode
+menu digit keystrokes, paste-detection timing): a plain streamed message carries no
+terminal-input ambiguity, so option selections, "Other" replies, and notes are now a
+single ordinary text submission each — no multi-step keystroke sequence, no staleness
+risk about "what's currently on screen" (there is no screen to be stale against).
 
-#### Scenario: Text typed in a node reaches the terminal
+#### Scenario: Text typed in a node reaches the session
 - **WHEN** the user selects a node in the spine and submits text from its detail pane's
   input box
-- **THEN** that text is sent to the PTY stdin and appears in the terminal panel's
-  transcript, identically to text typed directly in the terminal
+- **THEN** that text, prefixed with the node's id/title, is sent as a `message:send`
 
-#### Scenario: Selecting a question option reaches the terminal
+#### Scenario: Selecting a question option reaches the session
 - **WHEN** the user selects a `question` node in the spine and clicks an option card in
   its detail pane
-- **THEN** a single digit keystroke matching that option's 1-based position among the
-  node's `options` is sent to the PTY stdin, with no trailing Enter and no label text
+- **THEN** the option's label (plus any notes-field text), prefixed with the node's
+  id/title, is sent as a `message:send`
 
 #### Scenario: Custom reply on a question node
 - **WHEN** the user types into the "Other" field in a `question` node's detail pane
   instead of selecting an option
-- **THEN** the system sends the digit keystroke one past the node's last real option
-  (`options.length + 1`, matching the widget's own "Type something" menu entry),
-  followed by a separate `\r` to confirm it — which exits the menu back to the normal
-  chat prompt — followed by the free text (as an ordinary chat message, prefixed per the
-  node-context rule below)
-
-#### Scenario: Note attached to a selection
-- **WHEN** the user adds text to a `question` node's notes field in its detail pane
-  alongside a selected option
-- **THEN** the note text is sent as a separate follow-up message after the option's
-  digit keystroke, prefixed per the node-context rule below — it cannot be combined into
-  the same keystroke as the option selection itself
-
-#### Scenario: Every submission carries node context
-- **WHEN** the user submits free text from any node's detail-pane input box (a plain
-  reply box, a question node's "Other" field, or a question node's notes follow-up)
-- **THEN** the text sent to the PTY is prefixed with a reference to that node's id and
-  title — this does not apply to a question node's bare option-selection keystroke,
-  which carries no text at all
+- **THEN** that text, prefixed with the node's id/title, is sent as a `message:send`
 
 ### Requirement: Resolved-node document/artifact preview
 The system SHALL let the user open a read-only preview of a node's linked local file
@@ -177,8 +153,7 @@ browser tab.
 The GUI SHALL render in a dark or light visual theme matching the host's Claude Code
 `theme` setting (`~/.claude/settings.json`), not the viewer's OS light/dark preference.
 Both themes SHALL share the same monospace typography and token structure (background,
-panel, border, foreground, dim text, accent) — only the token *values* differ. Both the
-surrounding UI and the embedded terminal panel SHALL use the same resolved theme. When
+panel, border, foreground, dim text, accent) — only the token *values* differ. When
 the setting is missing, unreadable, or does not name a light theme, the GUI SHALL
 default to the dark theme. The GUI SHALL also provide a manual override (auto/dark/light,
 persisted client-side, e.g. `localStorage`) for when the backend's detection doesn't
@@ -192,8 +167,8 @@ match the user's actual environment; "auto" defers to the backend-detected theme
 
 #### Scenario: Light theme follows the config
 - **WHEN** Claude Code's `theme` setting names a light theme
-- **THEN** the GUI renders in the light theme, including the terminal panel's own color
-  scheme, not just the surrounding UI
+- **THEN** the GUI renders in the light theme, including the chat/transcript panel, not
+  just the surrounding UI
 
 #### Scenario: Theme does not follow OS preference
 - **WHEN** the viewer's operating system is set to light mode but Claude Code's own
@@ -207,7 +182,7 @@ match the user's actual environment; "auto" defers to the backend-detected theme
 
 ### Requirement: Optimistic pending indicator for in-flight submissions
 The tree spine and detail pane SHALL visually distinguish a node whose submission was
-just sent to the PTY from one that has not been interacted with, until the next
+just sent to the session from one that has not been interacted with, until the next
 `tree:update` shows a change to that specific node. This state is local to the browser
 tab — it is never written to `TREE.json` (per `Requirement: TREE.json is Claude-authored
 structured data`); it exists only so the user has feedback that their input was received
@@ -274,3 +249,92 @@ mouse.
 - **WHEN** a `question` node's detail pane has focus (not inside a text input) and the
   user presses `n`
 - **THEN** keyboard focus moves to the notes field
+
+### Requirement: Card-based transcript pane (design.md D11)
+The chat/transcript panel SHALL render the session's message stream as a list of
+discrete cards (assistant text, one-line tool-call summaries, system records), not raw
+terminal text, and SHALL provide a free-text input for sending new messages into the
+session.
+
+#### Scenario: Assistant text renders as a card
+- **WHEN** the session emits assistant text
+- **THEN** it appears as its own card, rendered as markdown
+
+#### Scenario: A tool call renders as a one-line summary card
+- **WHEN** the session's Claude calls a tool other than `AskUserQuestion`
+- **THEN** a card appears naming the tool and a short summary of its input — not full
+  tool-result content
+
+#### Scenario: Free-text input sends a message
+- **WHEN** the user types into the transcript pane's input box and submits
+- **THEN** that text is sent as a `message:send`, with no node-context prefix
+
+### Requirement: Live AskUserQuestion answering
+`AskUserQuestion` calls SHALL render as an interactive card in the transcript pane at
+the moment the tool is called, addressing every question in that call (a single
+`AskUserQuestion` call MAY carry 1-4 questions, each with 2-4 options and an optional
+`multiSelect` flag) — not written to `TREE.json` and not requiring a page reload to
+appear. Tool execution SHALL remain blocked until the user answers.
+
+#### Scenario: Question card appears immediately
+- **WHEN** the session's Claude calls `AskUserQuestion`
+- **THEN** a question card appears in the transcript pane within the same update cycle,
+  before any corresponding `TREE.json` write (there is none)
+
+#### Scenario: A browser connecting after the call still sees it
+- **WHEN** a browser connects (or reconnects) while an `AskUserQuestion` call is still
+  unanswered
+- **THEN** the pending question card appears on connect, not only to browsers that were
+  already connected when the call fired
+
+#### Scenario: Answering resolves the tool call
+- **WHEN** the user picks an option (or types free text) for every question in the card
+  and submits
+- **THEN** the answers are sent as `question:answer`, the session's blocked tool call
+  resolves, and the conversation continues
+
+#### Scenario: Multi-select question collects multiple picks
+- **WHEN** a question's `multiSelect` is true
+- **THEN** the user can pick more than one option before submitting, and all picks are
+  included for that question in the submitted answer
+
+### Requirement: Promote a transcript card into a tree node
+A card in the transcript pane (assistant text or a tool-call summary) SHALL provide a
+control that asks the session's Claude to add a corresponding `TREE.json` node, without
+the frontend writing to `TREE.json` directly — `TREE.json` remains Claude-authored only
+(`Requirement: TREE.json is Claude-authored structured data`, `open-gui-session`).
+
+#### Scenario: Promoting a card sends a message, not a file write
+- **WHEN** the user activates a card's "加進 tree" control
+- **THEN** a `message:send` asking Claude to add a node for that card's content is sent;
+  no `TREE.json` write happens directly from the browser
+
+#### Scenario: Promote control is not offered on system cards
+- **WHEN** a transcript entry is a system-kind record (an echoed user message, an
+  "Answered: …" record)
+- **THEN** it does not offer a "加進 tree" control
+
+### Requirement: Reconsider a resolved tree node
+A resolved `decision` or `question` node's detail pane SHALL provide a control that asks
+the session's Claude to reopen that node and update or remove anything in `TREE.json`
+that depended on it. This is a new forward turn, not a rollback — it does not remove or
+alter the node's prior resolution/answer in the session's own conversation history, only
+what the session's Claude subsequently writes to `TREE.json`. This control is
+intentionally not offered on the transcript pane's `AskUserQuestion` cards: an answered
+tool call cannot be un-sent, only a persisted `TREE.json` node can actually be rewritten.
+
+#### Scenario: Reconsider sends a message, not a rollback
+- **WHEN** the user activates a resolved `decision` or `question` node's "重新考慮"
+  control
+- **THEN** a `message:send` asking Claude to reopen that node (by id and title) and
+  reconcile dependent nodes is sent
+
+#### Scenario: Not offered on open nodes or other types
+- **WHEN** a node is `open`, or is an `artifact`/`info` node
+- **THEN** no "重新考慮" control is shown for it
+
+#### Scenario: Not offered on transcript question cards
+- **WHEN** the user views an already-answered `AskUserQuestion` card in the transcript
+  pane
+- **THEN** no retract/reconsider control is offered there — only the equivalent control
+  on a `TREE.json` node, if the interview promoted that decision into one

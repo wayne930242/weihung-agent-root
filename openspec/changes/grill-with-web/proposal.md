@@ -9,15 +9,21 @@ alignment is visible continuously rather than reconstructed after the fact.
 
 ## What Changes
 
+**Revision (2026-08-07, see design.md D11):** the browser session's underlying mechanism
+changed from a PTY-wrapped `claude` CLI (xterm.js + a Node.js `node-pty` sidecar) to the
+Agent SDK driven directly from the Deno backend. The sections below describe the current,
+post-D11 architecture; `design.md` keeps the full history of what was tried first and why
+it was replaced.
+
 This change ships as **two skills**, split so the browser-GUI infrastructure is
 independently usable rather than locked inside the grilling use case (see design.md D8):
 
 - **`open-gui`** (new, standalone, general-purpose skill): spins up a session-scoped
-  browser GUI wrapping a real, full-fidelity interactive `claude` CLI session
-  (permission prompts, tool use, everything) via a PTY-backed terminal — not a
-  simplified or headless chat approximation. A live, generically-typed node tree
-  (`decision` / `question` / `artifact` / `info`) renders alongside the terminal, driven
-  by a structured `TREE.json` file the session's Claude writes incrementally. Usable on
+  browser GUI driving a real `claude` session through the Agent SDK — tool calls,
+  including `AskUserQuestion`, arrive as structured messages and render as interactive
+  cards in a chat/transcript pane, not a wrapped terminal. A live, generically-typed node
+  tree (`decision` / `question` / `artifact` / `info`) renders alongside it, driven by a
+  structured `TREE.json` file the session's Claude writes incrementally. Usable on
   its own for any Claude Code session, not just grilling. **Fully passive lifecycle**:
   once started it never proactively closes the session — that is left entirely to
   whichever skill or user started it.
@@ -39,16 +45,18 @@ independently usable rather than locked inside the grilling use case (see design
 
 ### New Capabilities
 
-- `open-gui-terminal`: the PTY-backed, full-fidelity terminal experience in the browser
-  — spawning a fresh `claude` process, streaming its I/O over WebSocket, surviving
+- `open-gui-chat` (originally `open-gui-terminal`, renamed under D11): the Agent-SDK-
+  driven session — spawning a fresh `claude` session, pushing its message stream over
+  WebSocket as a card-based transcript, live `AskUserQuestion` answering, surviving
   browser disconnects/reconnects, and the static frontend serving.
 - `open-gui-tree`: the live, generically-typed node tree — the `TREE.json` schema
   (discriminated union over `decision` / `question` / `artifact` / `info` node types),
   incremental write discipline, real-time push to the browser, the split-view GUI layout
-  and its op-sec visual theme, per-node interaction (free-text input, and for `question`
-  nodes, clickable options plus an "Other" free-text reply and a notes field, mirroring
-  the `AskUserQuestion` tool's own interface) as a convenience entry point into the
-  single PTY stdin, and the resolved-node document/artifact preview panel.
+  and its op-sec visual theme, per-node interaction (free-text input, and for a
+  `TREE.json`-persisted `question` node, clickable options plus an "Other" free-text
+  reply and a notes field) as a message sent into the session, promoting a transcript
+  card into a tree node, reconsidering a resolved node, and the resolved-node
+  document/artifact preview panel.
 - `open-gui-session`: the `open-gui` skill's own thin orchestration — computing the
   per-session state directory, delivering the seed prompt, recording the backend
   process's PID/port for an external caller to use, starting the backend, and browser
@@ -68,12 +76,13 @@ independently usable rather than locked inside the grilling use case (see design
 ## Impact
 
 - **New code**: `skills/open-gui/` (SKILL.md, NODE-FORMAT.md, a Deno backend under
-  `server/` that talks to a Node.js sidecar for `node-pty`, a Next.js static-export
-  frontend under `web/`) and `skills/grill-with-web/` (SKILL.md only — no server/web
-  code, it reuses `open-gui`'s).
-- **New runtime dependencies**: Deno, Node.js, and `node-pty` (>=1.1.0-beta37) running
-  under a small Node.js sidecar process (not directly under Deno's npm compatibility
-  layer — verified unstable, see design.md D3).
+  `server/` driving `@anthropic-ai/claude-agent-sdk` directly via an `npm:` specifier, a
+  Next.js static-export frontend under `web/`) and `skills/grill-with-web/` (SKILL.md
+  only — no server/web code, it reuses `open-gui`'s).
+- **New runtime dependencies**: Deno (which also loads the Agent SDK — no separate
+  runtime for it) and Node.js (needed only for the frontend's own build tooling, not at
+  runtime). `node-pty`/a Node.js sidecar were tried first and abandoned — see design.md
+  D3 (the original instability finding) and D11 (why the whole PTY approach was dropped).
 - **No changes to existing skills** — `grill-with-docs`, `grilling`, and their format
   files (`CONTEXT-FORMAT.md`, `ADR-FORMAT.md`) are consumed as-is.
 - **Target project repos** gain one new artifact type when `grill-with-web` is used:
