@@ -2,17 +2,17 @@
 
 import { Handle, Position } from "@xyflow/react";
 import CardBody from "./CardBody";
-import Thread from "./Thread";
 import FreeTextBox from "./FreeTextBox";
 import Markdown from "./Markdown";
 import NodeTypeIcon from "./NodeTypeIcon";
+import { cn } from "../lib/cn";
 
 export default function InfoCard({ id, data }) {
-  const { node, thread, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus } = data;
 
   return (
     <div
-      className={`canvas-card canvas-card-info${focused ? " canvas-card-focused" : ""}`}
+      className={cn("canvas-card", "canvas-card-info", "nodrag", "nopan", focused && "canvas-card-focused")}
       data-card-id={id}
       onClick={onFocus}
     >
@@ -25,7 +25,6 @@ export default function InfoCard({ id, data }) {
       </div>
       <CardBody>
         <Markdown text={node.text} />
-        <Thread entries={thread} limit={1} />
       </CardBody>
       <div className="canvas-card-footer">
         <FreeTextBox node={node} placeholder="Add a note…" />

@@ -10,6 +10,10 @@ import { useSocket } from "./SocketProvider";
 export default function ChatBar() {
   const { send } = useSocket();
   const [draft, setDraft] = useState("");
+  // The ":" shortcut hint lives in the placeholder itself, not just the
+  // bottom shortcut-hints bar (user: "/ 和 : 放到相應的 input 的 placeholder
+  // （當還沒 focus 的時候）") — only while unfocused.
+  const [focused, setFocused] = useState(false);
 
   function submit() {
     if (!draft.trim()) return;
@@ -21,7 +25,9 @@ export default function ChatBar() {
     <div className="chat-bar">
       <textarea
         value={draft}
-        placeholder="Message…"
+        placeholder={focused ? "Message…" : "Message… (:)"}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {

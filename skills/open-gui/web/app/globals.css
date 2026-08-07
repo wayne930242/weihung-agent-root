@@ -101,6 +101,14 @@ button:focus {
   display: flex;
   flex-direction: column;
 }
+/* Lets any node position change (dagre re-layout, or 收斂's collapse-into-
+   root — CanvasView.js's `converging` state) animate smoothly. No animation
+   library needed: React Flow already positions nodes via an inline
+   `transform: translate(...)`, so a plain CSS transition on that property
+   is enough. */
+.react-flow__node {
+  transition: transform 0.5s ease;
+}
 .canvas-flow {
   flex: 1;
   min-height: 0;
@@ -129,12 +137,41 @@ button:focus {
   gap: 8px;
 }
 
+.shortcut-hints {
+  display: flex;
+  gap: 14px;
+  padding: 4px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--dim);
+  font-size: 12px;
+  flex: 0 0 auto;
+  /* Same reasoning as .chat-bar's z-index above — .detail-sidebar reaches
+     the viewport bottom and would otherwise paint over this row too. */
+  position: relative;
+  z-index: 10;
+}
+.shortcut-hints kbd {
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+  color: var(--fg);
+}
+
 .chat-bar {
   display: flex;
   gap: 8px;
   padding: 8px 14px;
   border-top: 1px solid var(--border);
   flex: 0 0 auto;
+  /* .detail-sidebar is `position: fixed; bottom: 0`, reaching the literal
+     viewport bottom regardless of this row's actual height — without a
+     higher z-index than the sidebar's (5), it painted over the right ~420px
+     of this bar, hiding the Send button whenever the sidebar was open
+     (found via a blind usability test: "the Send button... was no longer
+     visible at all"). */
+  position: relative;
+  z-index: 10;
 }
 .chat-bar textarea {
   flex: 1;
@@ -160,6 +197,18 @@ button:focus {
   color: var(--accent);
   border-color: var(--accent);
 }
+.agent-busy-indicator {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  animation: agent-busy-pulse 1.2s ease-in-out infinite;
+}
+@keyframes agent-busy-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 
 .canvas-card {
   width: 340px;
@@ -172,6 +221,16 @@ button:focus {
   border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
+  /* React Flow sets pointer-events: none on its own node wrapper when
+     elementsSelectable={false} (confirmed via getComputedStyle, not
+     guessed) — form elements inside still worked (their own default
+     behavior), but a click on a card's own background/text passed straight
+     through to the canvas underneath, never reaching this element's
+     onClick. Re-enabling it here is what actually makes click-to-focus
+     work, not the nodrag/nopan classes (those only opt out of React Flow's
+     drag/pan *interpretation* of a mousedown — a separate concern from the
+     pointer-events CSS property). */
+  pointer-events: auto;
 }
 .canvas-card-root {
   border-color: var(--accent);
@@ -294,11 +353,45 @@ button:focus {
 .question-submit {
   margin-top: 10px;
 }
+.question-confirm {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.question-confirm-value {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  color: var(--accent);
+}
+.question-confirm-actions {
+  flex: 0 0 auto;
+  /* .question-submit's own margin-top (below) is right for its OTHER use
+     (a standalone button under a list of options) but wrong here — inside
+     this flex ROW it pushes Submit 10px lower than its 重選 sibling, the
+     mismatched-height the user spotted. The gap this needs already comes
+     from .question-confirm's own padding-top/border-top instead. */
+  display: flex;
+  gap: 6px;
+}
+.question-confirm-actions .question-submit {
+  margin-top: 0;
+}
 
 .reconsider-btn {
   margin-left: auto;
   font-size: 11px;
   padding: 2px 8px;
+  /* Matches .status-badge's font-size/padding/line-height exactly — these
+     two sit side by side in .canvas-card-header, and CJK ("重新考慮") vs
+     Latin ("RESOLVED") glyphs render at different heights even at equal
+     font-size unless line-height is pinned explicitly (same reasoning as
+     the base `button` rule above, user-raised again: "高度又不一致，而且還
+     中英夾雜"). */
+  line-height: 1.4;
 }
 
 .node-type-icon {
@@ -310,13 +403,13 @@ button:focus {
 }
 
 .status-badge {
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 1.4;
   text-transform: uppercase;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 3px;
   border: 1px solid var(--border);
   color: var(--dim);
-  margin-bottom: 6px;
   display: inline-block;
 }
 .status-resolved {
@@ -493,9 +586,25 @@ button:focus {
   z-index: 5;
 }
 .detail-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-weight: bold;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.detail-sidebar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-sidebar-close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  padding: 2px 8px;
   flex: 0 0 auto;
 }
 .detail-sidebar-body {

@@ -10,6 +10,11 @@ import { buildSubmission } from "../lib/submission";
 export default function FreeTextBox({ node, placeholder = "Reply…", onSubmit }) {
   const { send } = useSocket();
   const [text, setText] = useState("");
+  // The "/" shortcut hint lives in the placeholder itself, not just the
+  // bottom shortcut-hints bar (user: "/ 和 : 放到相應的 input 的 placeholder
+  // （當還沒 focus 的時候）") — only while unfocused, since it's redundant
+  // once you're already typing here.
+  const [focused, setFocused] = useState(false);
 
   function submit() {
     if (!text.trim()) return;
@@ -23,7 +28,9 @@ export default function FreeTextBox({ node, placeholder = "Reply…", onSubmit }
       <textarea
         className="nodrag nopan"
         value={text}
-        placeholder={placeholder}
+        placeholder={focused ? placeholder : `${placeholder} (/)`}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           // Guard against IME composition (e.g. Chinese input): a composing

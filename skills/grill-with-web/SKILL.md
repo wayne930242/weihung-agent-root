@@ -47,4 +47,6 @@ Unlike `open-gui` alone, you own completion detection here. Poll the state direc
 
 ## 4. Stop and report
 
-Read `session.json` in the state directory for the backend's `pid`; send it `SIGTERM` (this is what actually closes the session — `open-gui` itself never does, by design). Then report back to the user: the written document paths (`CONTEXT.md` entries, any ADRs, `docs/grill/<slug>.md`).
+Read `session.json` in the state directory for the backend's `pid`; send it `SIGTERM` (this is what actually closes the session — `open-gui` itself never does, by design).
+
+**Then read the outcome back into this session, not just its file paths.** The whole point of running the interview in a browser instead of here is that the decision still has to land back in *this* conversation — a list of file paths makes the user go re-open them to find out what was actually decided, which defeats that. Read `TREE.json` (every node's `resolution`), `docs/grill/<slug>.md`, and any `CONTEXT.md`/ADR entries it wrote, then report the actual decisions — what was resolved and why — directly in your reply. File paths are supporting references after that summary, not a replacement for it.

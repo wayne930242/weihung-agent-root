@@ -611,6 +611,52 @@ logic was built on top of it, rather than assumed.
   question's own leading tag for display while still deciding routing from the first
   question only.
 
+**Revision (2026-08-07): follow-up discussion chains downward as ephemeral cards, not
+one card accumulating a thread.** Live use of "重新考慮" surfaced the gap directly: the
+agent's post-reconsideration analysis didn't carry the reconsidered node's tag, so it fell
+back to the root card by design (per the tag-routing rule above) — but for a user watching
+a specific node get re-litigated, seeing that reasoning land on root, mixed in with
+everything else, reads as broken continuity, not "correctly untagged." One card silently
+absorbing every reply into a `Thread`/`limit={1}` preview + DetailSidebar-on-focus doesn't
+communicate "this is round 2 of the same discussion" the way a visibly separate card,
+chained below the first, does.
+
+**Considered and rejected: have the agent write real child `decision` nodes into
+`TREE.json` for each round of follow-up.** This was the first framing put to the user, who
+initially picked it — but it fails a straightforward cost check against what's actually
+needed: `NODE-FORMAT.md` scopes `TREE.json` to decisions/artifacts/info/questions, not
+conversational back-and-forth, and persisting every round would need new schema, new
+`grill-with-web/SKILL.md` instructions, and backend tree-traversal to compute an
+attachment point — all to solve what is, underneath, a rendering problem. Superseded below.
+
+**Decision: chain ephemeral canvas cards, `TREE.json` untouched.** Reuses the pattern
+D12 already ships for live `AskUserQuestion` cards — a React Flow node synthesized from
+data the frontend already has, with an edge to a parent, but never written to
+`TREE.json`. Each subsequent tagged reply to an already-resolved-once node's branch
+becomes its own card chained below the previous one, instead of folding into that node's
+`Thread`. `TREE.json` gains a node only when the agent, as always, judges the round has
+actually reached a new decision worth persisting — content-authoring stays entirely
+Claude's call, unchanged from D4. **This is not a D4 reversal**: D4 rejected inferring
+structure from unstructured transcript/PTY prose; deciding which already-tag-routed
+thread entry chains under which card is a pure function over structured data the frontend
+already computes (`threadsByTarget`, the same `#[id]` routing D12 already relies on) — the
+same category as D12's existing narrow `patchNodeStatus` exception, not the alternative
+D4 rejected.
+
+**Attachment rule: most recently active node in the branch, not "deepest."** Computing a
+true deepest-open-descendant would need actual tree traversal; the existing
+`lastEntryTarget` tracking (CanvasView.js — which card's thread grew most recently)
+already answers "where is this branch's discussion right now" without it. Generalizes
+per-branch: when a new tagged reply lands, it chains under whichever card in that node's
+branch most recently received an entry, defaulting to the tagged node itself if the
+branch has no chained cards yet.
+
+**No cap on chain length.** A single branch could in principle grow to ten-plus rounds
+(~3,500px at current `CARD_HEIGHT`/`ranksep`) — accepted rather than building
+collapse/expand UI for it, since AutoPan already centers the viewport on whatever card
+most recently grew and React Flow's own pan/zoom handles the rest. Revisit only if this
+proves to be a real problem in practice, not preemptively.
+
 ## Risks / Trade-offs
 
 - **[Risk] `npm:node-pty` under Deno is a newly-viable, lightly-battle-tested path** and

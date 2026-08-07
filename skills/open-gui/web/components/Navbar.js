@@ -6,13 +6,10 @@ import ThemeToggle from "./ThemeToggle";
 // Session-level controls, fixed chrome outside the pannable canvas (user:
 // "定案 or stop or 收斂都應該放到 navbar") — these must stay reachable
 // regardless of where the viewport has panned/zoomed to, unlike a card
-// that's part of the graph itself.
-export default function Navbar({ topic, status }) {
+// that's part of the graph itself. `onConverge` is owned by CanvasView (it
+// needs to run the collapse animation before sending session:finalize).
+export default function Navbar({ topic, status, busy, onConverge }) {
   const { send } = useSocket();
-
-  function finalize() {
-    send({ type: "session:finalize" });
-  }
 
   function stop() {
     send({ type: "session:stop" });
@@ -22,10 +19,11 @@ export default function Navbar({ topic, status }) {
     <div className="navbar">
       <span className="navbar-topic">{topic || "open-gui"}</span>
       {status && <span className={`tree-status tree-status-${status}`}>{status}</span>}
+      {busy && <span className="agent-busy-indicator">Thinking…</span>}
       <div className="navbar-right">
         <ThemeToggle />
-        <button className="finalize-btn" onClick={finalize} title="Ask Claude to wrap up now">
-          定案
+        <button className="finalize-btn" onClick={onConverge} title="Collapse and ask Claude to wrap up">
+          收斂
         </button>
         <button className="stop-btn" onClick={stop} title="Stop this session now">
           Stop

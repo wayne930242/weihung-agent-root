@@ -2,31 +2,35 @@
 
 import { Handle, Position } from "@xyflow/react";
 import CardBody from "./CardBody";
-import Thread from "./Thread";
 import FreeTextBox from "./FreeTextBox";
 import StatusBadge from "./StatusBadge";
 import NodeTypeIcon from "./NodeTypeIcon";
 import { usePreview } from "./PreviewProvider";
 import { useSocket } from "./SocketProvider";
+import { cn } from "../lib/cn";
 
 // Ask (recommendation) and answer (resolution) on one card (user: "把 ask
-// 和 answer 放恣同一張卡片上就好"), a "重新考慮" control once resolved (see
-// NODE-FORMAT.md, design.md D12), and only its latest #[id]-routed thread
-// entry (user: "card 顯示最後的回應") — the full history and any live
-// pending question render in DetailSidebar once this card is focused.
+// 和 answer 放恣同一張卡片上就好") plus a "重新考慮" control once resolved (see
+// NODE-FORMAT.md, design.md D12). #[id]-routed follow-up replies no longer
+// render inline here — each is its own chained ThreadEntryCard beneath this
+// one instead (design.md D12's later revision).
 export default function DecisionCard({ id, data }) {
   const { send } = useSocket();
   const { openPreview } = usePreview();
-  const { node, thread, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus } = data;
   const resolved = node.status === "resolved";
 
   function reconsider() {
-    send({ type: "node:reconsider", nodeId: node.id, title: node.title });
+    // Carries the previous resolution along so the agent's next message can
+    // withdraw that specific conclusion with context, not just "reconsider
+    // this" with nothing to reconsider FROM (user: "重新考慮只需要把前一題的
+    // 結論帶脈絡重送，並且表示撤回前輪就好").
+    send({ type: "node:reconsider", nodeId: node.id, title: node.title, previousResolution: node.resolution });
   }
 
   return (
     <div
-      className={`canvas-card canvas-card-decision${focused ? " canvas-card-focused" : ""}`}
+      className={cn("canvas-card", "canvas-card-decision", "nodrag", "nopan", focused && "canvas-card-focused")}
       data-card-id={id}
       onClick={onFocus}
     >
@@ -51,7 +55,6 @@ export default function DecisionCard({ id, data }) {
             View doc →
           </button>
         )}
-        <Thread entries={thread} limit={1} />
       </CardBody>
       <div className="canvas-card-footer">
         <FreeTextBox node={node} />

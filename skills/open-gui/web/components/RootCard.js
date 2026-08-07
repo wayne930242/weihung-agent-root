@@ -3,6 +3,7 @@
 import { Handle, Position } from "@xyflow/react";
 import CardBody from "./CardBody";
 import Thread from "./Thread";
+import { cn } from "../lib/cn";
 
 // The canvas's always-present root card — the graph's anchor and the home
 // for every untagged transcript entry (general chat, unlabeled tool-use/
@@ -17,7 +18,7 @@ export default function RootCard({ id, data }) {
 
   return (
     <div
-      className={`canvas-card canvas-card-root${focused ? " canvas-card-focused" : ""}`}
+      className={cn("canvas-card", "canvas-card-root", "nodrag", "nopan", focused && "canvas-card-focused")}
       data-card-id={id}
       onClick={onFocus}
     >

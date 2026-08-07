@@ -3,11 +3,11 @@
 import { useCallback, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import CardBody from "./CardBody";
-import Thread from "./Thread";
 import StatusBadge from "./StatusBadge";
 import NodeTypeIcon from "./NodeTypeIcon";
 import { useSocket } from "./SocketProvider";
 import { buildSubmission } from "../lib/submission";
+import { cn } from "../lib/cn";
 
 // A `question`-type TREE.json node — persisted by a non-`grill-with-web`
 // consumer (NODE-FORMAT.md's D11 note: grill-with-web answers live instead,
@@ -15,9 +15,14 @@ import { buildSubmission } from "../lib/submission";
 // submitted as a plain message like any other node interaction.
 export default function QuestionTreeCard({ id, data }) {
   const { send } = useSocket();
-  const { node, thread, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus } = data;
   const [notes, setNotes] = useState("");
   const [customText, setCustomText] = useState("");
+  // "/" and "e" shortcut hints live in the placeholder itself (user: "/ 和 :
+  // 放到相應的 input 的 placeholder（當還沒 focus 的時候）") — only while
+  // unfocused.
+  const [otherFocused, setOtherFocused] = useState(false);
+  const [notesFocused, setNotesFocused] = useState(false);
   const optionCount = node.options?.length ?? 0;
   const resolved = node.status === "resolved";
 
@@ -42,12 +47,16 @@ export default function QuestionTreeCard({ id, data }) {
   );
 
   function reconsider() {
-    send({ type: "node:reconsider", nodeId: node.id, title: node.title });
+    // Carries the previous answer along so the agent's next message can
+    // withdraw that specific conclusion with context (user: "重新考慮只需要
+    // 把前一題的結論帶脈絡重送，並且表示撤回前輪就好").
+    const previousResolution = node.answer?.selectedLabel ?? node.answer?.customText;
+    send({ type: "node:reconsider", nodeId: node.id, title: node.title, previousResolution });
   }
 
   return (
     <div
-      className={`canvas-card canvas-card-question${focused ? " canvas-card-focused" : ""}`}
+      className={cn("canvas-card", "canvas-card-question", "nodrag", "nopan", focused && "canvas-card-focused")}
       data-card-id={id}
       onClick={onFocus}
     >
@@ -93,8 +102,10 @@ export default function QuestionTreeCard({ id, data }) {
           <input
             type="text"
             className="nodrag nopan"
-            placeholder="Other…"
+            placeholder={otherFocused ? "Other…" : "Other… (/)"}
             value={customText}
+            onFocus={() => setOtherFocused(true)}
+            onBlur={() => setOtherFocused(false)}
             onChange={(e) => setCustomText(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.nativeEvent.isComposing) {
@@ -116,11 +127,12 @@ export default function QuestionTreeCard({ id, data }) {
         </div>
         <textarea
           className="node-notes nodrag nopan"
-          placeholder="Notes…"
+          placeholder={notesFocused ? "Notes…" : "Notes… (e)"}
           value={notes}
+          onFocus={() => setNotesFocused(true)}
+          onBlur={() => setNotesFocused(false)}
           onChange={(e) => setNotes(e.target.value)}
         />
-        <Thread entries={thread} limit={1} />
       </CardBody>
     </div>
   );

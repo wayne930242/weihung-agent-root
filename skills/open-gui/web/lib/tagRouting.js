@@ -24,17 +24,14 @@ export function routeTaggedText(rawText, nodesById) {
   return { targetNodeId: id, text: rawText.slice(match[0].length) };
 }
 
-// Same routing rule applied to a live AskUserQuestion call — a call carries
-// 1-4 questions, but routing is decided once per call from the first
-// question's tag only (not split across nodes). Every question's own text
-// still gets its leading tag stripped for display, independent of routing,
-// so a later question that Claude also tagged (common when a call spans
-// more than one node's topic) doesn't show raw `#[id]` syntax to the user.
-export function routeQuestion(questions, nodesById) {
-  const { targetNodeId } = routeTaggedText(questions[0]?.question ?? "", nodesById);
-  const stripped = questions.map((q) => ({
-    ...q,
-    question: routeTaggedText(q.question, nodesById).text,
-  }));
-  return { targetNodeId, questions: stripped };
+// Same routing rule applied to each question in a live AskUserQuestion call
+// independently — a call carries 1-4 questions, and each becomes its own
+// ephemeral canvas card (design.md D12 revision, user: "三個問題三張卡片，
+// 然後都接到上層的 root" — a multi-question call spanning several nodes'
+// topics was rendering as one bundled UI, not one card per question).
+export function routeQuestions(questions, nodesById) {
+  return questions.map((q) => {
+    const { targetNodeId, text } = routeTaggedText(q.question, nodesById);
+    return { ...q, question: text, targetNodeId };
+  });
 }

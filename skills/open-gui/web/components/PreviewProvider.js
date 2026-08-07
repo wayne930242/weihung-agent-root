@@ -43,8 +43,13 @@ export function PreviewProvider({ children }) {
     (path) => {
       const requestId = crypto.randomUUID();
       requestIdRef.current = requestId;
-      setState({ open: true, path, loading: true, content: null, error: null });
-      send({ type: "preview:request", requestId, path });
+      // `doc`/`path` may carry a trailing `#heading` fragment (e.g.
+      // "CONTEXT.md#language") — that fragment isn't part of the filesystem
+      // path, so only the part before it is sent to the server's
+      // preview:request reader.
+      const filePath = path.split("#")[0];
+      setState({ open: true, path: filePath, loading: true, content: null, error: null });
+      send({ type: "preview:request", requestId, path: filePath });
     },
     [send],
   );

@@ -2,24 +2,24 @@
 
 import { Handle, Position } from "@xyflow/react";
 import CardBody from "./CardBody";
-import Thread from "./Thread";
 import FreeTextBox from "./FreeTextBox";
 import NodeTypeIcon from "./NodeTypeIcon";
 import { usePreview } from "./PreviewProvider";
+import { cn } from "../lib/cn";
 
 // NODE-FORMAT.md: `kind` defaults to "file" (local path, previewed via the
 // existing preview:request/preview:response flow). "url" iframes a
-// claude.ai artifact link directly. Shows only its latest thread entry
-// (design.md D12) — full history/live pending questions are DetailSidebar's
-// job once focused.
+// claude.ai artifact link directly. #[id]-routed follow-up replies render as
+// their own chained ThreadEntryCard beneath this one (design.md D12's later
+// revision), not inline here.
 export default function ArtifactCard({ id, data }) {
   const { openPreview } = usePreview();
-  const { node, thread, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus } = data;
   const kind = node.kind ?? "file";
 
   return (
     <div
-      className={`canvas-card canvas-card-artifact${focused ? " canvas-card-focused" : ""}`}
+      className={cn("canvas-card", "canvas-card-artifact", "nodrag", "nopan", focused && "canvas-card-focused")}
       data-card-id={id}
       onClick={onFocus}
     >
@@ -50,7 +50,6 @@ export default function ArtifactCard({ id, data }) {
             Preview {node.path}
           </button>
         )}
-        <Thread entries={thread} limit={1} />
       </CardBody>
       <div className="canvas-card-footer">
         <FreeTextBox node={node} />

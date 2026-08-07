@@ -142,6 +142,11 @@ const inputStream: AsyncIterable<SDKUserMsg> = {
     const pending: SDKUserMsg[] = [];
     let waiting: ((r: IteratorResult<SDKUserMsg>) => void) | null = null;
     pushMessage = (text: string) => {
+      // A blind usability test found no way to tell "the agent is working
+      // on this" from "nothing is happening" — no spinner, no indicator, at
+      // all, anywhere. `agent:busy`/`agent:idle` (paired with the `result`
+      // handler below) give the frontend that signal.
+      broadcast({ type: "agent:busy" });
       const msg: SDKUserMsg = {
         type: "user",
         message: { role: "user", content: text },
@@ -213,6 +218,12 @@ const sdkQuery = query({
       }>;
       pendingQuestionBroadcast = { requestId: ctx.toolUseID, questions };
       broadcast({ type: "question:ask", requestId: ctx.toolUseID, questions });
+      // A pending question is a "waiting on you" pause, not "agent is
+      // still working" — the tool call blocks the SDK's own turn from ever
+      // reaching a `result` message until answered, so without this the
+      // busy indicator would stay lit the whole time you're the one being
+      // asked to act.
+      broadcast({ type: "agent:idle" });
       const answers = await new Promise<Record<string, string | string[]>>((resolve) => {
         pendingQuestions.set(ctx.toolUseID, resolve);
       });
@@ -252,6 +263,7 @@ if (!currentTree.topic) currentTree.topic = topic;
         if (message.subtype !== "success") {
           pushTranscript({ kind: "system", text: `[turn ended: ${message.subtype}]` });
         }
+        broadcast({ type: "agent:idle" });
       }
     }
     console.error(`[open-gui] session stream ended`);
@@ -339,11 +351,32 @@ function handleWebSocket(socket: WebSocket) {
           const resolve = pendingQuestions.get(msg.requestId);
           if (resolve) {
             pendingQuestions.delete(msg.requestId);
-            const summary = Object.entries(msg.answers as Record<string, unknown>)
-              .map(([q, a]) => `${q} → ${Array.isArray(a) ? a.join(", ") : a}`)
-              .join("; ");
-            pushTranscript({ kind: "system", text: `Answered: ${summary}` });
+            // One echo PER question, not one joined "Answered: ..." summary
+            // — the old single-string form put "Answered: " before each
+            // question's own leading #[id] tag, breaking the frontend's
+            // leading-tag-anchor routing (lib/tagRouting.js) so every
+            // answer fell to the root card regardless of which node the
+            // question was actually about, and joining multiple questions
+            // into one string couldn't route to more than one node anyway.
+            // A live-question card is ephemeral once answered (removed from
+            // `liveQuestions` — CanvasView.js), so without this echo
+            // becoming a chain card, the answer left no visible trace at
+            // all (user: "使用者的心智圖要怎麼建立").
+            for (const [q, a] of Object.entries(msg.answers as Record<string, unknown>)) {
+              const answerText = Array.isArray(a) ? a.join(", ") : String(a);
+              pushTranscript({ kind: "system", text: `${q} → ${answerText}` });
+            }
             broadcast({ type: "question:resolved", requestId: msg.requestId });
+            // Resolving this promise un-blocks canUseTool and lets the SDK's
+            // turn continue running — but nothing else on this path signals
+            // that (unlike message:send/node:reconsider/session:finalize,
+            // which all go through pushMessage's own agent:busy broadcast).
+            // Without this, answering a live question leaves the busy pill
+            // dark for however long the agent keeps working before its next
+            // question:ask/result — observed via a blind usability test as a
+            // silent ~60-90s gap after the last branch's answer, right when
+            // the agent was actually still finalizing.
+            broadcast({ type: "agent:busy" });
             resolve(msg.answers);
           }
           break;
@@ -351,15 +384,26 @@ function handleWebSocket(socket: WebSocket) {
         case "node:reconsider": {
           const nodeId = msg.nodeId as string;
           const title = msg.title as string;
+          const previousResolution = msg.previousResolution as string | undefined;
           patchNodeStatus(dir, nodeId, "open")
             .then((found) => {
               if (!found) return;
-              // Leading #[nodeId] so this echo routes onto the reconsidered
-              // node's own card, same convention as buildSubmission.
-              pushTranscript({ kind: "system", text: `#[${nodeId}] Reconsider requested: "${title}"` });
+              // No transcript echo here (unlike buildSubmission's own-reply
+              // echoes) — the card's status badge flipping to OPEN is
+              // already the visible signal; echoing "Reconsider requested"
+              // as thread content just duplicated it and, worse, briefly
+              // displaced the card's real resolution text.
+              //
+              // Carries the previous conclusion as context and frames this
+              // as withdrawing it, rather than a bare "reconsider this" with
+              // nothing to reconsider from (user: "重新考慮只需要把前一題的
+              // 結論帶脈絡重送，並且表示撤回前輪就好").
+              const withdrawn = previousResolution
+                ? ` I'm withdrawing the previous conclusion: "${previousResolution}".`
+                : "";
               pushMessage(
-                `I want to reconsider "${title}" [${nodeId}] — I've reopened it in ` +
-                  `TREE.json (status: open). Please update or remove anything else ` +
+                `Reconsider "${title}" [${nodeId}] — I've reopened it in TREE.json ` +
+                  `(status: open).${withdrawn} Please update or remove anything else ` +
                   `that depended on it, then ask me again if you need to.`,
               );
             })
@@ -368,10 +412,17 @@ function handleWebSocket(socket: WebSocket) {
         }
         case "session:finalize": {
           pushTranscript({ kind: "system", text: "Finalize requested" });
+          // "Decide yourself, don't ask" is the operative instruction here —
+          // 收斂 means the user is done providing input, so any still-open
+          // branch getting answered with a NEW AskUserQuestion instead of a
+          // judgment call defeats the point (user: "收斂了，那些問題應該全部
+          // 設定成 resolve，回答都是「as agent decide」").
           pushMessage(
-            "Please finalize now: every branch should be resolved or explicitly " +
-              "dropped, then write the summary doc and set TREE.json's top-level " +
-              "status to complete.",
+            "Please finalize now: the user is done providing input, so do not ask " +
+              "any further questions. For every branch still open, decide it " +
+              "yourself using your own best judgment and resolve it (or explicitly " +
+              "drop it) rather than asking — then write the summary doc and set " +
+              "TREE.json's top-level status to complete.",
           );
           break;
         }
