@@ -1,0 +1,14 @@
+{
+  "name": "open-gui-sidecar",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Node.js sidecar owning node-pty for the open-gui Deno backend.",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "node fix-spawn-helper-permissions.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "node-pty": "1.1.0-beta37"
+  }
+}

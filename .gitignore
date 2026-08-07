@@ -45,6 +45,12 @@ backups/
 # OS
 .DS_Store
 
+# skills/open-gui: Node.js sidecar + Next.js frontend build artifacts
+skills/open-gui/server/sidecar/node_modules/
+skills/open-gui/web/node_modules/
+skills/open-gui/web/.next/
+skills/open-gui/web/out/
+
 # Legacy (SuperClaude)
 _CLAUDE.md
 PRINCIPLES.md

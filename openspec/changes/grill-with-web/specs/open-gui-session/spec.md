@@ -59,8 +59,10 @@ and SHALL always print the full session URL regardless of whether auto-open succ
 
 ### Requirement: Fully passive lifecycle when used standalone
 The system SHALL NOT poll `TREE.json` (or any other session state) for a completion
-signal, and SHALL NOT proactively stop the backend process or close the session on its
-own. A session runs until its caller (a user or another skill) explicitly stops it.
+signal, and SHALL NOT infer that a session is "done" from task content in order to stop
+the backend or close the session. A session runs until its caller (a user or another
+skill) explicitly stops it, EXCEPT the two mechanical conditions below, neither of which
+is a judgment call about whether the task is finished.
 
 #### Scenario: Session left running has no auto-shutdown
 - **WHEN** an `open-gui` session is invoked directly by a user (not as another skill's
@@ -73,3 +75,46 @@ own. A session runs until its caller (a user or another skill) explicitly stops 
   it (e.g. on its own completion or cancellation logic)
 - **THEN** it does so using the recorded PID (Backend process handle requirement) — this
   is the calling skill's own behavior, not something `open-gui` performs automatically
+
+#### Scenario: Backend shuts down when the wrapped claude process exits
+- **WHEN** the spawned `claude` process exits on its own (e.g. `/exit`, a crash) rather
+  than being stopped externally
+- **THEN** the backend broadcasts why (so a connected browser can show it) and then
+  shuts itself down shortly after — there is no PTY left for it to usefully serve
+
+#### Scenario: Backend shuts down after a sustained idle period with no connections
+- **WHEN** zero browser tabs have been connected to a session for 15 minutes straight
+  (every tab was closed, or the browser never connected at all — e.g. auto-open silently
+  failed and nobody opened the URL manually)
+- **THEN** the backend shuts itself down, so a forgotten or never-opened session does not
+  run unattended indefinitely
+
+#### Scenario: A quick reconnect is unaffected by the idle timer
+- **WHEN** a browser connects to a session within the 15-minute idle window (e.g. the tab
+  was closed by accident and immediately reopened)
+- **THEN** the idle shutdown is cancelled and the session continues running normally
+
+### Requirement: Deterministic claude session id for manual hand-off
+When spawning a real `claude` process (not a test stand-in), the system SHALL pin its
+session id via `--session-id` at spawn time and record it in the per-session state
+directory, so a user can later resume that same session from an ordinary terminal
+without needing to parse it out of PTY output. This SHALL NOT be triggered
+automatically by a browser disconnect or closed tab — only ever by explicit user
+request, after the `open-gui` backend has been stopped.
+
+#### Scenario: Session id is pinned and recorded
+- **WHEN** the backend spawns a real `claude` process
+- **THEN** it passes `--session-id <uuid>` and records that same id in the state
+  directory's session record
+
+#### Scenario: Closing the tab does not trigger a hand-off
+- **WHEN** the user closes the browser tab
+- **THEN** the backend and PTY process keep running exactly as they would for any other
+  disconnect (see `open-gui-terminal`'s reconnect requirement) — no hand-off, pause, or
+  session-id-based action happens automatically
+
+#### Scenario: Manual resume from a normal terminal
+- **WHEN** the user has stopped the `open-gui` session and wants to continue it from an
+  ordinary terminal
+- **THEN** running `claude --resume <recorded-session-id>` resumes that same session's
+  transcript, picking up where the browser session left off
