@@ -478,3 +478,145 @@ decision record; this section is the implementation log.
       SDK-driven mechanism, rewrote `open-gui-tree`'s node-interaction requirement
       (message, not PTY keystrokes) and added new requirements for the card-based
       transcript, live question answering, promote-to-tree, and reconsider.
+
+## 12. D12 pivot: node-graph canvas replaces the split-view
+
+Live use of D11's shipped split-view UI surfaced concrete complaints in one batch: text
+too small/low contrast, the two-panel layout showing overlapping information
+unintuitively, no visible sense of the discussion's own topic, and no way to tell which
+reply was about which node. See design.md D12 for the full decision record.
+
+- [x] 12.1 **Contrast/text-size fix, shipped first and independently** (user: "文字太小，
+      對比不足，看得很吃力"). `globals.css`: `--dim` lightened to `#8a948d` (dark)/
+      `#525d54` (light) — the original was ~3:1 against `--bg`, below WCAG AA's 4.5:1;
+      base font size 13px → 15px. Token-level only, deliberately not a per-component
+      polish pass since most components were about to be deleted by 12.3-12.5 — verified
+      via `npm run build` before moving on, per this session's own earlier lesson about
+      testing unbuilt bundles.
+- [x] 12.2 Researched `@xyflow/react` (current package name, MIT, `react`/`react-dom`
+      peer `>=17`) and `@dagrejs/dagre` (the maintained fork — plain `dagre` is
+      unmaintained) via each package's own npm registry metadata before adding either as
+      a dependency, per this project's "look up current docs, don't assume" rule.
+- [x] 12.3 **`#[id]` tag-routing design confirmed via three rounds of user clarification**
+      before writing any routing code: untagged content and untagged live questions both
+      default to the root card (not hidden, not guessed at); the tag itself is stripped
+      from displayed text once it routes somewhere; only a *leading* tag is ever treated
+      as a routing tag, never one appearing mid-message; a tag whose id doesn't match a
+      real node is left as plain text, not swallowed. `lib/tagRouting.js` implements all
+      four rules.
+- [x] 12.4 **Reliability-checked the `#[id]` tagging instruction against a real session
+      before building any routing logic on top of it** — a minimal seed asked Claude to
+      tag one reply and leave a second, unrelated one untagged; both came back exactly
+      as specified (`#[choice-a-or-b] ...` and a clean untagged closing remark). This
+      was the one fact that decided whether 12.6's routing logic was worth building at
+      all, checked the same way D11's SDK spike was checked before its own rewrite.
+- [x] 12.5 Deleted `SplitView.js`, `TreePanel.js`, `TreeSpine.js`, `NodeDetail.js`,
+      `TranscriptPane.js`, `DecisionNode.js`, `ArtifactNode.js`, `InfoNode.js`,
+      `QuestionNode.js` (the old detail-pane version) — the master/detail model and every
+      component built for it, per design.md D12's accepted consequence.
+- [x] 12.6 **`lib/layout.js`**: fixed-footprint (340×220px) top-down dagre layout,
+      recomputed on every render — safe because `nodesDraggable={false}` in v1 (no
+      manual repositioning to preserve across data-only updates), and because dagre is
+      deterministic so a data-only re-render reproduces the same coordinates rather than
+      visibly jumping.
+- [x] 12.7 **`CanvasView.js`** (replaces `SplitView.js`): subscribes to the same
+      `tree:update`/`transcript:snapshot`/`transcript:event`/`question:ask` events as
+      before, buckets every entry into the root card's thread or a specific node's
+      thread fresh from current tree state on every change (`lib/tagRouting.js`) — no
+      stored routing decision that could go stale if a tag's target node appears after
+      the entry itself did. **AutoPan** (user: "新訊息來記得要 scroll canvas" — a canvas
+      has no linear bottom to scroll to) centers the viewport on whichever card just got
+      new content, via React Flow's `setCenter`.
+- [x] 12.8 New per-type canvas cards (`RootCard.js`, `DecisionCard.js`,
+      `ArtifactCard.js`, `InfoCard.js`, `QuestionTreeCard.js`) and a shared
+      `Thread.js`/`LiveQuestionCard.js` pair embedded in every card — ask and answer
+      unified on one card (user: "把 ask 和 answer 放恣同一張卡片上就好"), each with its
+      own bounded, internally-scrolling thread beneath. Reused `FreeTextBox.js`,
+      `StatusBadge.js`, `NodeTypeIcon.js`, `Markdown.js`, `usePreview()` unchanged.
+- [x] 12.9 **Backend: `node:reconsider`** (`state.ts`'s `patchNodeStatus` — an atomic
+      read-modify-write flipping one node's `status` to `open`) plus a follow-up message
+      to Claude for the cascade reasoning. The one deliberate, narrow exception to
+      "Claude is the sole author of `TREE.json`" — safe because it's a single field, one
+      node, a structural flip, not content authoring. Not locked against a concurrent
+      write from Claude's own process — accepted as a rare, low-stakes race.
+- [x] 12.10 **Backend: `session:finalize`/`session:stop`**, and a "定案"/Stop control pair
+      on the root card. Both explicit user actions, not inferred completion — same
+      category as `open-gui-session`'s two existing mechanical shutdown exceptions.
+- [x] 12.11 **Three real bugs found while writing this section's spec deltas, fixed
+      before calling any of it done:**
+      (a) `buildSubmission` (`lib/submission.js`) built `Re "title" [id]: text` — no
+      leading `#[id]`, so a card's own submission echo would misroute to the root card
+      instead of back onto that same card. Changed to lead with `#[id]` so submissions
+      use the exact same convention as Claude's own tagged replies.
+      (b) The `message:send` echo in `main.ts` prefixed with `"> "`, pushing any leading
+      tag off position 0 where the routing regex requires it. Dropped the prefix —
+      `.thread-entry-system` styling alone conveys "you sent this."
+      (c) A `question:ask` had no corresponding "now cleared" signal once answered, so
+      an answered question would keep rendering as pending indefinitely on every browser
+      including the one that answered it. Added `question:resolved` (`PROTOCOL.md`),
+      broadcast right after a `question:answer` resolves, and a frontend listener that
+      clears it by `requestId`.
+      Also broadened `CanvasView.js`'s tag check from `assistant`-only to
+      `assistant`-or-`system` entries, since (a) meant user-submission echoes now needed
+      the same routing the assistant-reply path already had.
+- [x] 12.12 Updated `PROTOCOL.md` (`node:reconsider`, `session:finalize`, `session:stop`,
+      `question:resolved`), `grill-with-web/SKILL.md` (the `#[id]`-tagging instruction,
+      the finalize-request and reconsider-request reaction instructions), design.md
+      (D12), and `open-gui-tree`/`open-gui-session` specs (canvas/root-card/tag-routing/
+      reconsider/finalize/stop requirements replacing the master/detail and spine-
+      keyboard-nav ones, which described components 12.5 deleted).
+
+## 13. D12 live-testing fixes (five rounds of user feedback on the first canvas build)
+
+Full detail in design.md's D12 revision note; this section is the task-level record.
+All items verified live via `claude-in-chrome` against a real multi-turn interview
+(topic: greet.js whitespace/capitalization normalization) that reached `status:
+complete` with a correct summary doc, not just built-and-assumed-working.
+
+- [x] 13.1 **Critical: fixed zero card interactivity.** Every button/input inside a
+      custom React Flow node was silently unclickable/unfocusable — React Flow's own
+      pan handler captures pointer events inside nodes by default; confirmed via the
+      library's own docs, not guessed. Added the `nopan`/`nodrag` convention classes to
+      every interactive element across every card, `Thread`, `LiveQuestionCard`,
+      `FreeTextBox`. Added `lib/cn.js` (a minimal classname joiner — no Tailwind in this
+      project, so no `tailwind-merge` needed) after a user correction on manual
+      className string concatenation.
+- [x] 13.2 Moved session-level controls out of the canvas entirely: `Navbar.js`
+      (topic/status/theme/定案/Stop) and `ChatBar.js` (general message input) are fixed
+      chrome siblings of `<ReactFlow>`. `RootCard.js` lost its own footer — now shaped
+      like any other card.
+- [x] 13.3 Cards switched from a fixed 220px height to CSS min/max-height (auto,
+      content-driven) — the fixed height was clipping real recommendation/resolution
+      text. `lib/layout.js`'s `CARD_HEIGHT` is now documented as a dagre spacing
+      estimate, not a promise of the actual rendered size.
+- [x] 13.4 **`DetailSidebar.js`** (new): cards now show only their latest routed thread
+      entry; the focused card's full history renders in this docked sidebar instead —
+      including, for a live pending question, the actual interactive answering UI
+      (moved out of the small card after a user report that a question's options
+      weren't visibly rendering there). Promote-to-tree ("加進 tree") removed outright,
+      judged no longer needed once `#[id]` routing already places content correctly.
+- [x] 13.5 Click-to-focus (any card) and keyboard navigation: `Tab`/`Shift+Tab` cycles
+      through cards needing action (pending question, or an open `question`-type node);
+      digit keys 1-4 answer a single-question pending call directly; `/` focuses the
+      card's reply/Other input; `n` its notes field; `:` always focuses the general chat
+      input. One `activeNodeId`/`manualFocusId` concept drives AutoPan, the sidebar
+      target, and keyboard focus together — an explicit click/Tab wins over auto-drift,
+      but a genuinely new question still reclaims focus.
+- [x] 13.6 **Found and fixed the real reason `#[id]` routing wasn't working in a full
+      interview**, distinct from anything wrong in the routing code itself: Claude
+      tagged a reply `#trim` (no brackets, abbreviated from the real id
+      `trim-whitespace`) — correctly fell through to root per the no-fuzzy-match design,
+      but defeated the point. The isolated single-round tagcheck (12.4) wasn't
+      representative of real multi-turn instruction-following. Fixed at the prompt:
+      `grill-with-web/SKILL.md` now requires the id be copied verbatim with a worked
+      example, deliberately not loosening the frontend's matching rule. Also fixed a
+      real display bug found in the same pass: only question `[0]`'s tag was ever
+      stripped for display; `lib/tagRouting.js`'s `routeQuestion` now strips every
+      question's own tag while still deciding routing from the first alone.
+      Re-verified live post-fix: a real 3-question `AskUserQuestion` call used
+      `#[trim-whitespace]`/`#[capitalize-first-letter]` verbatim, routed correctly, and
+      the session reached `status: complete` with a well-formed `docs/grill/*.md`.
+- [x] 13.7 Updated design.md (D12 revision), `open-gui-tree` spec (rewrote the live-
+      question/session-controls requirements, removed the promote-to-tree requirement,
+      added card-shows-latest/DetailSidebar, cards-auto-size, and click-to-focus/
+      keyboard-navigation requirements), and `grill-with-web/SKILL.md`.

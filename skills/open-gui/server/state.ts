@@ -93,3 +93,30 @@ export async function readTree(dir: string): Promise<TreeDoc> {
     throw err;
   }
 }
+
+// The one narrow, program-driven exception to "Claude is the sole author of
+// TREE.json" (design.md D4/D12): a mechanical status flip for the
+// reconsider action, safe because it's a single well-defined field on one
+// node, not content authoring — the cascade reasoning still goes to Claude
+// as a follow-up message, this only unblocks the UI instantly. Read-modify-
+// write, not locked against a concurrent write from Claude's own process;
+// accepted as a rare, low-stakes race (worst case: the flip is silently
+// overwritten by Claude's own concurrent write, and the user just clicks
+// reconsider again) rather than building real cross-process file locking
+// for it. Writes via temp-file-then-rename, matching the atomic-write
+// convention `main.ts`'s `Deno.watchFs` handling already expects.
+export async function patchNodeStatus(
+  dir: string,
+  nodeId: string,
+  status: string,
+): Promise<boolean> {
+  const tree = await readTree(dir);
+  const node = tree.nodes.find((n) => n.id === nodeId);
+  if (!node) return false;
+  node.status = status;
+  const path = treeJsonPath(dir);
+  const tmpPath = `${path}.tmp-${crypto.randomUUID()}`;
+  await Deno.writeTextFile(tmpPath, JSON.stringify(tree, null, 2) + "\n");
+  await Deno.rename(tmpPath, path);
+  return true;
+}

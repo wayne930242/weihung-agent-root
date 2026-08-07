@@ -2,7 +2,7 @@ import { SocketProvider } from "../components/SocketProvider";
 import { PreviewProvider } from "../components/PreviewProvider";
 import FatalBanner from "../components/FatalBanner";
 import SessionEndedBanner from "../components/SessionEndedBanner";
-import SplitView from "../components/SplitView";
+import CanvasView from "../components/CanvasView";
 import PreviewPanel from "../components/PreviewPanel";
 
 export default function Page() {
@@ -11,7 +11,7 @@ export default function Page() {
       <PreviewProvider>
         <FatalBanner />
         <SessionEndedBanner />
-        <SplitView />
+        <CanvasView />
         <PreviewPanel />
       </PreviewProvider>
     </SocketProvider>

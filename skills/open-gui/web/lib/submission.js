@@ -8,7 +8,10 @@ export function sanitizeText(text) {
 // Every submission carries a reference to the originating node's id and
 // title (spec: "Every submission carries node context"), so the session can
 // identify which node is being answered even when multiple nodes are open.
+// Leads with the same `#[id]` tag Claude's own replies use (lib/tagRouting.js,
+// design.md D12) so the echo of the user's own submission routes to that
+// node's card too, not the root card — one tagging convention both ways.
 export function buildSubmission(node, rawText) {
   const clean = sanitizeText(rawText);
-  return `Re "${node.title}" [${node.id}]: ${clean}`;
+  return `#[${node.id}] Re "${node.title}": ${clean}`;
 }

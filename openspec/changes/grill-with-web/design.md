@@ -463,6 +463,154 @@ worth the rewrite cost. `tasks.md` tracks the new implementation tasks separatel
 superseded PTY-era ones (marked, not deleted, per this file's existing practice of keeping
 the record of what was tried).
 
+### D12: Node-graph canvas replaces the split-view (chat panel + tree spine/detail)
+
+**Context:** live use of D11's split-view surfaced concrete complaints: text too small/
+low contrast, the two panels showing overlapping information in an unintuitive way
+(a resolved question's answer only visible in the detail pane, not alongside the
+question itself), and no sense of the discussion's own topic or of which reply was about
+which node. User's proposed replacement: a single top-down node-graph canvas as the
+primary view (a `TreeSpine`/`NodeDetail`-style master/detail pair no longer exists at
+all), chat as a node type rather than a separate panel, ask+answer unified on one card,
+and Claude's replies routed to the node they discuss via an explicit tag.
+
+**Contrast/size fix, shipped first and independently:** `--dim` was ~3:1 against `--bg`
+in both palettes (below WCAG AA's 4.5:1 for normal text) — lightened to `#8a948d`
+(dark)/`#525d54` (light). Base font size raised from 13px to 15px. This part didn't wait
+on the canvas redesign since it's a token-level fix with no design decision attached.
+
+**Mechanism:**
+- `@xyflow/react` (MIT, pure-ESM-compatible, `react`/`react-dom` peer `>=17`) renders the
+  canvas; `@dagrejs/dagre` (the maintained fork — plain `dagre` is unmaintained) computes
+  a top-down (`rankdir: "TB"`) layout from the same parent/child relationships `TREE.json`
+  already carries. Verified via each package's own npm registry metadata before adding
+  the dependency (per this project's own "look up current docs, don't assume" rule).
+- A synthetic root card — not a `TREE.json` node — is always node #1, carrying the
+  session's `topic` (user: "討論主旨應該是第一張節點"). Every `decision`/`artifact`/`info`/
+  `question` node in `TREE.json` becomes its own card, laid out beneath it.
+- **`#[id]`-tagged routing** (user-proposed, reliability-checked live before building
+  any routing logic — a 1-round Deno smoke test confirmed the seed-prompt instruction is
+  followed correctly: a tagged reply came back exactly as `#[node-id] ...`, an unrelated
+  closing remark came back with no tag at all): a leading `#[node-id]` on an assistant
+  message routes it into that node's own card, appended to a thread rendered beneath its
+  ask/answer content — "把 ask 和 answer 放恣同一張卡片上", extended to "and the
+  follow-up discussion goes right below that, same card." Anything untagged, or tagged
+  with an id that isn't a real current node, renders on the root card's thread instead —
+  user-specified twice: only a *leading* tag counts ("只有開頭的明確要帶的，才是要接"),
+  and a non-matching tag is left as plain text, not swallowed ("不要過度敏感 #slug 如果
+  對不到的，代表那可能是真的 #slug 要送給使用者") — `lib/tagRouting.js` implements both
+  guards. The tag itself is stripped from what's displayed once it does route somewhere.
+  The same routing rule applies once to a live `AskUserQuestion` call's first question
+  text, so a question can also land on the node it's actually about instead of always
+  defaulting to root.
+- Tool-use activity (`Bash`, `Read`, etc.) has no natural place for Claude to embed a tag
+  (the tool's `input` isn't freeform text), so it always renders on the root card's
+  thread — user-chosen explicitly over hiding it, so exploration stays visible/legible.
+- Every card has a **fixed footprint** (340×220px, `lib/layout.js`'s `CARD_WIDTH`/
+  `CARD_HEIGHT`) with its own internally-scrolling thread, so dagre's layout input never
+  changes shape as a thread grows — deliberately traded away free-form manual dragging
+  for v1 (`nodesDraggable={false}`) rather than building the drag-position-preservation
+  logic a controlled, auto-relaying canvas needs to combine with manual repositioning;
+  the user's actual ask was top-down auto-layout, not manual arrangement.
+- **AutoPan** (user: "新訊息來記得要 scroll canvas" — a canvas has no linear "bottom" to
+  scroll to the way the old transcript pane did): the viewport centers on whichever
+  card's thread just grew, or on the node a new live question routed to, via React
+  Flow's own `setCenter`.
+
+**Program-driven TREE.json mutation, narrowly scoped (user-proposed):** D4's "Claude is
+the sole author of `TREE.json`" is not reversed, but gets one deliberate, narrow
+exception — reconsidering a resolved node. Previously (D11) this only ever sent Claude a
+message and waited a full turn before the node's `status` changed at all. Now the backend
+flips that one node's `status` back to `open` directly — an atomic read-modify-write,
+`state.ts`'s `patchNodeStatus` — for instant UI feedback, and *separately* still sends
+Claude a message so the cascade reasoning (what else depended on this node) still gets
+real judgment, not a mechanical guess. This is safe specifically because it's narrow (one
+field, one node, a structural flip) and because the content authoring — resolution text,
+new nodes, cascade updates — still only ever comes from Claude. Not locked against a
+concurrent write from Claude's own process; accepted as a rare, low-stakes race (see
+`state.ts`'s comment on `patchNodeStatus`).
+
+**Two new explicit session controls, both browser-triggered:** a "定案" (finalize)
+button sends Claude a direct instruction to wrap up now, without waiting for Claude to
+decide to call `AskUserQuestion` itself first (`session:finalize`). A "Stop" button lets
+the browser request shutdown directly (`session:stop`) rather than requiring an external
+`SIGTERM`. Both are explicit user actions, not inferred task-completion — the same
+category as D8/D9's two "mechanical" exceptions to "never shut down," not a reversal of
+that rule (an inferred-completion auto-close is still never done; a user clicking a
+button that says "stop" is not an inference).
+
+**Consequence:** this deletes `TreeSpine.js`, `NodeDetail.js`, `TranscriptPane.js`,
+`SplitView.js`, and the master/detail model entirely — a second full frontend rewrite
+within hours of D11's, on top of an already-large session. Accepted: each complaint this
+addresses (contrast, duplicate/unintuitive display, no sense of topic or of which reply
+answers what) was concrete and reproducible in the shipped D11 UI, not a hypothetical
+improvement — and the `#[id]` mechanism was reliability-checked live before any routing
+logic was built on top of it, rather than assumed.
+
+**Revision (2026-08-07): five rounds of live-testing fixes on the first canvas build.**
+
+- **Critical: no card was interactive at all.** Every button/input inside a custom React
+  Flow node was silently eating clicks and refusing focus. Root cause (confirmed against
+  React Flow's own docs, not guessed): the canvas's own pan handler captures pointer
+  events inside custom nodes by default; interactive elements need the library's `nopan`/
+  `nodrag` convention classes to opt out. Every button, input, and textarea across every
+  card, `Thread`, `LiveQuestionCard`, and `FreeTextBox` now carries them
+  (`lib/cn.js` added — a minimal classname joiner, this project has no Tailwind so no
+  `tailwind-merge` is needed, just safe conditional joining — after a user correction
+  ("tailwind class 要用 cn 合併才能這樣寫") pointed at manual template-literal
+  concatenation as the pattern to fix, even though this project has no Tailwind).
+- **Session-level controls moved out of the canvas entirely** (user: "root 的選項和輸入
+  可能要拉到 canvas 外面的 layout，定案 or stop or 收斂都應該放到 navbar，message 應該放
+  到最外層的 chat"). `Navbar.js` (topic, status, theme toggle, 定案/Stop) and `ChatBar.js`
+  (the general message input) are fixed chrome siblings of `<ReactFlow>`, not nodes
+  inside it — reachable regardless of pan/zoom position. The root card lost its own
+  footer entirely; it's now shaped like any other card (a thread, nothing else).
+- **Cards switched from a fixed pixel height to CSS min/max-height** (user: "卡片的高度不
+  能固定，這樣內容都看不清楚" — the original fixed 220px genuinely clipped real
+  recommendation/resolution text). `lib/layout.js`'s `CARD_HEIGHT` is now explicitly
+  documented as a dagre spacing *estimate*, not a promise the rendered card matches it —
+  safe because dagre only needs a number to avoid overlapping rows, not pixel-perfect
+  agreement with final CSS height.
+- **Cards show only their latest entry; DetailSidebar shows the rest** (user: "card 顯示
+  最後的回應，但是 focus card 的時候，可以用邊欄 layout 顯示那一段的完整過程"). New
+  `DetailSidebar.js`, docked on the right, renders the focused card's full thread — and,
+  when that card has a live pending question, the actual interactive `LiveQuestionCard`
+  UI too (moved out of the cramped fixed-width card entirely, after the user noticed a
+  question's options weren't visibly rendering in the small card: "問題選項沒有出來，是
+  不是 focus 的時候可以顯示再卡片旁邊"). Promote-to-tree ("加進 tree") was removed
+  outright at the same time — the user judged it no longer needed once `#[id]`-tagged
+  routing already places discussion on the right card without a manual step.
+- **Click-to-focus and keyboard navigation**, sharing one `activeNodeId`/`manualFocusId`
+  concept with AutoPan: clicking a card, or `Tab`/`Shift+Tab`, cycles focus among cards
+  that need action (a live pending question, or an open `question`-type node) and pans
+  the viewport there. Within the focused card/sidebar: digit keys `1`-`4` pick-and-submit
+  an option (single-question calls only — a multi-question call has no unambiguous "the"
+  option list for a bare digit, so it's mouse-only there, a documented simplification);
+  `/` focuses the card's own reply/Other input; `n` focuses its notes field where one
+  exists; `:` always focuses the global `ChatBar`, regardless of what's focused on
+  canvas. An explicit click/Tab wins over auto-drift (so looking around doesn't fight the
+  user), but a genuinely *new* question still reclaims focus even from a manual look-away
+  — tracked by clearing `manualFocusId` on a new `requestId`, not on every render.
+- **`#[id]` tagging broke under real interview conditions, not just the isolated
+  reliability check.** Live testing surfaced Claude tagging a reply `#trim` — no
+  brackets, and abbreviated from the real id `trim-whitespace` — which silently fell
+  through to the root card exactly as designed (no false match), but defeated the whole
+  point (user: "我發現問題選項都跑到 root 去了，應該放到對應的 card 去"). The single-
+  round tagcheck (D12's first revision) wasn't representative of a full multi-turn
+  interview's instruction-following. Fixed at the prompt, not by loosening the matching
+  rule — `grill-with-web/SKILL.md` now spells out "copied verbatim, character for
+  character" with a worked example and an explicit warning against tagging from memory,
+  deliberately not adding fuzzy/prefix matching on the frontend (which the user had
+  already ruled out earlier: "不要過度敏感"). Re-verified live after the prompt fix: a
+  3-question `AskUserQuestion` call correctly used `#[trim-whitespace]` and
+  `#[capitalize-first-letter]` verbatim, routed correctly, and reached `status: complete`
+  with a well-formed summary doc. Separately fixed a real display bug found in the same
+  session: only the first question's tag was ever stripped for display (routing is
+  decided from it alone), so a second/third tagged question in the same call showed raw
+  `#[id]` syntax to the user — `lib/tagRouting.js`'s `routeQuestion` now strips every
+  question's own leading tag for display while still deciding routing from the first
+  question only.
+
 ## Risks / Trade-offs
 
 - **[Risk] `npm:node-pty` under Deno is a newly-viable, lightly-battle-tested path** and

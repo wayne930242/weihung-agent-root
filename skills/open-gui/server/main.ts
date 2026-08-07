@@ -6,6 +6,7 @@
 import { query } from "npm:@anthropic-ai/claude-agent-sdk";
 import {
   ensureStateDir,
+  patchNodeStatus,
   readTree,
   readThemeMode,
   seedPromptPath,
@@ -326,7 +327,12 @@ function handleWebSocket(socket: WebSocket) {
       const msg = JSON.parse(event.data as string);
       switch (msg.type) {
         case "message:send":
-          pushTranscript({ kind: "system", text: `> ${msg.text}` });
+          // No "> " prefix: a leading #[id] tag (buildSubmission, lib/
+          // submission.js) must stay the literal first characters for the
+          // frontend's routing to see it (design.md D12) — the echo relies
+          // on .thread-entry-system styling to read as "you sent this",
+          // not a textual quote marker.
+          pushTranscript({ kind: "system", text: msg.text });
           pushMessage(msg.text);
           break;
         case "question:answer": {
@@ -337,8 +343,41 @@ function handleWebSocket(socket: WebSocket) {
               .map(([q, a]) => `${q} → ${Array.isArray(a) ? a.join(", ") : a}`)
               .join("; ");
             pushTranscript({ kind: "system", text: `Answered: ${summary}` });
+            broadcast({ type: "question:resolved", requestId: msg.requestId });
             resolve(msg.answers);
           }
+          break;
+        }
+        case "node:reconsider": {
+          const nodeId = msg.nodeId as string;
+          const title = msg.title as string;
+          patchNodeStatus(dir, nodeId, "open")
+            .then((found) => {
+              if (!found) return;
+              // Leading #[nodeId] so this echo routes onto the reconsidered
+              // node's own card, same convention as buildSubmission.
+              pushTranscript({ kind: "system", text: `#[${nodeId}] Reconsider requested: "${title}"` });
+              pushMessage(
+                `I want to reconsider "${title}" [${nodeId}] — I've reopened it in ` +
+                  `TREE.json (status: open). Please update or remove anything else ` +
+                  `that depended on it, then ask me again if you need to.`,
+              );
+            })
+            .catch((err) => console.error(`[open-gui] node:reconsider failed: ${err}`));
+          break;
+        }
+        case "session:finalize": {
+          pushTranscript({ kind: "system", text: "Finalize requested" });
+          pushMessage(
+            "Please finalize now: every branch should be resolved or explicitly " +
+              "dropped, then write the summary doc and set TREE.json's top-level " +
+              "status to complete.",
+          );
+          break;
+        }
+        case "session:stop": {
+          console.error(`[open-gui] session:stop requested from browser`);
+          shutdown();
           break;
         }
         case "preview:request": {

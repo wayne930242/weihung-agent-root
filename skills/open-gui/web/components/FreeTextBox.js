@@ -21,6 +21,7 @@ export default function FreeTextBox({ node, placeholder = "Reply…", onSubmit }
   return (
     <div className="node-freetext">
       <textarea
+        className="nodrag nopan"
         value={text}
         placeholder={placeholder}
         onChange={(e) => setText(e.target.value)}
@@ -33,7 +34,7 @@ export default function FreeTextBox({ node, placeholder = "Reply…", onSubmit }
           }
         }}
       />
-      <button onClick={submit} disabled={!text.trim()}>
+      <button className="nodrag nopan" onClick={submit} disabled={!text.trim()}>
         Send
       </button>
     </div>

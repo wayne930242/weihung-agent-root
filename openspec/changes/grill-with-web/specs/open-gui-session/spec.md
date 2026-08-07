@@ -95,6 +95,12 @@ is a judgment call about whether the task is finished.
   was closed by accident and immediately reopened)
 - **THEN** the idle shutdown is cancelled and the session continues running normally
 
+#### Scenario: The browser can request an explicit stop (design.md D12)
+- **WHEN** the user activates the GUI's own stop control
+- **THEN** the backend shuts itself down immediately — a third explicit trigger, not an
+  inferred one; the same category as the two mechanical exceptions above, since a direct
+  user action is not a completion guess
+
 ### Requirement: Deterministic claude session id for manual hand-off
 When spawning a real `claude` process (not a test stand-in), the system SHALL pin its
 session id via `--session-id` at spawn time and record it in the per-session state
