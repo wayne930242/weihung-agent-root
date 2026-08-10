@@ -1,11 +1,11 @@
 ---
 name: grill-with-web
-description: Use when the user wants a grilling interview to run in the browser instead of the terminal — "grill this in the browser", "web version of grilling", "grill with a live decision tree". The GUI counterpart of grill-with-docs, for the same refactoring/architecture-improvement triggers, when the user specifically wants the browser experience.
+description: Use whenever there's an unresolved decision that's the user's to make — "grill this in the browser", "web version of grilling", "grill with a live decision tree", or any plan/design/idea that needs stress-testing. Prioritize this over the terminal-based grilling/grill-me/grill-with-docs by default. Runs the interview in the browser with a live decision tree, in the conversation's current language, layering in grill-with-docs' ADR/CONTEXT.md recording where the decision warrants it.
 ---
 
 # Grill With Web
 
-The GUI version of `grill-with-docs`. You build the seed prompt and manage the session's lifecycle; `open-gui` does everything session/browser/tree-rendering. Read `skills/open-gui/SKILL.md` first if you haven't invoked it before — this skill is a thin layer on top of its contract, not a reimplementation.
+The GUI counterpart of `grilling`, layering in `grill-with-docs`' ADR/CONTEXT.md recording discipline. You build the seed prompt and manage the session's lifecycle; `open-gui` does everything session/browser/tree-rendering. Read `skills/open-gui/SKILL.md` first if you haven't invoked it before — this skill is a thin layer on top of its contract, not a reimplementation.
 
 ## 1. Build the seed prompt
 
@@ -22,7 +22,9 @@ one goes in verbatim, condensed if it helps, but self-contained. Don't tell it t
 grill-with-docs" — tell it what grill-with-docs actually says to do.
 
 Include in the seed prompt: the grilling topic, relevant background, relevant file
-paths, and (embedded directly, not referenced by path):
+paths, the language to communicate in (match this conversation's — state it explicitly,
+since the target session starts blank and has no way to infer it), and (embedded
+directly, not referenced by path):
 
 - Populate `TREE.json` **at the literal absolute path you computed** (see `open-gui/SKILL.md`'s "For other skills invoking open-gui" — the target session cannot discover this path itself). State the exact top-level shape: `{"status": "in_progress" | "complete", "nodes": [...]}` — spell out both literal strings (underscore, not hyphen). A condensed re-explanation of `NODE-FORMAT.md` that only covers per-node `status` enums and drops the top-level one is an easy, real gap to leave by accident — say it explicitly, don't assume it's implied.
 - The interview discipline from `grill-with-docs/SKILL.md`: challenge glossary conflicts, sharpen fuzzy language, discuss concrete scenarios, cross-reference against the code, record resolved terms in `CONTEXT.md` inline (per `CONTEXT-FORMAT.md`'s shape) the moment they crystallise, and offer an ADR (per `ADR-FORMAT.md`'s shape, `docs/adr/NNNN-slug.md`) only when a decision is hard to reverse, surprising without context, AND the result of a real trade-off.
