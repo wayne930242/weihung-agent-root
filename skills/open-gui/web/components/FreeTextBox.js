@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useSocket } from "./SocketProvider";
-import { buildSubmission } from "../lib/submission";
 
 // Plain free-text follow-up box for node types other than `question`
 // (design.md D5: "all other node types get a plain free-text box").
+// Submits go through `enqueue` (item 3's pending queue, CanvasView.js) —
+// SidekickPanel dispatches them one at a time once the agent is idle,
+// rather than firing straight to the agent regardless of what it's
+// already working on.
 
-export default function FreeTextBox({ node, placeholder = "Reply…", onSubmit }) {
-  const { send } = useSocket();
+export default function FreeTextBox({ node, enqueue, placeholder = "Reply…", onSubmit }) {
   const [text, setText] = useState("");
   // The "/" shortcut hint lives in the placeholder itself, not just the
   // bottom shortcut-hints bar (user: "/ 和 : 放到相應的 input 的 placeholder
@@ -18,7 +19,7 @@ export default function FreeTextBox({ node, placeholder = "Reply…", onSubmit }
 
   function submit() {
     if (!text.trim()) return;
-    send({ type: "message:send", text: buildSubmission(node, text) });
+    enqueue(node, text);
     onSubmit?.();
     setText("");
   }

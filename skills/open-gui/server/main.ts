@@ -116,7 +116,7 @@ function scheduleIdleShutdown() {
     console.error(
       `[open-gui] no browser connected for ${IDLE_SHUTDOWN_MS / 1000}s — shutting down`,
     );
-    shutdown();
+    shutdown("idle_timeout");
   }, IDLE_SHUTDOWN_MS);
 }
 
@@ -272,7 +272,7 @@ if (!currentTree.topic) currentTree.topic = topic;
     broadcast({ type: "fatal", message: String(err) });
   }
   broadcast({ type: "session:ended" });
-  setTimeout(shutdown, 500);
+  setTimeout(() => shutdown("stream_ended"), 500);
 })();
 
 (async () => {
@@ -428,7 +428,7 @@ function handleWebSocket(socket: WebSocket) {
         }
         case "session:stop": {
           console.error(`[open-gui] session:stop requested from browser`);
-          shutdown();
+          shutdown("session:stop");
           break;
         }
         case "preview:request": {
@@ -491,11 +491,23 @@ console.log(
   `[open-gui] to switch to a normal terminal later: stop this session, then run \`claude --resume ${claudeSessionId}\``,
 );
 
-function shutdown() {
+// Item 2 fix: every exit path writes an `ended` marker into session.json
+// before the process actually dies, so a poller (grill-with-web) can tell
+// "this backend already exited without finalizing" apart from "still
+// working" instead of both looking identical to a bounded poll that only
+// watches TREE.json.
+async function shutdown(reason: "sigterm" | "session:stop" | "stream_ended" | "idle_timeout") {
   sdkQuery.close();
+  await writeSessionRecord(dir, {
+    pid: Deno.pid,
+    port,
+    url: sessionUrl,
+    claudeSessionId,
+    ended: { reason, finalized: currentTree.status === "complete" },
+  });
   Deno.exit(0);
 }
-Deno.addSignalListener("SIGINT", shutdown);
-Deno.addSignalListener("SIGTERM", shutdown);
+Deno.addSignalListener("SIGINT", () => shutdown("sigterm"));
+Deno.addSignalListener("SIGTERM", () => shutdown("sigterm"));
 
 await server.finished;

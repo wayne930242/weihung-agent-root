@@ -58,6 +58,20 @@ export interface SessionRecord {
   // terminal via `claude --resume <claudeSessionId>` once this open-gui
   // session's backend is stopped — see open-gui/SKILL.md.
   claudeSessionId: string | null;
+  // Set only once the backend has actually exited — absent while still
+  // running, so a poller (grill-with-web) checks for its mere presence
+  // instead of parsing a third "running" enum value everywhere. Lets a
+  // poller distinguish "browser Stop was clicked before finalizing" (dead
+  // process, TREE.json never reached "complete") from "still genuinely
+  // working" — both of which otherwise look identical to a bounded poll
+  // that only checks TREE.json and eventually times out either way.
+  ended?: {
+    reason: "sigterm" | "session:stop" | "stream_ended" | "idle_timeout";
+    // Whether TREE.json's top-level status was "complete" at the moment
+    // the backend exited — the poller's real signal; `reason` is only
+    // supporting context for what triggered the exit.
+    finalized: boolean;
+  };
 }
 
 export async function writeSessionRecord(dir: string, record: SessionRecord): Promise<void> {

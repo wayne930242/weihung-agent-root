@@ -9,7 +9,7 @@ import { cn } from "../lib/cn";
 // for every untagged transcript entry (general chat, unlabeled tool-use/
 // exploration) and any AskUserQuestion call that didn't resolve to a
 // specific node (lib/tagRouting.js). Session-level controls (message input,
-// 定案/Stop) live in fixed chrome outside the canvas instead (Navbar.js,
+// 收斂/Stop) live in fixed chrome outside the canvas instead (Navbar.js,
 // ChatBar.js). Shows only its latest entry (design.md D12, user: "card 顯示
 // 最後的回應") — the full history is DetailSidebar's job once this card is
 // focused.

@@ -17,7 +17,7 @@ import { cn } from "../lib/cn";
 // `originNode` — the real TREE.json node this chain hangs off, since a
 // chain card has no id of its own for Claude to tag a reply back onto.
 export default function ThreadEntryCard({ id, data }) {
-  const { entry, originNode, focused, onFocus } = data;
+  const { entry, originNode, focused, onFocus, enqueue } = data;
   return (
     <div
       className={cn("canvas-card", "canvas-card-reply", "nodrag", "nopan", focused && "canvas-card-focused")}
@@ -33,7 +33,7 @@ export default function ThreadEntryCard({ id, data }) {
         <Thread entries={[entry]} />
       </CardBody>
       <div className="canvas-card-footer">
-        <FreeTextBox node={originNode} />
+        <FreeTextBox node={originNode} enqueue={enqueue} />
       </div>
     </div>
   );

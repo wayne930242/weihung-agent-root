@@ -17,7 +17,7 @@ import { cn } from "../lib/cn";
 export default function DecisionCard({ id, data }) {
   const { send } = useSocket();
   const { openPreview } = usePreview();
-  const { node, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus, enqueue } = data;
   const resolved = node.status === "resolved";
 
   function reconsider() {
@@ -57,7 +57,7 @@ export default function DecisionCard({ id, data }) {
         )}
       </CardBody>
       <div className="canvas-card-footer">
-        <FreeTextBox node={node} />
+        <FreeTextBox node={node} enqueue={enqueue} />
       </div>
     </div>
   );

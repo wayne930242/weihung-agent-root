@@ -8,7 +8,7 @@ import NodeTypeIcon from "./NodeTypeIcon";
 import { cn } from "../lib/cn";
 
 export default function InfoCard({ id, data }) {
-  const { node, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus, enqueue } = data;
 
   return (
     <div
@@ -27,7 +27,7 @@ export default function InfoCard({ id, data }) {
         <Markdown text={node.text} />
       </CardBody>
       <div className="canvas-card-footer">
-        <FreeTextBox node={node} placeholder="Add a note…" />
+        <FreeTextBox node={node} enqueue={enqueue} placeholder="Add a note…" />
       </div>
     </div>
   );

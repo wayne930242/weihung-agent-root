@@ -14,7 +14,7 @@ import { cn } from "../lib/cn";
 // revision), not inline here.
 export default function ArtifactCard({ id, data }) {
   const { openPreview } = usePreview();
-  const { node, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus, enqueue } = data;
   const kind = node.kind ?? "file";
 
   return (
@@ -52,7 +52,7 @@ export default function ArtifactCard({ id, data }) {
         )}
       </CardBody>
       <div className="canvas-card-footer">
-        <FreeTextBox node={node} />
+        <FreeTextBox node={node} enqueue={enqueue} />
       </div>
     </div>
   );

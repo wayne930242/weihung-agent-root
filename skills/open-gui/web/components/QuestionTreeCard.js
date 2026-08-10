@@ -6,16 +6,16 @@ import CardBody from "./CardBody";
 import StatusBadge from "./StatusBadge";
 import NodeTypeIcon from "./NodeTypeIcon";
 import { useSocket } from "./SocketProvider";
-import { buildSubmission } from "../lib/submission";
 import { cn } from "../lib/cn";
 
 // A `question`-type TREE.json node — persisted by a non-`grill-with-web`
 // consumer (NODE-FORMAT.md's D11 note: grill-with-web answers live instead,
 // via LiveQuestionCard). Same option-cards + "Other" + notes interface,
-// submitted as a plain message like any other node interaction.
+// submitted as a plain message like any other node interaction — through
+// `enqueue` (item 3's pending queue, CanvasView.js), same as FreeTextBox.
 export default function QuestionTreeCard({ id, data }) {
   const { send } = useSocket();
-  const { node, pendingQuestion, focused, onFocus } = data;
+  const { node, pendingQuestion, focused, onFocus, enqueue } = data;
   const [notes, setNotes] = useState("");
   const [customText, setCustomText] = useState("");
   // "/" and "e" shortcut hints live in the placeholder itself (user: "/ 和 :
@@ -31,9 +31,9 @@ export default function QuestionTreeCard({ id, data }) {
       const label = node.options[index - 1].label;
       const notesTrimmed = notes.trim();
       const combined = notesTrimmed ? `${label} — note: ${notesTrimmed}` : label;
-      send({ type: "message:send", text: buildSubmission(node, combined) });
+      enqueue(node, combined);
     },
-    [node, notes, send],
+    [node, notes, enqueue],
   );
 
   const submitOther = useCallback(
@@ -41,9 +41,9 @@ export default function QuestionTreeCard({ id, data }) {
       if (!text.trim()) return;
       const notesTrimmed = notes.trim();
       const combined = notesTrimmed ? `${text} — note: ${notesTrimmed}` : text;
-      send({ type: "message:send", text: buildSubmission(node, combined) });
+      enqueue(node, combined);
     },
-    [node, notes, send],
+    [node, notes, enqueue],
   );
 
   function reconsider() {

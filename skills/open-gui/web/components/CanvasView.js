@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useSocket } from "./SocketProvider";
@@ -10,12 +10,15 @@ import ArtifactCard from "./ArtifactCard";
 import InfoCard from "./InfoCard";
 import QuestionTreeCard from "./QuestionTreeCard";
 import LiveQuestionCanvasCard from "./LiveQuestionCanvasCard";
+import QuestionBatchSubmitCard from "./QuestionBatchSubmitCard";
 import ThreadEntryCard from "./ThreadEntryCard";
 import Navbar from "./Navbar";
 import ChatBar from "./ChatBar";
 import DetailSidebar from "./DetailSidebar";
+import SidekickPanel from "./SidekickPanel";
 import { routeTaggedText, routeQuestions } from "../lib/tagRouting";
 import { layoutTree, CARD_WIDTH, CARD_HEIGHT } from "../lib/layout";
+import { buildSubmission } from "../lib/submission";
 
 // design.md D12: replaces the split-view (transcript pane + tree spine/
 // detail) with a single top-down node-graph canvas — the tree is the
@@ -93,6 +96,7 @@ const NODE_TYPES = {
   info: InfoCard,
   question: QuestionTreeCard,
   "live-question": LiveQuestionCanvasCard,
+  "question-batch-submit": QuestionBatchSubmitCard,
   reply: ThreadEntryCard,
 };
 
@@ -144,6 +148,48 @@ export default function CanvasView() {
   const [agentBusy, setAgentBusy] = useState(false);
   const keyCounter = useRef(0);
   const prevEntriesLengthRef = useRef(0);
+
+  // Pending-message queue (item 3): every card's reply/submit used to call
+  // `send` directly, so multiple cards submitted while the agent was still
+  // busy on an earlier turn all landed in the backend's own internal queue
+  // (main.ts's input-stream `pending` array) with zero visibility and no way
+  // to change your mind. `enqueue` is what every reply box calls instead —
+  // it stages the submission here; the dispatch effect below is the only
+  // thing that actually calls `send`, one at a time, only once the agent is
+  // idle. SidekickPanel renders `queue` so what's waiting (and its origin
+  // card) is visible, with a cancel per still-queued entry.
+  const [queue, setQueue] = useState([]); // [{id, text, label, preview}]
+  const queueCounter = useRef(0);
+  const dispatchLockRef = useRef(false);
+
+  const enqueue = useCallback((node, rawText) => {
+    const id = `queue:${queueCounter.current++}`;
+    const text = node ? buildSubmission(node, rawText) : rawText;
+    const label = node ? node.title : "General";
+    setQueue((q) => [...q, { id, text, label, preview: rawText.trim() || rawText }]);
+  }, []);
+
+  const cancelQueued = useCallback((id) => {
+    setQueue((q) => q.filter((item) => item.id !== id));
+  }, []);
+
+  // Dispatches the queue's front entry once the agent is actually idle —
+  // `dispatchLockRef` covers the round-trip gap between calling `send` and
+  // the server's `agent:busy` broadcast landing (agentBusy is still stale
+  // `false` for that window), so a second entry can't slip out in the same
+  // render pass. Cleared the moment `agentBusy` turns true, since the
+  // `!agentBusy` guard below already prevents re-firing until it turns
+  // false again on its own.
+  useEffect(() => {
+    if (agentBusy) {
+      dispatchLockRef.current = false;
+      return;
+    }
+    if (dispatchLockRef.current || queue.length === 0) return;
+    dispatchLockRef.current = true;
+    send({ type: "message:send", text: queue[0].text });
+    setQueue((q) => q.slice(1));
+  }, [queue, agentBusy, send]);
 
   useEffect(() => {
     const offTree = addListener("tree:update", (msg) => setTree(msg.tree));
@@ -253,24 +299,46 @@ export default function CanvasView() {
       .filter((q) => !(q.question in partialAnswers));
   }, [pendingRaw, nodesById, partialAnswers]);
 
+  // Only stages the answer — does NOT send `question:answer` itself even
+  // once every question in the batch has one. That used to auto-fire the
+  // instant the last pick landed, with no chance to review what the batch
+  // as a whole was about to say; `batchSubmit` (below) renders one shared
+  // review-and-confirm card once every question is staged, and only ITS
+  // Submit button (`submitBatch`) actually sends (user: "問題組合...跳到
+  // submit card（這張卡片是問題的共同 child，只有所有問題都回答的時候他才會
+  // 出現）").
   function answerOne(question, requestId, value) {
-    const next = { ...partialAnswers, [question]: value };
-    setPartialAnswers(next);
-    if (pendingRaw && Object.keys(next).length === pendingRaw.questions.length) {
-      // routeQuestions strips display tags; send the ORIGINAL question text
-      // as the key so it matches what the SDK's tool call actually asked.
-      // Does NOT reset partialAnswers back to {} here — `pendingRaw` itself
-      // is still the old batch until the server's `question:resolved`
-      // round-trips back (offResolved below), and `liveQuestions`' filter
-      // keys off partialAnswers; clearing it early re-passed every already-
-      // answered question in this batch through that filter for one frame,
-      // making them briefly reappear fully interactive (user: "submit 按下
-      // 以後沒有效果，沒有 resolve" — that's what they were seeing/re-
-      // clicking). The next real `question:ask` resets it instead.
-      const answers = {};
-      for (const q of pendingRaw.questions) answers[q.question] = next[routeTaggedText(q.question, nodesById).text];
-      send({ type: "question:answer", requestId, answers });
+    setPartialAnswers((prev) => ({ ...prev, [question]: value }));
+  }
+
+  // The shared child card, gated on every question in the batch having a
+  // staged answer — `parents` is the deduped set of nodes the batch's
+  // questions actually route to (usually just root, but a batch can span
+  // more than one node's branch), so the card reads as "common child of the
+  // questions" the way the user described rather than picking one arbitrary
+  // parent. `routedQuestions` carries the tag-stripped display text so the
+  // review card and `partialAnswers` share the same keys.
+  const batchSubmit = useMemo(() => {
+    if (!pendingRaw) return null;
+    if (Object.keys(partialAnswers).length !== pendingRaw.questions.length) return null;
+    const routedQuestions = routeQuestions(pendingRaw.questions, nodesById);
+    const parents = [...new Set(routedQuestions.map((q) => (q.targetNodeId && nodesById.has(q.targetNodeId) ? q.targetNodeId : ROOT_ID)))];
+    return { cardId: `submit:${pendingRaw.requestId}`, parents, routedQuestions };
+  }, [pendingRaw, partialAnswers, nodesById]);
+
+  // Moved out of answerOne above — this is now the only thing that actually
+  // sends `question:answer`, triggered by the batch-submit card's own
+  // button. Same key-matching logic as before it moved: routeQuestions
+  // strips display tags, so the SDK's ORIGINAL question text is the key the
+  // outgoing `answers` object needs, looked up via partialAnswers' stripped
+  // key.
+  function submitBatch() {
+    if (!pendingRaw) return;
+    const answers = {};
+    for (const q of pendingRaw.questions) {
+      answers[q.question] = partialAnswers[routeTaggedText(q.question, nodesById).text];
     }
+    send({ type: "question:answer", requestId: pendingRaw.requestId, answers });
   }
 
   // A genuinely new question reclaims focus even if the user had manually
@@ -279,12 +347,12 @@ export default function CanvasView() {
     if (pendingRaw) setManualFocusId(null);
   }, [pendingRaw?.requestId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A multi-question AskUserQuestion batch only resolves once every card in
-  // it is submitted (answerOne above) — until then, each already-submitted
-  // card just leaves its stand-in system entry with nothing to indicate how
-  // many more are still needed (blind usability test: answering one of four
-  // read as "did this even work?" with no clue the other three were still
-  // blocking it).
+  // A multi-question AskUserQuestion batch only reaches `batchSubmit`'s
+  // review card once every question has a staged answer (answerOne above)
+  // — until then, each already-staged question just leaves its stand-in
+  // system entry with nothing to indicate how many more are still needed
+  // (blind usability test: answering one of four read as "did this even
+  // work?" with no clue the other three were still blocking it).
   const batchProgress =
     pendingRaw && pendingRaw.questions.length > 1
       ? { answered: Object.keys(partialAnswers).length, total: pendingRaw.questions.length }
@@ -301,10 +369,11 @@ export default function CanvasView() {
 
   const firstLiveQuestionId = liveQuestions[0]?.cardId ?? null;
 
-  // Priority: explicit user focus > a live pending question > whatever's
+  // Priority: explicit user focus > a live pending question > the batch's
+  // review-and-confirm card once every question is staged > whatever's
   // newest. (user: "focus 應該 focus「還沒 resolve 的問題」而非 root" — but an
   // explicit click/Tab should still be able to look elsewhere on purpose.)
-  const activeNodeId = manualFocusId ?? firstLiveQuestionId ?? lastEntryTarget;
+  const activeNodeId = manualFocusId ?? firstLiveQuestionId ?? batchSubmit?.cardId ?? lastEntryTarget;
 
   useEffect(() => {
     setSidebarDismissed(false);
@@ -345,6 +414,7 @@ export default function CanvasView() {
       ...treeNodes.map((n) => ({ id: n.id })),
       ...liveQuestions.map((q) => ({ id: q.cardId })),
       ...chainNodeDefs,
+      ...(batchSubmit ? [{ id: batchSubmit.cardId }] : []),
     ];
     const rfEdges = [
       ...treeNodes.map((n) => {
@@ -356,6 +426,11 @@ export default function CanvasView() {
         return { id: `${parent}->${q.cardId}`, source: parent, target: q.cardId };
       }),
       ...chainEdgeDefs,
+      // One edge per node the batch's questions actually route to — the
+      // "common child" the user described, not a single arbitrary parent.
+      ...(batchSubmit
+        ? batchSubmit.parents.map((p) => ({ id: `${p}->${batchSubmit.cardId}`, source: p, target: batchSubmit.cardId }))
+        : []),
     ];
     const positioned = layoutTree(rfNodes, rfEdges);
     // Converging: collapse every card onto the root's position, each offset
@@ -380,6 +455,13 @@ export default function CanvasView() {
           data: { thread: threadsByTarget.get(ROOT_ID) ?? [], focused, onFocus },
         };
       }
+      if (batchSubmit && n.id === batchSubmit.cardId) {
+        return {
+          ...n,
+          type: "question-batch-submit",
+          data: { questions: batchSubmit.routedQuestions, answers: partialAnswers, onSubmit: submitBatch, focused, onFocus },
+        };
+      }
       const liveQuestion = liveQuestions.find((q) => q.cardId === n.id);
       if (liveQuestion) {
         return {
@@ -395,7 +477,11 @@ export default function CanvasView() {
       }
       const chain = chainEntryById.get(n.id);
       if (chain) {
-        return { ...n, type: "reply", data: { entry: chain.entry, originNode: chain.originNode, focused, onFocus } };
+        return {
+          ...n,
+          type: "reply",
+          data: { entry: chain.entry, originNode: chain.originNode, focused, onFocus, enqueue },
+        };
       }
       const node = nodesById.get(n.id);
       // No `thread` here — follow-up replies are their own chained cards
@@ -403,12 +489,12 @@ export default function CanvasView() {
       return {
         ...n,
         type: node.type,
-        data: { node, focused, onFocus },
+        data: { node, focused, onFocus, enqueue },
       };
     });
     return { nodes: withData, edges: rfEdges };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tree, nodesById, threadsByTarget, liveQuestions, activeNodeId, converging]);
+  }, [tree, nodesById, threadsByTarget, liveQuestions, activeNodeId, converging, enqueue, batchSubmit, partialAnswers, pendingRaw]);
 
   // "Needs action": a live question card, or a persisted `question`-type
   // node still open — the set n/p cycles through (user: "n p，是前往下一個、
@@ -417,7 +503,12 @@ export default function CanvasView() {
   const actionableIds = useMemo(
     () =>
       nodes
-        .filter((n) => n.type === "live-question" || (n.data.node?.type === "question" && n.data.node?.status === "open"))
+        .filter(
+          (n) =>
+            n.type === "live-question" ||
+            n.type === "question-batch-submit" ||
+            (n.data.node?.type === "question" && n.data.node?.status === "open"),
+        )
         .map((n) => n.id),
     [nodes],
   );
@@ -521,6 +612,7 @@ export default function CanvasView() {
           </ReactFlow>
           <AutoPan activeNodeId={activeNodeId} nodes={nodes} />
         </ReactFlowProvider>
+        <SidekickPanel queue={queue} onCancel={cancelQueued} />
         <DetailSidebar
           key={activeNodeId}
           title={sidebarDismissed ? null : (focusedData?.node?.title ?? (activeNodeId === ROOT_ID ? "General" : null))}
@@ -537,7 +629,7 @@ export default function CanvasView() {
         <span><kbd>:</kbd> chat</span>
         <span><kbd>Esc</kbd> back</span>
       </div>
-      <ChatBar />
+      <ChatBar enqueue={enqueue} />
     </div>
   );
 }
