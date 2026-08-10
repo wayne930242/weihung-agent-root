@@ -279,6 +279,26 @@ export default function CanvasView() {
     if (pendingRaw) setManualFocusId(null);
   }, [pendingRaw?.requestId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A multi-question AskUserQuestion batch only resolves once every card in
+  // it is submitted (answerOne above) — until then, each already-submitted
+  // card just leaves its stand-in system entry with nothing to indicate how
+  // many more are still needed (blind usability test: answering one of four
+  // read as "did this even work?" with no clue the other three were still
+  // blocking it).
+  const batchProgress =
+    pendingRaw && pendingRaw.questions.length > 1
+      ? { answered: Object.keys(partialAnswers).length, total: pendingRaw.questions.length }
+      : null;
+
+  // "Please finalize now" (converge()'s pushMessage) explicitly asks Claude
+  // to resolve or drop every open branch before flipping top-level status —
+  // but a plain chat "wrap up" phrasing can also reach `complete` without
+  // going through that instruction, and nothing here enforces it either way
+  // (D4: Claude alone authors TREE.json). Surface the mismatch rather than
+  // silently trusting `complete` to mean "nothing left open."
+  const openNodesAfterComplete =
+    tree?.status === "complete" ? (tree.nodes ?? []).filter((n) => n.status === "open").length : 0;
+
   const firstLiveQuestionId = liveQuestions[0]?.cardId ?? null;
 
   // Priority: explicit user focus > a live pending question > whatever's
@@ -474,7 +494,14 @@ export default function CanvasView() {
 
   return (
     <div className="canvas-view">
-      <Navbar topic={tree?.topic} status={tree?.status} busy={agentBusy} onConverge={converge} />
+      <Navbar
+        topic={tree?.topic}
+        status={tree?.status}
+        busy={agentBusy}
+        batchProgress={batchProgress}
+        openNodesAfterComplete={openNodesAfterComplete}
+        onConverge={converge}
+      />
       <div className="canvas-flow">
         <ReactFlowProvider>
           <ReactFlow

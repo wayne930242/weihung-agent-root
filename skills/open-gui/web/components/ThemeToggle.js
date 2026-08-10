@@ -21,6 +21,7 @@ export default function ThemeToggle() {
       className="theme-toggle"
       onClick={cycle}
       title="Theme: auto follows Claude Code's own setting"
+      aria-label="Toggle theme"
     >
       {themeOverride}
     </button>

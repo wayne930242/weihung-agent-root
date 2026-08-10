@@ -1,10 +1,24 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePreview } from "./PreviewProvider";
 import Markdown from "./Markdown";
 
 export default function PreviewPanel() {
   const { open, path, loading, content, error, closePreview } = usePreview();
+
+  // The shortcut-hints bar and CanvasView's own keydown handler both
+  // advertise "Esc back", but CanvasView's Escape case only blurs a
+  // focused input — nothing there ever closed this overlay.
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e) {
+      if (e.key === "Escape") closePreview();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, closePreview]);
+
   if (!open) return null;
 
   const isMarkdown = path?.toLowerCase().endsWith(".md");

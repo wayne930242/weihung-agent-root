@@ -205,6 +205,20 @@ button:focus {
   color: var(--accent);
   animation: agent-busy-pulse 1.2s ease-in-out infinite;
 }
+.batch-progress-indicator {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--dim);
+  border-radius: 999px;
+  color: var(--dim);
+}
+.open-after-complete-warning {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  color: var(--danger);
+}
 @keyframes agent-busy-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }

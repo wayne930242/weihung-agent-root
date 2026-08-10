@@ -84,55 +84,67 @@ export default function QuestionTreeCard({ id, data }) {
             {node.answer.notes && <span className="answer-card-notes">note: {node.answer.notes}</span>}
           </div>
         )}
-        {optionCount > 0 && (
-          <div className="option-cards">
-            {node.options.map((opt, i) => (
+        {/* Answering UI only makes sense pre-resolution — Notes here is a
+            modifier attached to the option/Other you're about to submit
+            (submitOption/submitOther above), not an independently-saveable
+            field. Left rendered post-resolution, these three invited input
+            that had no send path at all: typing Notes on an already-
+            resolved node just sat in local state with nowhere to go
+            (there's no "resubmit notes alone" message type). Changing an
+            existing answer is 重新考慮's job, not this. */}
+        {!resolved && (
+          <>
+            {optionCount > 0 && (
+              <div className="option-cards">
+                {node.options.map((opt, i) => (
+                  <button
+                    key={opt.label}
+                    className="option-card nodrag nopan"
+                    onClick={() => submitOption(i + 1)}
+                  >
+                    <span className="option-label">{opt.label}</span>
+                    {opt.description && <span className="option-desc">{opt.description}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="node-other">
+              <input
+                type="text"
+                className="nodrag nopan"
+                placeholder={otherFocused ? "Other…" : "Other… (/)"}
+                value={customText}
+                onFocus={() => setOtherFocused(true)}
+                onBlur={() => setOtherFocused(false)}
+                onChange={(e) => setCustomText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                    submitOther(customText);
+                    setCustomText("");
+                  }
+                }}
+              />
               <button
-                key={opt.label}
-                className="option-card nodrag nopan"
-                onClick={() => submitOption(i + 1)}
+                className="nodrag nopan"
+                onClick={() => {
+                  submitOther(customText);
+                  setCustomText("");
+                }}
+                disabled={!customText.trim()}
               >
-                <span className="option-label">{opt.label}</span>
-                {opt.description && <span className="option-desc">{opt.description}</span>}
+                Send
               </button>
-            ))}
-          </div>
+            </div>
+            <textarea
+              className="node-notes nodrag nopan"
+              placeholder={notesFocused ? "Notes…" : "Notes… (e)"}
+              value={notes}
+              onFocus={() => setNotesFocused(true)}
+              onBlur={() => setNotesFocused(false)}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </>
         )}
-        <div className="node-other">
-          <input
-            type="text"
-            className="nodrag nopan"
-            placeholder={otherFocused ? "Other…" : "Other… (/)"}
-            value={customText}
-            onFocus={() => setOtherFocused(true)}
-            onBlur={() => setOtherFocused(false)}
-            onChange={(e) => setCustomText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                submitOther(customText);
-                setCustomText("");
-              }
-            }}
-          />
-          <button
-            className="nodrag nopan"
-            onClick={() => {
-              submitOther(customText);
-              setCustomText("");
-            }}
-            disabled={!customText.trim()}
-          >
-            Send
-          </button>
-        </div>
-        <textarea
-          className="node-notes nodrag nopan"
-          placeholder={notesFocused ? "Notes…" : "Notes… (e)"}
-          value={notes}
-          onFocus={() => setNotesFocused(true)}
-          onBlur={() => setNotesFocused(false)}
-          onChange={(e) => setNotes(e.target.value)}
-        />
       </CardBody>
     </div>
   );

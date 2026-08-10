@@ -8,7 +8,7 @@ import ThemeToggle from "./ThemeToggle";
 // regardless of where the viewport has panned/zoomed to, unlike a card
 // that's part of the graph itself. `onConverge` is owned by CanvasView (it
 // needs to run the collapse animation before sending session:finalize).
-export default function Navbar({ topic, status, busy, onConverge }) {
+export default function Navbar({ topic, status, busy, batchProgress, openNodesAfterComplete, onConverge }) {
   const { send } = useSocket();
 
   function stop() {
@@ -19,6 +19,19 @@ export default function Navbar({ topic, status, busy, onConverge }) {
     <div className="navbar">
       <span className="navbar-topic">{topic || "open-gui"}</span>
       {status && <span className={`tree-status tree-status-${status}`}>{status}</span>}
+      {openNodesAfterComplete > 0 && (
+        <span
+          className="open-after-complete-warning"
+          title="Marked complete, but this many nodes are still open — the wrap-up path taken didn't resolve them"
+        >
+          {openNodesAfterComplete} still open
+        </span>
+      )}
+      {batchProgress && (
+        <span className="batch-progress-indicator">
+          {batchProgress.answered}/{batchProgress.total} answered — {batchProgress.total - batchProgress.answered} more needed
+        </span>
+      )}
       {busy && <span className="agent-busy-indicator">Thinking…</span>}
       <div className="navbar-right">
         <ThemeToggle />
