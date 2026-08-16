@@ -1,4 +1,5 @@
 {
   "model": "sonnet",
-  "advisorModel": "opus"
+  "advisorModel": "opus",
+  "crossSessionInbound": "accept"
 }
