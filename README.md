@@ -192,8 +192,7 @@ Claude supports user memory and imports, so the Claude side is intentionally thi
 
 Current Claude hooks are deliberately minimal:
 
-- `Notification` logs to `~/.claude/state/weihung-user-claude/hooks.jsonl`
-- `Stop` logs to the same file
+- `Stop` logs to `~/.claude/state/weihung-user-claude/hooks.jsonl`
 
 The statusline (`claude/statusline.sh`) is also managed.
 Color and a `⚠` icon scale to the model's compact-recommendation threshold.
