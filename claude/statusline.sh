@@ -15,7 +15,6 @@ if command -v jq > /dev/null 2>&1; then
     IFS= read -r RL_7D
     IFS= read -r LINES_ADDED
     IFS= read -r LINES_REMOVED
-    IFS= read -r SESS_NAME
     IFS= read -r GIT_WT
     IFS= read -r AGENT
     IFS= read -r OUT_STYLE
@@ -27,7 +26,6 @@ if command -v jq > /dev/null 2>&1; then
     (.rate_limits.seven_day.used_percentage // -1 | floor),
     (.cost.total_lines_added // 0),
     (.cost.total_lines_removed // 0),
-    (.session_name // "" | gsub("\n"; " ")),
     (.workspace.git_worktree // ""),
     (.agent.name // ""),
     (.output_style.name // "default")
@@ -40,32 +38,12 @@ else
   RL_7D=-1
   LINES_ADDED=0
   LINES_REMOVED=0
-  SESS_NAME=""
   GIT_WT=""
   AGENT=""
   OUT_STYLE="default"
 fi
 
 DIR_NAME="${CUR_DIR##*/}"
-
-# Truncate session name to a 24-column visual width (fullwidth/CJK
-# characters render as 2 columns, so this is ~12 CJK chars or 24 ASCII)
-SESS_TRUNC=""
-if [[ -n "$SESS_NAME" ]]; then
-  SESS_TRUNC=$(SESS_NAME="$SESS_NAME" python3 -c '
-import os, unicodedata
-s = os.environ["SESS_NAME"]
-w, out = 0, []
-for c in s:
-    cw = 2 if unicodedata.east_asian_width(c) in ("W", "F") else 1
-    if w + cw > 24:
-        out.append("…")
-        break
-    out.append(c)
-    w += cw
-print("".join(out), end="")
-')
-fi
 
 # Git info
 BRANCH=""
@@ -129,9 +107,6 @@ if [[ -n "$BRANCH" ]]; then
   L_BRANCH=$(printf '\033[48;5;54m\033[38;5;255m  %s %s' "$GIT_BODY" "$R")
 fi
 
-L_SESS=""
-[[ -n "$SESS_TRUNC" ]] && L_SESS=$(printf '\033[48;5;238m\033[38;5;255m  %s %s' "$SESS_TRUNC" "$R")
-
 L_WT=""
 [[ -n "$GIT_WT" ]] && L_WT=$(printf '\033[48;5;25m\033[38;5;255m  %s %s' "$GIT_WT" "$R")
 
@@ -142,7 +117,7 @@ L_OS=""
 [[ "$OUT_STYLE" != "default" && -n "$OUT_STYLE" ]] \
   && L_OS=$(printf ' %s %s%s' "$DIM" "$OUT_STYLE" "$R")
 
-LEFT="${L_MODEL}${L_DIR}${L_SESS}${L_BRANCH}${L_WT}${L_AG}${L_OS}"
+LEFT="${L_MODEL}${L_DIR}${L_BRANCH}${L_WT}${L_AG}${L_OS}"
 
 # RIGHT: plain text with icon + threshold colors
 CTX_C=$(ctx_fg "$PCT")
