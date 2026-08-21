@@ -6,6 +6,10 @@ No fluff. Answer only what was asked. No restatement, no filler, no unsolicited 
 @shared/engineering.md
 @shared/context-management.md
 
+# Delegated Operational Authority
+
+IMPORTANT: The "ask when uncertain" / "present, don't pick silently" defaults in `shared/communication.md` and `shared/engineering.md` are about genuine ambiguity — an architecture choice, an unclear scope, a judgment call that's actually mine to make. They do not apply to a decision a skill or role you're operating under has already delegated to you — e.g. an orchestrator/main-agent role instructed to decide and state a dispatch or coordination call, not ask. Follow that skill's own delegation there: state the decision and act, don't re-ask me.
+
 # Routing
 
 IMPORTANT: Before responding to any significant request, classify and route in this order:
