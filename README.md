@@ -93,10 +93,12 @@ through a dispatcher.
 
 - Every source-changing task follows Requirements → Spec → Design → Implement →
   Verify.
-- A mechanical, self-contained change keeps the lifecycle inline.
-- Work that needs discovery, changes a contract, spans components, or crosses a
-  session or handoff uses `docs/specs/YYYY-MM-DD-<slug>/` with separate
-  `requirements.md`, `spec.md`, `design.md`, and `verification.md` files.
+- Clear, localized work with little future reuse keeps the lifecycle inline,
+  even when observable behavior changes.
+- Work whose decisions or proof must guide future work, coordinate contracts or
+  components, or cross a session or handoff uses
+  `docs/specs/YYYY-MM-DD-<slug>/` with separate `requirements.md`, `spec.md`,
+  `design.md`, and `verification.md` files.
 - Every programming change uses TDD. The agent proves correctness through the
   closest practical interface; human final check judges appropriateness only.
 - Native plans own execution sequencing. Dispatchers own routing and operational
@@ -271,8 +273,9 @@ If you want to opt in manually, copy the relevant snippet from:
 ## Why This Is Light
 
 - The global prompt files are short.
-- Every source-changing route uses the embedded Mini SDD lifecycle; mechanical
-  work stays inline and durable work leaves phased artifacts under `docs/specs/`.
+- Every source-changing route uses the embedded Mini SDD lifecycle; low-reuse
+  local work stays inline and durable work leaves phased artifacts under
+  `docs/specs/`.
 - Approval policy is not mixed into prompt prose.
 - Automation is not mixed into prompt prose.
 - Product-specific capabilities live in product-specific directories.

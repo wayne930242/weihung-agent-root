@@ -137,7 +137,8 @@ Status: confirmed by user on 2026-08-23
 ## Confirmation
 
 - User confirmation: confirmed on 2026-08-23
-- Persistence threshold: option A in `requirements.md`
+- Persistence threshold: revised on 2026-08-23 so future reuse and coordination,
+  not observable behavior alone, determine artifact persistence
 - Browser GUI removal: explicitly confirmed by the user on 2026-08-23
 - Capability additions and the correctness/appropriateness boundary: explicitly
   confirmed by the user on 2026-08-23

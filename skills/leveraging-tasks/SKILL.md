@@ -1,6 +1,6 @@
 ---
 name: leveraging-tasks
-description: Use for any source-changing development work.
+description: Use for source-changing development; keep low-reuse local work inline and persist only durable decisions.
 ---
 
 # Leveraging Tasks
@@ -16,13 +16,16 @@ ADRs, rules, and related specs. Resolve cheap facts from their source.
 
 Classify artifact depth:
 
-- **Inline:** a self-contained mechanical change with no discovery, behavioral
-  choice, public contract change, or handoff risk.
-- **Durable:** work that needs discovery, changes observable behavior or a
-  contract, spans components, or must survive a session or agent handoff.
+- **Inline:** requirements are clear, impact is localized, implementation and
+  verification fit this run, and the decisions have little future reuse. Inline
+  work may change observable behavior.
+- **Durable:** decisions, constraints, or evidence need future reuse: unresolved
+  design requiring confirmation, a public/external contract or migration,
+  cross-component coordination, or continuity across a session or handoff.
 
 For durable work, read [MINI-SDD.md](MINI-SDD.md) fully and create or resume its
-artifact folder. Existing related artifacts make the work durable.
+artifact folder. A user-requested spec or an active related artifact also makes
+the work durable. Entering this skill alone never requires artifact files.
 
 For debugging, read [DEBUGGING.md](DEBUGGING.md) now and establish its
 pre-specification feedback loop before diagnosing or proposing a fix.
@@ -54,7 +57,7 @@ appropriateness. Durable work records this in `spec.md` and links sources rather
 than copying them.
 
 Present a durable spec to the user and wait for explicit confirmation. A clear
-inline request is already the approved contract for a mechanical change.
+inline request is already the approved contract for inline work.
 
 **Complete when:** the contract is explicit and, for durable work, confirmed by
 the user. Production-source editing starts only after this point.

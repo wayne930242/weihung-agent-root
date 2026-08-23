@@ -19,14 +19,14 @@ Everything else should stay closer to the project or the local machine.
 
 Use the lightest process that preserves intent and proof.
 
-- Keep a mechanical, self-contained change inline and execute it without a
-  persistent artifact.
+- Keep clear, localized work inline when its decisions have little future reuse;
+  observable behavior may still change.
 - Invoke a skill only when its specialized behavior changes the outcome.
 - Shape every source-changing task through Requirements, Spec, Design, Implement,
   and Verify after entering the target project, regardless of dispatch.
 - Persist separate `requirements.md`, `spec.md`, `design.md`, and
-  `verification.md` files when discovery, behavior, or proof must survive a
-  session or agent handoff.
+  `verification.md` files when decisions, constraints, or proof must guide
+  future work, coordinate consumers, or survive a session or agent handoff.
 - Keep each artifact small enough to understand in one pass and link to existing
   sources instead of copying them.
 - Every programming change uses TDD. The agent owns correctness and exercises the

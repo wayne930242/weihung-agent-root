@@ -90,8 +90,10 @@ lifecycle and artifact convention, not an invocable skill or parallel framework.
 
 ## Durable artifact lifecycle
 
-Artifacts live under `docs/specs/YYYY-MM-DD-<slug>/` and appear only as phases
-are reached:
+The phase logic always applies, but files exist only when their decisions,
+constraints, or proof have future reuse. Clear localized work remains inline
+even when it changes behavior. Durable artifacts live under
+`docs/specs/YYYY-MM-DD-<slug>/` and appear only as phases are reached:
 
 - `requirements.md`: outcome, actors, scope, scenarios, decisions, open questions
 - `spec.md`: observable contract, edge cases, constraints, applied standards,

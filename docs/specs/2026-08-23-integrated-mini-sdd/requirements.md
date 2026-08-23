@@ -97,10 +97,14 @@ the target project's development flow after entering that project.
 
 - Every development task follows the same requirements, specification, design,
   implementation, and verification logic.
-- Persist the four-file lifecycle when work needs discovery, changes observable
-  behavior or a contract, spans components, or must survive a session or agent
-  handoff.
-- Keep truly mechanical, self-contained changes inline.
+- Persist the four-file lifecycle only when decisions, constraints, or proof have
+  future reuse: unresolved design needs persisted confirmation, public/external
+  contracts or migrations affect consumers, components need coordination, or
+  continuity must survive a session or handoff.
+- Keep clear, localized work inline when it can be implemented and verified in
+  the current run and its decisions have little future reuse. Observable behavior
+  change alone is not a persistence trigger.
+- A user-requested spec or an active related Mini SDD artifact remains durable.
 
 ## Capability decision
 

@@ -8,6 +8,7 @@ Verified: 2026-08-23
 |---|---|---|
 | One development owner embeds Mini SDD | `AGENTS.md`, `CLAUDE.md`, and `skills/leveraging-tasks/SKILL.md` route source-changing work through `leveraging-tasks` | Pass |
 | Durable requirements, spec, design, and verification remain traceable | `skills/leveraging-tasks/MINI-SDD.md` defines the threshold, four phase files, and update rules | Pass |
+| Small low-reuse behavior changes remain inline | `leveraging-tasks` and `MINI-SDD.md` make future reuse and coordination the persistence test; observable behavior alone is explicitly insufficient | Pass |
 | Specification precedes implementation and requires user confirmation | The Spec phase blocks production-source editing until explicit confirmation | Pass |
 | Debugging begins with executable feedback before specification | The Ground phase loads `DEBUGGING.md` and establishes its red-capable loop before diagnosis | Pass |
 | No parallel task engine or implementation diary | Native plans own sequencing; `tasks.md` and implementation diaries are explicitly excluded | Pass |
@@ -27,6 +28,10 @@ Verified: 2026-08-23
 
 ## Automated results
 
+- 2026-08-23 persistence refinement: `quick_validate.py` passed for
+  `leveraging-tasks`; active instruction searches confirmed that no remaining
+  rule makes observable behavior alone a persistence trigger; `git diff --check`
+  passed.
 - All 15 retained skills passed Codex `quick_validate.py`.
 - `tests/install.sh`: pass; the local install linked the four new skills in both
   tool roots, with explicit Codex assertions for each.

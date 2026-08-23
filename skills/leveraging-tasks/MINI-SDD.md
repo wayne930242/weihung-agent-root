@@ -5,17 +5,22 @@ or dispatcher.
 
 ## Persistence threshold
 
-Create or resume `docs/specs/YYYY-MM-DD-<slug>/` when any condition applies:
+Artifact creation is a future-value decision, not a consequence of entering
+`leveraging-tasks` or changing observable behavior. Create or resume
+`docs/specs/YYYY-MM-DD-<slug>/` when any condition applies:
 
-- requirements or design need exploration
-- observable behavior, compatibility, or a public contract changes
-- multiple components or dependent changes must stay aligned
-- a decision or constraint must survive compaction, another session, or a handoff
+- a decision, constraint, or proof must guide future work beyond this run
+- unresolved design needs explicit confirmation and persisted context
+- a public/external contract or migration affects downstream consumers
+- multiple components need a shared compatibility or coordination record
+- continuity is required across compaction, another session, or a handoff
 - the user asks for a spec or durable design
-- a related Mini SDD artifact already exists
+- an active related Mini SDD artifact already owns the change
 
-A self-contained mechanical change keeps the same lifecycle inline and creates
-no artifact folder.
+Keep work inline when requirements are clear, impact is localized,
+implementation and verification fit this run, and its decisions have little
+future reuse. Inline work may add or change observable behavior and creates no
+artifact folder.
 
 ## Phase files
 
