@@ -121,6 +121,23 @@ Bootstrap a new machine by cloning or updating the repo into the standard locati
 bash scripts/bootstrap.sh
 ```
 
+Install the repository-managed Codex agent system into Windows Codex Desktop
+from WSL:
+
+```bash
+bash scripts/install-codex-desktop-wsl.sh
+```
+
+The Desktop installer discovers the Windows user profile automatically and
+copies only the managed Codex surface. It preserves Windows-only `.system`
+skills, plugins, `config.toml`, authentication, history, and runtime state.
+Conflicting managed targets fail safely; use `--force` to back them up under
+Windows Local AppData before replacement:
+
+```bash
+bash scripts/install-codex-desktop-wsl.sh --force
+```
+
 Remote one-liner bootstrap:
 
 ```bash
@@ -266,6 +283,7 @@ If you want to opt in manually, copy the relevant snippet from:
 The repo currently verifies:
 
 - installer behavior with `tests/install.sh`
+- Windows Codex Desktop installer behavior with `tests/install_codex_desktop_wsl.sh`
 - Claude hook scripts with `tests/hooks.sh`
 - Codex hook scripts with `tests/codex_hooks.sh`
 - bootstrap clone/update behavior with `tests/bootstrap.sh`

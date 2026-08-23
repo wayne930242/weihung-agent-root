@@ -31,6 +31,17 @@ under `docs/specs/`.
 - Put automation behavior in Codex `hooks.json` and `hooks/`, not in prose.
 - Put specialized delegation behavior in Codex `agents/*.toml`, not in prose.
 
+# Windows / WSL Path Interoperability
+
+- When running in WSL, translate local attachment paths written as `C:\\...`
+  (or another Windows drive path) to `/mnt/<drive>/...` before accessing them.
+  Use `wslpath -u` when available.
+- Quote translated paths because Windows user and temporary directories may
+  contain spaces.
+- Do not conclude that a Windows clipboard or temporary file has expired only
+  because its unconverted Windows path is unavailable inside WSL. Check the
+  translated path first.
+
 # Browser Automation
 
 - If the current harness has a browser tool and the task does not require login, use the faster non-auth path first.
