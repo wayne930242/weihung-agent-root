@@ -1,9 +1,9 @@
 ---
 name: grill-me
-description: A relentless interview to sharpen a plan or design.
+description: Use when the user asks to be grilled on an idea.
 ---
 
-Run a `/grilling` session.
+Invoke the `grilling` skill through the current harness's native skill mechanism.
 
 ---
 

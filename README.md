@@ -65,6 +65,12 @@ rules/
   chinese-writing.md
 skills/
   leveraging-tasks/
+    MINI-SDD.md
+    DEBUGGING.md
+  tdd/
+  codebase-design/
+  domain-modeling/
+  prototype/
   providing-knowledge/
   investigating/
   inspecting/
@@ -78,6 +84,28 @@ config/
   claude-settings.json             # main model and advisor pairing
   codex-config.toml                # optional snippet, not auto-merged
 ```
+
+## Mini SDD
+
+Mini SDD is the phased development lifecycle embedded in `leveraging-tasks`. It
+runs after the agent enters the target project, whether work arrived directly or
+through a dispatcher.
+
+- Every source-changing task follows Requirements → Spec → Design → Implement →
+  Verify.
+- A mechanical, self-contained change keeps the lifecycle inline.
+- Work that needs discovery, changes a contract, spans components, or crosses a
+  session or handoff uses `docs/specs/YYYY-MM-DD-<slug>/` with separate
+  `requirements.md`, `spec.md`, `design.md`, and `verification.md` files.
+- Every programming change uses TDD. The agent proves correctness through the
+  closest practical interface; human final check judges appropriateness only.
+- Native plans own execution sequencing. Dispatchers own routing and operational
+  state. ADRs own hard-to-reverse architecture decisions.
+
+The phase transitions live in
+[`skills/leveraging-tasks/SKILL.md`](skills/leveraging-tasks/SKILL.md); the
+conditional artifact contract is progressively disclosed through
+[`MINI-SDD.md`](skills/leveraging-tasks/MINI-SDD.md).
 
 ## Install
 
@@ -226,6 +254,8 @@ If you want to opt in manually, copy the relevant snippet from:
 ## Why This Is Light
 
 - The global prompt files are short.
+- Every source-changing route uses the embedded Mini SDD lifecycle; mechanical
+  work stays inline and durable work leaves phased artifacts under `docs/specs/`.
 - Approval policy is not mixed into prompt prose.
 - Automation is not mixed into prompt prose.
 - Product-specific capabilities live in product-specific directories.

@@ -1,15 +1,25 @@
 ---
 name: grilling
-description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
+description: Use to resolve user-owned decisions through a design-tree interview.
 ---
 
-Interview me relentlessly about every aspect of this until we reach a shared understanding. Walk down each branch of the decision tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+Interview the user relentlessly until you reach a shared understanding. Map the subject as a **design tree**: every decision branches into the decisions that depend on it.
 
-Ask the questions one at a time, waiting for feedback on each question before continuing. Asking multiple questions at once is bewildering.
+Work in **rounds**. The **frontier** is every open decision whose prerequisites are settled. Ask the whole frontier in one round, numbering each question and giving your recommended answer. Then wait for the user's answers before continuing.
 
-If a *fact* can be found by exploring the environment (filesystem, tools, etc.), look it up rather than asking me. The *decisions*, though, are mine — put each one to me and wait for my answer.
+Format each question like this:
 
-Do not act on it until I confirm we have reached a shared understanding.
+```
+❓ **Q1 — <title>**: <question and options>
+
+➡️ <recommended answer and why>
+```
+
+Each answer reshapes the tree. Recompute the frontier before the next round. A question that still depends on another open decision belongs to a later round.
+
+Finding facts is the agent's job. Use the environment and available tools; delegate independent fact-finding only when it materially saves time. The decisions are the user's: put each frontier question to them and wait.
+
+The session is complete when the frontier is empty and every branch has been visited. Act on the result only after the user confirms shared understanding. Return the confirmed requirements and decisions to the caller; update a caller-provided `requirements.md` before returning.
 
 ---
 

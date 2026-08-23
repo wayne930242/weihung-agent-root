@@ -1,6 +1,6 @@
 ---
 name: writing-great-skills
-description: Use when writing or editing a skill, subagent, rule, or agent-system doc — the vocabulary and principles that keep a skill predictable. Consult before coining a new term for skill behaviour.
+description: Use when writing or editing skills or agent-system instructions.
 ---
 
 A skill exists to wrangle determinism out of a stochastic system. **Predictability** — the agent taking the same _process_ every run, not producing the same output — is the root virtue; every lever below serves it.

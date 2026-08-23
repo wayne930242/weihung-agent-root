@@ -49,6 +49,10 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/skills/inspecting" "$REPO_ROOT/skills/inspecting"
   assert_symlink_target "$fake_home/.codex/skills/investigating" "$REPO_ROOT/skills/investigating"
   assert_symlink_target "$fake_home/.codex/skills/leveraging-tasks" "$REPO_ROOT/skills/leveraging-tasks"
+  assert_symlink_target "$fake_home/.codex/skills/tdd" "$REPO_ROOT/skills/tdd"
+  assert_symlink_target "$fake_home/.codex/skills/codebase-design" "$REPO_ROOT/skills/codebase-design"
+  assert_symlink_target "$fake_home/.codex/skills/domain-modeling" "$REPO_ROOT/skills/domain-modeling"
+  assert_symlink_target "$fake_home/.codex/skills/prototype" "$REPO_ROOT/skills/prototype"
   assert_symlink_target "$fake_home/.codex/skills/providing-knowledge" "$REPO_ROOT/skills/providing-knowledge"
   assert_symlink_target "$fake_home/.codex/skills/reflecting-to-root" "$REPO_ROOT/skills/reflecting-to-root"
   assert_symlink_target "$fake_home/.codex/agents/docs-researcher.toml" "$REPO_ROOT/codex/agents/docs-researcher.toml"
@@ -64,7 +68,8 @@ from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert "hooks" in settings, settings
 assert "Stop" in settings["hooks"], settings
-assert "Notification" in settings["hooks"], settings
+assert "Notification" not in settings["hooks"], settings
+assert settings["crossSessionInbound"] == "accept", settings
 PY
 
   [[ ! -e "$fake_home/.codex/config.toml" ]] || fail "did not expect installer to rewrite ~/.codex/config.toml in the light layout"
@@ -132,7 +137,8 @@ settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["customSetting"] is True, settings
 assert settings["effortLevel"] == "xhigh", settings
 assert "Stop" in settings["hooks"], settings
-assert "Notification" in settings["hooks"], settings
+assert "Notification" not in settings["hooks"], settings
+assert settings["crossSessionInbound"] == "accept", settings
 PY
 
   rm -rf "$temp_dir"
@@ -153,6 +159,7 @@ from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["model"] == "sonnet", settings
 assert settings["advisorModel"] == "opus", settings
+assert settings["crossSessionInbound"] == "accept", settings
 assert "Stop" in settings["hooks"], settings
 assert "statusLine" in settings, settings
 PY

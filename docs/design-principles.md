@@ -15,6 +15,31 @@ The repo should manage only behavior that is both:
 
 Everything else should stay closer to the project or the local machine.
 
+## Workflow Boundary
+
+Use the lightest process that preserves intent and proof.
+
+- Keep a mechanical, self-contained change inline and execute it without a
+  persistent artifact.
+- Invoke a skill only when its specialized behavior changes the outcome.
+- Shape every source-changing task through Requirements, Spec, Design, Implement,
+  and Verify after entering the target project, regardless of dispatch.
+- Persist separate `requirements.md`, `spec.md`, `design.md`, and
+  `verification.md` files when discovery, behavior, or proof must survive a
+  session or agent handoff.
+- Keep each artifact small enough to understand in one pass and link to existing
+  sources instead of copying them.
+- Every programming change uses TDD. The agent owns correctness and exercises the
+  closest practical interface itself: tests, CLI, API, runtime, Chrome/browser
+  automation, computer use, or another project-native surface.
+- Human review owns appropriateness: whether an objectively working UX, workflow,
+  or domain result is suitable for its users and context. Keep that verdict
+  distinct from correctness evidence.
+- Do not stack planning frameworks with overlapping jobs.
+
+`leveraging-tasks` owns phase transitions. Native model planning owns execution
+tasks; dispatch tools own routing and operational state.
+
 ## What Belongs Here
 
 - short shared working agreements

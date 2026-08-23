@@ -1,72 +1,52 @@
 ---
 name: inspecting
-description: Use when the user asks to check, audit, or review something thoroughly. Builds a check plan, then verifies each item with the investigating skill.
-model: sonnet
+description: Use to check, audit, verify, or review a defined target.
 ---
 
 # Inspecting
 
-Build a plan. Verify every item, relentlessly.
+Define the evidence needed, check it, and give each scoped item a verdict.
+
+For a branch, pull request, worktree, or change-set review, read
+[DIFF-REVIEW.md](DIFF-REVIEW.md) first and use its fixed-point Standards/Spec
+branch.
 
 ## Inspection Flow
 
-### Phase 1: Build Check Plan
+### Phase 1: Scale the Inspection
 
-Before checking anything, build the complete plan:
+Choose the lightest mode that can support a trustworthy conclusion:
 
-1. **Identify scope.** What is being inspected? What are the boundaries?
-2. **List all check items.** Be exhaustive. Consider:
-   - Functional correctness
-   - Edge cases and error handling
-   - Architecture and structure quality
-   - Security and data safety
-   - Performance implications
-   - Convention compliance
-   - Dependencies and side effects
-3. **Order by risk.** Highest-impact items first.
-4. **Present plan to user.** Format:
+- **Focused:** one narrow target or claim. Inspect it directly.
+- **Standard:** several clear items. State a concise checklist, then proceed.
+- **High-risk or ambiguous:** security, production, destructive effects, or unclear boundaries. Present the plan and wait for confirmation.
 
-```
-## Inspection Plan: [subject]
+Include only dimensions relevant to the request: correctness, edge cases, architecture, security, performance, conventions, dependencies, and side effects.
 
-### Scope
-[What we are checking]
+### Phase 2: Verify
 
-### Check Items
-1. [ ] [Item] — [what we verify and why it matters]
-2. [ ] [Item] — [what we verify and why it matters]
-...
-```
+For each scoped item:
 
-Wait for user confirmation before proceeding.
-
-### Phase 2: Execute Plan
-
-For each check item:
-
-1. Invoke the `investigating` skill to verify that specific item.
-2. Record result: pass / fail / needs attention.
-3. If fail → note what is wrong and what the fix would be.
-4. Move to next item.
+1. Identify the evidence that would prove or disprove it.
+2. Gather that evidence directly. Invoke `investigating` only when the item requires substantial research or cross-source verification.
+3. Record a verdict: pass, fail, needs attention, or insufficient evidence.
+4. Keep observed facts separate from inference.
 
 ### Phase 3: Report
 
 ```
-## Inspection Report: [subject]
-
-| # | Check Item | Result | Notes |
-|---|-----------|--------|-------|
-| 1 | [item] | pass/fail | [details] |
-
-### Summary
-- Passed: N / Total
-- Issues found: [list with severity]
-- Recommended actions: [prioritized list]
+| Check Item | Verdict | Evidence / Notes |
+|------------|---------|------------------|
+| [item] | [verdict] | [evidence] |
 ```
+
+Lead with the conclusion. Prioritize failures and recommended actions by impact. Name any unverified boundary instead of implying full coverage.
+
+When another workflow supplies an artifact path, return verdicts to that phase's
+artifact rather than creating a separate report.
 
 ## Principles
 
-- **Plan first, check second.** The plan is the completion criterion: inspection is done when every item on it has a verdict.
-- **Exhaustive.** Missing a check item is worse than a false alarm.
-- **Each item gets a real investigation.** Evidence decides the verdict.
-- **User controls scope.** Present the plan, let the user add/remove items.
+- **Evidence decides the verdict.** Confidence does not replace proof.
+- **Scope is the completion criterion.** Finish when every scoped item has a verdict.
+- **Depth follows risk.** Ceremony that does not improve the conclusion is noise.

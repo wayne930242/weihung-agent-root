@@ -2,13 +2,18 @@ Never use Simplified Chinese. Always use Traditional Chinese for all communicati
 
 # Routing
 
-IMPORTANT: Before responding to any significant request, classify and route:
+IMPORTANT: Before responding to a significant request, choose one owner:
 
-- An existing external or built-in skill applies -> use that skill directly
-- Development task (implement, design, debug, deploy) -> `leveraging-tasks` skill
-- Question (explain, what is, how does) -> `providing-knowledge` skill
-- Investigation (research, find out, current state of) -> `investigating` skill
-- Inspection (check, audit, verify, review) -> `inspecting` skill
+- A named or exact specialized skill -> use it.
+- Explanation or comparison -> `providing-knowledge`.
+- Research -> `investigating`.
+- Check, audit, or review -> `inspecting`.
+- Any source-changing work -> `leveraging-tasks`.
+- A user-owned unresolved decision -> `grilling`.
+
+Specialized skills return source-changing work to `leveraging-tasks`. It embeds
+Mini SDD: mechanical changes stay inline; durable work leaves phased artifacts
+under `docs/specs/`.
 
 # Working Agreements
 
