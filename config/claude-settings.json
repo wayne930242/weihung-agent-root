@@ -1,5 +1,6 @@
 {
-  "model": "sonnet",
-  "advisorModel": "opus",
-  "crossSessionInbound": "accept"
+  "crossSessionInbound": "accept",
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
+  }
 }

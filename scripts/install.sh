@@ -38,7 +38,7 @@ Installs this repository as the source of truth for:
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
-  - config/claude-settings.json main model and advisor pairing
+  - config/claude-settings.json subagent model pin (env.CLAUDE_CODE_SUBAGENT_MODEL)
 
 Defaults to failing on conflicts. Pass --force to back up conflicting targets
 before replacing them with symlinks.

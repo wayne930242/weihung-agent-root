@@ -157,8 +157,9 @@ model_settings_are_merged() {
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "sonnet", settings
-assert settings["advisorModel"] == "opus", settings
+assert "model" not in settings, settings
+assert "advisorModel" not in settings, settings
+assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "sonnet", settings
 assert settings["crossSessionInbound"] == "accept", settings
 assert "Stop" in settings["hooks"], settings
 assert "statusLine" in settings, settings

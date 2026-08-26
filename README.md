@@ -81,7 +81,7 @@ scripts/
   bootstrap.sh
 config/
   claude-hooks.json
-  claude-settings.json             # main model and advisor pairing
+  claude-settings.json             # subagent model pin, not main/advisor model
   codex-config.toml                # optional snippet, not auto-merged
 ```
 
@@ -207,11 +207,11 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Model selection is the one entry that moved off this list. `config/claude-settings.json` manages `model` and `advisorModel`, because a main/advisor pairing is a working agreement rather than a machine preference — it should hold on every machine you work from.
+Main model and advisor model are personal preferences, so they stay off this list: pick them yourself in `~/.claude/settings.local.json` or with `/model`.
 
-The pairing is Sonnet main with an Opus advisor. That is the combination Anthropic published numbers for (SWE-bench Multilingual +2.7pp over Sonnet solo, cost −11.9%), and Sonnet 5 carries a 1M context window natively on the Anthropic API rather than depending on the plan's automatic upgrade the way Opus does. Advisor usage counts against the same subscription limits as ordinary work, and subagents inherit the setting.
+Worker dispatch is the one model entry that moved off this list. `config/claude-settings.json` pins `env.CLAUDE_CODE_SUBAGENT_MODEL` to `sonnet`, because subagents doing general programming work should stay on a known-good model regardless of whichever main model you happen to be running interactively. This env var overrides even a per-invocation model override, so it holds on every machine you work from.
 
-Uninstall drops both keys only while they still hold the installed value, so a hand-edited model survives.
+Uninstall drops the pinned env var only while it still holds the installed value, so a hand-edited setting survives.
 
 ## Conflict And Backup Behavior
 

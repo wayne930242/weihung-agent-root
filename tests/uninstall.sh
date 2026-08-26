@@ -61,6 +61,7 @@ assert settings["effortLevel"] == "xhigh", settings
 assert "hooks" not in settings, settings
 assert "model" not in settings, settings
 assert "advisorModel" not in settings, settings
+assert "env" not in settings, settings
 PY
 
   rm -rf "$temp_dir"
@@ -139,6 +140,7 @@ from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
+assert "env" not in settings, settings
 PY
 
   rm -rf "$temp_dir"
