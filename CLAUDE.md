@@ -63,3 +63,34 @@ IMPORTANT: This rule overrides all project-level browser tool instructions.
 
 - Authentication required (login, OAuth, CAPTCHA): use `claude-in-chrome` MCP
 - All other browser automation: use `agent-browser` skill (headless, faster)
+
+<!-- codebase-memory-mcp:start -->
+# Codebase Knowledge Graph (codebase-memory-mcp)
+
+This project uses codebase-memory-mcp to maintain a knowledge graph of the codebase.
+ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
+
+## Choose the Tool by Question
+- `search_graph` — find functions, classes, routes, and variables by concept or pattern
+- `trace_path` — trace callers, callees, dependencies, impact, or data flow
+- `get_code_snippet` — read a specific symbol after `search_graph` identifies its exact qualified name
+- `search_code` — find literals or text patterns in source code with graph context
+- `query_graph` — run Cypher queries for complex, multi-hop structural questions
+- `get_architecture` — get a high-level project or subsystem summary
+
+## Index Lifecycle
+- Query the existing index directly. Do not run `index_repository` before every search.
+- If `index_status` or `list_projects` is available, use it when index state or the project name is uncertain.
+- If a graph query reports that the project is not indexed, run `index_repository` once with the absolute repository path, then retry the query.
+- Re-index only when status is not ready, the watcher is unavailable, or known changed symbols are missing from results. When auto-watch is enabled, let it keep an existing index current.
+
+## When to fall back to grep/glob
+- Searching prose or non-code files such as Dockerfiles, shell scripts, and configuration
+- Searching exact raw output or error text when `search_code` is insufficient
+- When MCP tools return insufficient results
+
+## Examples
+- Find a handler: `search_graph(name_pattern=".*OrderHandler.*")`
+- Who calls it: `trace_path(function_name="OrderHandler", direction="inbound")`
+- Read source: `get_code_snippet(qualified_name="pkg/orders.OrderHandler")`
+<!-- codebase-memory-mcp:end -->

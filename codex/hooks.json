@@ -17,7 +17,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "echo \"Code discovery: prefer codebase-memory-mcp (search_graph, trace_path, get_code_snippet, query_graph, search_code) over grep/file-read; run index_repository first if the project is not indexed.\""
+                        "command": "echo \"Code discovery: choose the matching codebase-memory-mcp tool and query the existing index directly; do not index before every search. If the project is not indexed, run index_repository once with its absolute path and retry. Re-index only when status or known-missing symbols indicate a stale graph.\""
                     }
                 ]
             }
