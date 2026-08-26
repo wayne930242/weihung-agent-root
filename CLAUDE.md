@@ -26,9 +26,29 @@ that owner does not require SDD files: clear local work with little future reuse
 stays inline, while durable decisions and coordination leave phased artifacts
 under `docs/specs/`.
 
-# Cross-Model Consult
+# Complex Delegation
 
-Codex participates through `/codex:rescue`.
+A delegation is complex when it needs the target app's real harness or worktree, spans multiple steps or components, or benefits from mid-flight coordination.
+Route every complex delegation through the Straw Boss plugin's `boss-say` skill.
+Require `dispatching-work` to use a live `herdr-pane` so the user can watch, join, and answer the dispatched agent directly.
+If Herdr is unavailable, report that the in-loop route is blocked before changing transport; do not silently replace it with a plain subagent, direct `/codex:rescue`, or a headless dispatch.
+
+<!-- straw-boss:agent-routing:start -->
+# User-Facing Codex Refinement
+
+After completing and verifying any user-facing deliverable, dispatch a final review-and-refinement pass to `codex` through Straw Boss and Herdr.
+User-facing includes web, desktop, mobile, browser extensions, terminal/TUI workflows, and other interfaces people directly operate.
+Leave model and effort unset so Codex uses its current configured defaults.
+
+Codex must operate the closest available real interface, inspect the result, make any source or configuration adjustments needed within the original request, and repeat the real-interface check until no actionable finding remains.
+It may make those scoped adjustments without asking for approval at each iteration; return after the pass with the changes, evidence, and any remaining blocker.
+
+This refinement authority does not expand product scope or authorize destructive or external actions, commit, push, merge, deployment, release, submission, or authentication bypass.
+<!-- straw-boss:agent-routing:end -->
+
+# Direct Cross-Model Consult
+
+Reserve direct `/codex:rescue` use for self-contained, non-complex consultation.
 
 - Generating an asset (fixtures, scaffolds, sample data, boilerplate) → delegate, then verify the output yourself
 - Generating an image → delegate, and state that the asset is project-bound, or it stays under `$CODEX_HOME/generated_images/`
