@@ -34,13 +34,17 @@ Require `dispatching-work` to use a live `herdr-pane` so the user can watch, joi
 If Herdr is unavailable, report that the in-loop route is blocked before changing transport; do not silently replace it with a plain subagent, direct `/codex:rescue`, or a headless dispatch.
 
 <!-- straw-boss:agent-routing:start -->
-# User-Facing Codex Refinement
+# UI/UX Design Codex Refinement
 
-After completing and verifying any user-facing deliverable, dispatch a final review-and-refinement pass to `codex` through Straw Boss and Herdr.
-User-facing includes web, desktop, mobile, browser extensions, terminal/TUI workflows, and other interfaces people directly operate.
+Dispatch a final review-and-refinement pass to `codex` through Straw Boss and Herdr only when the completed work introduces new UI/UX design, needs design judgment, or sets a new design direction.
+User-facing surfaces include web, desktop, mobile, browser extensions, terminal/TUI workflows, and other interfaces people directly operate.
+
+Do not dispatch this pass when the work only applies an existing layout, design system, or component pattern, or when the frontend requirement is already specified and only needs implementation to that spec.
+General frontend work is not a trigger by itself; the normal verification for that work is enough.
+
 Leave model and effort unset so Codex uses its current configured defaults.
 
-Codex must operate the closest available real interface, inspect the result, make any source or configuration adjustments needed within the original request, and repeat the real-interface check until no actionable finding remains.
+When it does trigger, Codex must operate the closest available real interface, inspect the result, make any source or configuration adjustments needed within the original request, and repeat the real-interface check until no actionable finding remains.
 It may make those scoped adjustments without asking for approval at each iteration; return after the pass with the changes, evidence, and any remaining blocker.
 
 This refinement authority does not expand product scope or authorize destructive or external actions, commit, push, merge, deployment, release, submission, or authentication bypass.

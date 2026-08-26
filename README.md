@@ -291,6 +291,7 @@ The repo currently verifies:
 - Codex hook scripts with `tests/codex_hooks.sh`
 - bootstrap clone/update behavior with `tests/bootstrap.sh`
 - uninstall restore/remove behavior with `tests/uninstall.sh`
+- prompt routing rules with `tests/prompts.sh`
 
 ## Not Tracked
 
