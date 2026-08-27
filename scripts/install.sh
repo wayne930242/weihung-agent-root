@@ -190,8 +190,6 @@ install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
 install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
-merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
-merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
 
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.claude/agents/$(basename "$agent_file")"
@@ -224,6 +222,11 @@ done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
 while IFS= read -r hook_file; do
   install_link "$hook_file" "$TARGET_HOME/.codex/hooks/$(basename "$hook_file")"
 done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
+
+# Merge last: a hook entry in settings.json must never outlive a missing script,
+# or every matching event fails with exit 127.
+merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
+merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
 
 log "Install complete."
 report_optional_plugins

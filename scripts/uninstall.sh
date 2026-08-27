@@ -203,6 +203,11 @@ if [[ -n "$LATEST_BACKUP_DIR" ]]; then
   log "Using latest backup directory: $LATEST_BACKUP_DIR"
 fi
 
+# Clean first: a hook entry in settings.json must never outlive a removed script,
+# or every matching event fails with exit 127.
+clean_scalar_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
+clean_claude_settings "$TARGET_HOME/.claude/settings.json"
+
 restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"
 restore_or_remove "$TARGET_HOME/.claude/statusline.sh"
 restore_or_remove "$TARGET_HOME/.codex/AGENTS.md"
@@ -237,8 +242,6 @@ while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.codex/hooks/$(basename "$file")"
 done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
-clean_scalar_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
-clean_claude_settings "$TARGET_HOME/.claude/settings.json"
 cleanup_empty_dirs
 
 log "Uninstall complete."

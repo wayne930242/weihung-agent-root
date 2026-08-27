@@ -25,6 +25,37 @@ run_uninstall() {
   HOME="$fake_home" bash "$UNINSTALL_SCRIPT" --home "$fake_home" "$@"
 }
 
+assert_registered_hooks_runnable() {
+  local fake_home="$1"
+
+  python3 - "$fake_home" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+fake_home = sys.argv[1]
+settings_path = Path(fake_home) / ".claude/settings.json"
+if not settings_path.exists():
+    raise SystemExit(0)
+
+settings = json.loads(settings_path.read_text(encoding="utf-8"))
+missing = []
+for entries in settings.get("hooks", {}).values():
+    for entry in entries:
+        for hook in entry.get("hooks", []):
+            command = hook.get("command", "").strip('"')
+            if not command.startswith("$HOME/"):
+                continue
+            script = command.replace("$HOME", fake_home, 1)
+            if not os.access(script, os.X_OK):
+                missing.append(script)
+
+if missing:
+    raise SystemExit("settings.json registers unrunnable hook commands: %s" % missing)
+PY
+}
+
 restore_from_backup_and_clean_hooks() {
   local temp_dir
   temp_dir="$(mktemp -d)"
@@ -146,8 +177,32 @@ PY
   rm -rf "$temp_dir"
 }
 
+
+aborted_uninstall_never_leaves_missing_hooks_registered() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude/shared"
+  printf 'old shared\n' > "$fake_home/.claude/shared/communication.md"
+
+  run_install "$fake_home" --force
+
+  rm "$fake_home/.claude/shared/communication.md"
+  printf 'user replaced this\n' > "$fake_home/.claude/shared/communication.md"
+
+  if run_uninstall "$fake_home"; then
+    fail "expected uninstall to fail when a managed file was replaced by a real file"
+  fi
+
+  assert_registered_hooks_runnable "$fake_home"
+
+  rm -rf "$temp_dir"
+}
+
 run_all_tests() {
   restore_from_backup_and_clean_hooks
+  aborted_uninstall_never_leaves_missing_hooks_registered
   fresh_install_uninstall_removes_managed_files
   latest_backup_directory_wins
   uninstall_keeps_user_edited_model

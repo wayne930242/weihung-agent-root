@@ -27,6 +27,37 @@ run_install() {
   HOME="$fake_home" bash "$INSTALL_SCRIPT" --home "$fake_home" "$@"
 }
 
+assert_registered_hooks_runnable() {
+  local fake_home="$1"
+
+  python3 - "$fake_home" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+fake_home = sys.argv[1]
+settings_path = Path(fake_home) / ".claude/settings.json"
+if not settings_path.exists():
+    raise SystemExit(0)
+
+settings = json.loads(settings_path.read_text(encoding="utf-8"))
+missing = []
+for entries in settings.get("hooks", {}).values():
+    for entry in entries:
+        for hook in entry.get("hooks", []):
+            command = hook.get("command", "").strip('"')
+            if not command.startswith("$HOME/"):
+                continue
+            script = command.replace("$HOME", fake_home, 1)
+            if not os.access(script, os.X_OK):
+                missing.append(script)
+
+if missing:
+    raise SystemExit("settings.json registers unrunnable hook commands: %s" % missing)
+PY
+}
+
 fresh_install_creates_expected_symlinks() {
   local temp_dir
   temp_dir="$(mktemp -d)"
@@ -168,8 +199,27 @@ PY
   rm -rf "$temp_dir"
 }
 
+
+aborted_install_never_registers_missing_hooks() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude/agents"
+  printf 'existing\n' > "$fake_home/.claude/agents/security-reviewer.md"
+
+  if run_install "$fake_home"; then
+    fail "expected install to fail when a managed agent already exists without --force"
+  fi
+
+  assert_registered_hooks_runnable "$fake_home"
+
+  rm -rf "$temp_dir"
+}
+
 run_all_tests() {
   fresh_install_creates_expected_symlinks
+  aborted_install_never_registers_missing_hooks
   conflict_without_force_fails
   force_replaces_and_backs_up_conflicts
   existing_settings_are_merged_not_replaced
