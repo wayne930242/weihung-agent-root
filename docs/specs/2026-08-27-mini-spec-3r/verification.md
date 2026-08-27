@@ -64,9 +64,20 @@ eval now reads the whole turn stream.
 
 - Local verification: complete.
 - Behavior eval: complete on `sonnet`; not run on other models.
-- Commit: recorded below once made.
-- Push: recorded below once made.
-- Install probe: recorded below once run.
+- Commit: `a52cfa4` on `main`.
+- Push: `origin/main` advanced `0245cc4..a52cfa4`, carrying the previously
+  unpushed `f4ef385` with it.
+- Install: `scripts/install.sh` re-run against the real home; 46 links verified,
+  `~/.claude/skills/leveraging-tasks` and `~/.codex/skills/leveraging-tasks`
+  both resolve to this repository, and every configured hook command resolves to
+  an existing script.
+- Claude Code probe: a real-root `claude -p` run quoted both declaration lines,
+  all three approval fields, and what `Status: proposed` forbids.
+- Codex probe: `codex exec` in a directory outside the repo returned the same
+  three answers, so the contract is live through `~/.codex/skills`.
+- OpenSpec: no match for `openspec` or `opsx` across `~/.claude/CLAUDE.md`,
+  `~/.claude/shared`, `~/.claude/skills`, `~/.claude/agents`, `~/.codex/AGENTS.md`,
+  `~/.codex/skills`, `~/.codex/rules`, or `~/.codex/agents`.
 - CI: none configured.
 - Deployment: not applicable.
 - Browser proof: not applicable.
