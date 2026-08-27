@@ -26,10 +26,7 @@ through `boss-say` instead, and `leveraging-tasks` then runs inside the
 dispatched session rather than here. See Complex Delegation below.
 
 A specialized skill hands what it established to the implementation owner, which
-continues from there — the finding travels, the work does not restart. Entering
-that owner does not require SDD files: clear local work with little future reuse
-stays inline, while durable decisions and coordination leave phased artifacts
-under `docs/specs/`.
+continues from there — the finding travels, the work does not restart.
 
 # Complex Delegation
 

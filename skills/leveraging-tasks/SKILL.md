@@ -5,125 +5,71 @@ description: Use for source-changing development; keep low-reuse local work inli
 
 # Leveraging Tasks
 
-Own source-changing work after the agent enters the target project. A dispatcher
-may deliver the request, but the target project's instructions and skills govern
-execution.
+Own source-changing work after entering the target project. A dispatcher may
+deliver the request; the target project's instructions and skills govern
+execution. Phases run Ground → Requirements → Spec → Design → Implement →
+Verify. Return to an earlier phase whenever new information changes user intent
+or observable behavior; update only the design when the contract holds.
 
-## 1. Ground
+## Ground
 
-Read the request, project instructions, relevant code, existing `CONTEXT.md`,
-ADRs, rules, and related specs. Resolve cheap facts from their source.
-
-Classify artifact depth:
+Classify artifact depth before specifying:
 
 - **Inline:** requirements are clear, impact is localized, implementation and
   verification fit this run, and the decisions have little future reuse. Inline
-  work may change observable behavior.
-- **Durable:** decisions, constraints, or evidence need future reuse: unresolved
-  design requiring confirmation, a public/external contract or migration,
-  cross-component coordination, or continuity across a session or handoff.
+  work may change observable behavior and writes no artifact files.
+- **Durable:** a decision, constraint, or proof must outlive this run —
+  unconfirmed design, a public or external contract, a migration,
+  cross-component coordination, continuity across a session or handoff, a
+  user-requested spec, or an active related artifact.
 
-For durable work, read [MINI-SDD.md](MINI-SDD.md) fully and create or resume its
-artifact folder. A user-requested spec or an active related artifact also makes
-the work durable. Entering this skill alone never requires artifact files.
+Durable work reads [MINI-SDD.md](MINI-SDD.md) and creates or resumes its folder.
+Debugging reads [DEBUGGING.md](DEBUGGING.md) and establishes its red-capable
+loop before diagnosing.
 
-For debugging, read [DEBUGGING.md](DEBUGGING.md) now and establish its
-pre-specification feedback loop before diagnosing or proposing a fix.
+## Requirements
 
-**Complete when:** the target project, artifact depth, and applicable sources are
-known.
-
-## 2. Requirements
-
-Reuse requirements already established in the conversation. Resolve factual gaps
-with `investigating` or `inspecting`. Resolve decisions belonging to the user with
-`grilling`; use `grill-with-docs` when domain terms or an ADR should also persist.
-
-Invoke `domain-modeling` when programming touches domain behavior, terminology,
-invariants, or bounded-context boundaries.
-
-Durable work records the outcome, actors, scope, scenarios, decisions, and open
-questions in `requirements.md`.
+Resolve facts from their source; use `investigating` or `inspecting` when the
+search is wide. Send decisions that belong to the user to `grilling`, or
+`grill-with-docs` when domain terms or an ADR should persist. Invoke
+`domain-modeling` when terminology, invariants, or context boundaries move.
 
 **Complete when:** no open question blocks an observable specification.
 
-## 3. Spec
+## Spec
 
-Inspect the affected code and applicable project standards. Write the observable
-contract, edge cases, compatibility constraints, non-goals, applied standards,
-and validation strategy. For programming, specify the agent-operated interface
-that will prove correctness and any separate human question about
-appropriateness. Durable work records this in `spec.md` and links sources rather
-than copying them.
+State the observable contract, edge cases, compatibility constraints, non-goals,
+and the applied project standards. Name the agent-operated interface that will
+prove correctness, and any separate human question about appropriateness.
+Present a durable spec and wait for explicit user confirmation.
+Production-source editing starts only after this point. A clear inline request
+is already its own approved contract.
 
-Present a durable spec to the user and wait for explicit confirmation. A clear
-inline request is already the approved contract for inline work.
+## Design
 
-**Complete when:** the contract is explicit and, for durable work, confirmed by
-the user. Production-source editing starts only after this point.
+Choose the smallest approach that fits the confirmed contract and the project's
+existing architecture. Invoke `codebase-design` when interfaces, seams, or
+adapters change, `prototype` when a named question is cheaper to settle by
+throwaway experiment, `tdd` for every programming change, and the project's
+exact skill when its scope matches. Design is done when implementation invents
+no product behavior or architecture.
 
-## 4. Design
+## Implement
 
-Choose the smallest approach that satisfies the approved contract and current
-project architecture. Identify affected interfaces, data flow, precedent,
-trade-offs, risks, and verification seams. Durable work records these in
-`design.md`.
+The harness-native plan owns sequencing. Work one red-green slice at a time
+through `tdd`. Mini SDD creates no `tasks.md`, agent state, or diary.
 
-- For debugging, continue the design and implementation steps in
-  [DEBUGGING.md](DEBUGGING.md).
-- Invoke `codebase-design` when module interfaces, seams, adapters, or
-  architectural shape changes.
-- Invoke `prototype` when a named design question is best settled by a disposable
-  experiment.
-- Invoke `tdd` for every programming change. It selects a red-capable test or
-  real interface for agent-owned correctness and separates any human final check
-  for appropriateness.
-- For deployment, apply the project's deployment rules and exact deploy skill.
-- Invoke a project skill when its scope exactly matches the work.
+## Verify
 
-Return to an earlier phase when new information changes user intent or observable
-behavior. Update only the design when the contract remains unchanged.
-
-**Complete when:** implementation can proceed without inventing product behavior
-or architecture while coding.
-
-## 5. Implement
-
-Use the harness-native plan for sequencing and the project's exact skills for
-execution. Work in narrow, verifiable slices and keep unrelated cleanup outside
-the diff. Continue `tdd` one vertical red-green slice at a time for every
-programming change. Carry confirmed domain language into identifiers and tests,
-keep invariants in the domain model, and translate external or cross-context
-models at adapters. Mini SDD creates no task list, agent state, or implementation
-diary.
-
-**Complete when:** every approved behavior is implemented and no extra behavior
-was added.
-
-## 6. Verify
-
-Run the planned checks. Agent-owned correctness uses the closest available real
-interface: tests, CLI, API, runtime or operational harnesses, Chrome/browser
-automation, computer use, or an equivalent project-native surface. Review
-separately:
-
-- **Standards:** project conventions and relevant code-quality rules.
-- **Spec:** missing, incorrect, or unrequested behavior against the approved
-  contract.
-- **Domain:** ubiquitous language, invariant placement, bounded contexts, and
-  adapter translations remain aligned with the confirmed model.
-- **Appropriateness:** when specified, the human judges whether an already
-  working result is suitable for its users and context.
-
-Durable work records requirement-to-evidence mapping, deviations, and gaps in
-`verification.md`. Keep local verification, commit, push, CI, deployment, and
-browser proof as distinct claims.
-
-Keep automated results, interface observations, operational evidence, human
-appropriateness verdicts, and gaps distinct. Human review does not replace a
-missing correctness result. Documentation-only changes use agent inspection and
-applicable static checks.
+Correctness is agent-owned: exercise the closest available real interface —
+tests, CLI, API, runtime or operational harness, browser automation, computer
+use, or another project-native surface. Documentation-only changes use agent
+inspection and static checks. Then review the diff separately against project
+standards, the approved contract, and the confirmed domain model. A human
+verdict covers appropriateness only: whether an already-working result suits its
+users and context. It never substitutes for missing correctness evidence.
 
 **Complete when:** every programming item has agent-owned correctness evidence,
 every required appropriateness decision has a human verdict, and every remaining
-gap is explicitly reported as incomplete.
+gap is reported as incomplete. Keep local verification, commit, push, CI,
+deployment, and browser proof as distinct claims.

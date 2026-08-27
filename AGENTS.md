@@ -11,10 +11,8 @@ IMPORTANT: Before responding to a significant request, choose one owner:
 - Any source-changing work -> `leveraging-tasks`.
 - A user-owned unresolved decision -> `grilling`.
 
-Specialized skills return source-changing work to `leveraging-tasks`. Entering
-that owner does not require SDD files: clear local work with little future reuse
-stays inline, while durable decisions and coordination leave phased artifacts
-under `docs/specs/`.
+Specialized skills return source-changing work to `leveraging-tasks`; the
+finding travels, the work does not restart.
 
 # Working Agreements
 

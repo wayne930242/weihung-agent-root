@@ -87,27 +87,20 @@ config/
 
 ## Mini SDD
 
-Mini SDD is the phased development lifecycle embedded in `leveraging-tasks`. It
-runs after the agent enters the target project, whether work arrived directly or
-through a dispatcher.
+Mini SDD is the phased development lifecycle embedded in `leveraging-tasks`:
+Ground → Requirements → Spec → Design → Implement → Verify, applied after the
+agent enters the target project.
 
-- Every source-changing task follows Requirements → Spec → Design → Implement →
-  Verify.
-- Clear, localized work with little future reuse keeps the lifecycle inline,
-  even when observable behavior changes.
-- Work whose decisions or proof must guide future work, coordinate contracts or
-  components, or cross a session or handoff uses
-  `docs/specs/YYYY-MM-DD-<slug>/` with separate `requirements.md`, `spec.md`,
-  `design.md`, and `verification.md` files.
-- Every programming change uses TDD. The agent proves correctness through the
-  closest practical interface; human final check judges appropriateness only.
-- Native plans own execution sequencing. Dispatchers own routing and operational
-  state. ADRs own hard-to-reverse architecture decisions.
+Its one structural rule is a persistence threshold. Clear, localized work with
+little future reuse stays inline and writes no files; work whose decisions or
+proof must outlive the run leaves `requirements.md`, `spec.md`, `design.md`, and
+`verification.md` under `docs/specs/YYYY-MM-DD-<slug>/`.
 
-The phase transitions live in
+Phase transitions live in
 [`skills/leveraging-tasks/SKILL.md`](skills/leveraging-tasks/SKILL.md); the
-conditional artifact contract is progressively disclosed through
-[`MINI-SDD.md`](skills/leveraging-tasks/MINI-SDD.md).
+artifact contract is progressively disclosed through
+[`MINI-SDD.md`](skills/leveraging-tasks/MINI-SDD.md) and the debug loop through
+[`DEBUGGING.md`](skills/leveraging-tasks/DEBUGGING.md).
 
 ## Install
 

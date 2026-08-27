@@ -19,26 +19,21 @@ Everything else should stay closer to the project or the local machine.
 
 Use the lightest process that preserves intent and proof.
 
-- Keep clear, localized work inline when its decisions have little future reuse;
-  observable behavior may still change.
-- Invoke a skill only when its specialized behavior changes the outcome.
-- Shape every source-changing task through Requirements, Spec, Design, Implement,
-  and Verify after entering the target project, regardless of dispatch.
-- Persist separate `requirements.md`, `spec.md`, `design.md`, and
-  `verification.md` files when decisions, constraints, or proof must guide
-  future work, coordinate consumers, or survive a session or agent handoff.
-- Keep each artifact small enough to understand in one pass and link to existing
-  sources instead of copying them.
-- Every programming change uses TDD. The agent owns correctness and exercises the
-  closest practical interface itself: tests, CLI, API, runtime, Chrome/browser
-  automation, computer use, or another project-native surface.
-- Human review owns appropriateness: whether an objectively working UX, workflow,
-  or domain result is suitable for its users and context. Keep that verdict
-  distinct from correctness evidence.
-- Do not stack planning frameworks with overlapping jobs.
-
-`leveraging-tasks` owns phase transitions. Native model planning owns execution
-tasks; dispatch tools own routing and operational state.
+- Shape every source-changing task through Requirements, Spec, Design,
+  Implement, and Verify after entering the target project, regardless of
+  dispatch.
+- Persist the four phase files only when decisions, constraints, or proof must
+  guide future work, coordinate consumers, or survive a session or handoff.
+  Observable behavior change alone is not a trigger.
+- Keep each artifact readable in one pass and link to existing sources instead
+  of copying them.
+- Every programming change uses TDD, and the agent owns correctness through the
+  closest practical interface. Human review owns appropriateness only; keep that
+  verdict distinct from correctness evidence.
+- Do not stack planning frameworks with overlapping jobs, and do not restate a
+  rule in a second file. `leveraging-tasks` owns phase transitions, native
+  planning owns execution tasks, dispatch tools own routing and operational
+  state.
 
 ## What Belongs Here
 
