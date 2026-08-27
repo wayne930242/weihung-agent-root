@@ -13,7 +13,7 @@ or observable behavior; update only the design when the contract holds.
 
 ## Ground
 
-Classify artifact depth before specifying:
+Declare the change **Inline** or **Durable** before the first production edit:
 
 - **Inline:** requirements are clear, impact is localized, implementation and
   verification fit this run, and the decisions have little future reuse. Inline
@@ -23,7 +23,20 @@ Classify artifact depth before specifying:
   cross-component coordination, continuity across a session or handoff, a
   user-requested spec, or an active related artifact.
 
-Durable work reads [MINI-SDD.md](MINI-SDD.md) and creates or resumes its folder.
+Escalate to durable instead when the request carries material ambiguity, spans
+modules or sessions, sets a contract meant to last, is high risk, expands scope
+beyond what was asked, or when the user wants to see the spec first.
+
+Inline work opens its reply with these two lines, then executes. They are
+required output, not preamble, and no brevity rule removes them:
+
+    Inline — Contract: <one sentence of the observable behavior after the change>
+    Authorization: <the user's explicit source-change request>
+
+Approval already given is not requested again.
+
+Durable work reads [MINI-SDD.md](MINI-SDD.md) and creates or resumes its folder
+before it specifies anything; that folder is its declaration.
 Debugging reads [DEBUGGING.md](DEBUGGING.md) and establishes its red-capable
 loop before diagnosing.
 
@@ -41,9 +54,14 @@ search is wide. Send decisions that belong to the user to `grilling`, or
 State the observable contract, edge cases, compatibility constraints, non-goals,
 and the applied project standards. Name the agent-operated interface that will
 prove correctness, and any separate human question about appropriateness.
-Present a durable spec and wait for explicit user confirmation.
-Production-source editing starts only after this point. A clear inline request
-is already its own approved contract.
+Write the durable contract to `spec.md` under `Status: proposed` before
+presenting it — a spec that exists only in the reply is not a durable spec —
+then wait for explicit user confirmation. `proposed` forbids production-source
+editing; artifacts, sandboxes, and read-only work stay open. Only the user's
+explicit approving reply sets `Status: approved`, `Approved at`, and
+`Approved from` — never elapsed time, a silent user, or the agent's own
+judgment. An inline `Contract:` is already approved under its recorded
+`Authorization:`.
 
 ## Design
 
@@ -68,6 +86,12 @@ inspection and static checks. Then review the diff separately against project
 standards, the approved contract, and the confirmed domain model. A human
 verdict covers appropriateness only: whether an already-working result suits its
 users and context. It never substitutes for missing correctness evidence.
+
+Give every requirement in the contract its own `Requirement | Evidence | Result`
+row, where `Result` is `pass`, `fail`, or `unknown` and `Evidence` names the real
+interface exercised and what it observed. A green suite, a passing unrelated
+check, or an agent's claim of completion is not evidence for a requirement
+nothing exercised; that requirement stays `unknown`.
 
 **Complete when:** every programming item has agent-owned correctness evidence,
 every required appropriateness decision has a human verdict, and every remaining

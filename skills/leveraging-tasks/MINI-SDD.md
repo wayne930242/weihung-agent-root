@@ -14,10 +14,16 @@ decisions; open questions, empty before the spec is confirmed.
 
 ## `spec.md`
 
-Observable behavior and edge cases; compatibility constraints and non-goals;
-applied standards with their impact; evidence and precedent links; the
-agent-owned correctness strategy and its interface; any separate human
-appropriateness question; the user's confirmation and date.
+Opens with the approval header, then observable behavior and edge cases;
+compatibility constraints and non-goals; applied standards with their impact;
+evidence and precedent links; the agent-owned correctness strategy and its
+interface; any separate human appropriateness question.
+
+```
+Status: proposed | approved
+Approved at: <date the user approved, empty while proposed>
+Approved from: <the user reply that approved it, empty while proposed>
+```
 
 ## `design.md`
 
@@ -28,10 +34,11 @@ straightforward design may be short, but it still names precedent and seam.
 
 ## `verification.md`
 
-Requirement-to-evidence mapping; automated, runtime, and agent-operated
-interface results; human appropriateness verdicts; deviations from the confirmed
-spec or design; unresolved gaps and their impact. Keep local verification,
-commit, push, CI, deployment, and browser proof as separate claims.
+One `Requirement | Evidence | Result` row per requirement in `spec.md`, where
+`Result` is `pass`, `fail`, or `unknown`; then human appropriateness verdicts;
+deviations from the confirmed spec or design; unresolved gaps and their impact.
+Keep local verification, commit, push, CI, deployment, and browser proof as
+separate claims.
 
 ## Updates
 

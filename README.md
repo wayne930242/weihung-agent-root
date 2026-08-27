@@ -75,6 +75,8 @@ skills/
   investigating/
   inspecting/
   reflecting-to-root/
+evals/
+  mini-spec-3r.sh                  # real agent-behavior eval, run on demand
 scripts/
   install.sh
   uninstall.sh
@@ -91,10 +93,25 @@ Mini SDD is the phased development lifecycle embedded in `leveraging-tasks`:
 Ground → Requirements → Spec → Design → Implement → Verify, applied after the
 agent enters the target project.
 
-Its one structural rule is a persistence threshold. Clear, localized work with
-little future reuse stays inline and writes no files; work whose decisions or
-proof must outlive the run leaves `requirements.md`, `spec.md`, `design.md`, and
-`verification.md` under `docs/specs/YYYY-MM-DD-<slug>/`.
+Three rules carry it, and nothing else is enforced:
+
+- **Route.** Every source change declares itself Inline or Durable before the
+  first production edit. Clear, localized, low-reuse work stays inline and writes
+  no files; ambiguity, cross-module or cross-session scope, a lasting contract,
+  high risk, scope expansion, or a user who wants the spec first makes it durable
+  and leaves `requirements.md`, `spec.md`, `design.md`, and `verification.md`
+  under `docs/specs/YYYY-MM-DD-<slug>/`.
+- **Ratify.** Inline work states one observable `Contract:` and records the
+  user's request as its `Authorization:`, then executes without re-asking.
+  Durable work sits at `Status: proposed` — which forbids production edits —
+  until the user's explicit reply sets `Status: approved`, `Approved at`, and
+  `Approved from`.
+- **Result.** Verification gives every requirement its own
+  `Requirement | Evidence | Result` row, with `pass`, `fail`, or `unknown`. A
+  green suite is not evidence for a requirement nothing exercised.
+
+No hook enforces any of this. The contract is the text the agent reads, and
+[`evals/mini-spec-3r.sh`](evals/mini-spec-3r.sh) proves a real agent follows it.
 
 Phase transitions live in
 [`skills/leveraging-tasks/SKILL.md`](skills/leveraging-tasks/SKILL.md); the
@@ -284,7 +301,19 @@ The repo currently verifies:
 - Codex hook scripts with `tests/codex_hooks.sh`
 - bootstrap clone/update behavior with `tests/bootstrap.sh`
 - uninstall restore/remove behavior with `tests/uninstall.sh`
-- prompt routing rules with `tests/prompts.sh`
+- prompt routing rules and Mini Spec deletion guards with `tests/prompts.sh`
+
+`tests/` proves the rules are still written down. Whether an agent obeys them is
+a separate question, answered by `evals/mini-spec-3r.sh`: it installs this repo
+into a throwaway home, drives a headless agent against a throwaway project, and
+asserts what changed on disk — inline work executing directly, durable work
+stopping before any source edit, and approved durable work producing
+per-requirement evidence. It costs money and is not deterministic, so it runs on
+demand rather than with the test suite.
+
+```bash
+bash evals/mini-spec-3r.sh
+```
 
 ## Not Tracked
 
