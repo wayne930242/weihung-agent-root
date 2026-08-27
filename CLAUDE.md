@@ -21,7 +21,12 @@ IMPORTANT: Before responding to a significant request, choose one owner:
 - Any source-changing work → `leveraging-tasks`.
 - A user-owned unresolved decision → `grilling`.
 
-Specialized skills return source-changing work to `leveraging-tasks`. Entering
+Source-changing work that needs a managed app's own working directory routes
+through `boss-say` instead, and `leveraging-tasks` then runs inside the
+dispatched session rather than here. See Complex Delegation below.
+
+A specialized skill hands what it established to the implementation owner, which
+continues from there — the finding travels, the work does not restart. Entering
 that owner does not require SDD files: clear local work with little future reuse
 stays inline, while durable decisions and coordination leave phased artifacts
 under `docs/specs/`.

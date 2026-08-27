@@ -37,14 +37,17 @@ evidence-backed.
 ## 3. Confirm
 
 Propose the smallest correction. Use `grilling` when viable alternatives carry a
-real user-owned trade-off. Wait until the user confirms the root cause and
-direction; treat disagreement as new diagnostic input.
+real user-owned trade-off, and wait for the user there. When the cause and the
+correction carry no such trade-off, state both and continue; treat later
+disagreement as new diagnostic input.
 
 ## 4. Hand off
 
-Return the confirmed chain to `leveraging-tasks` as requirements input for every
-source-changing fix, regardless of size. This skill does not bypass specification,
-design, implementation, or verification.
+Return the confirmed chain to `leveraging-tasks` as requirements input for the
+source-changing fix. It classifies artifact depth itself: a localized correction
+runs inline there, and only durable decisions produce artifacts. Handing the
+chain over is what keeps it from being re-derived, not a checkpoint the fix has
+to clear.
 
 **Complete when:** no change was requested, or `leveraging-tasks` has received a
 confirmed refinement target.
