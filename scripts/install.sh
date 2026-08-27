@@ -136,6 +136,67 @@ PY
   log "Merged $(basename "$fragment_path") into $settings_path"
 }
 
+prune_orphan_hooks() {
+  local settings_path="$1"
+  local target_home="$2"
+
+  if [[ ! -f "$settings_path" ]]; then
+    return
+  fi
+
+  python3 - "$settings_path" "$target_home" <<'PY'
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+settings_path = Path(sys.argv[1])
+target_home = sys.argv[2]
+
+settings = json.loads(settings_path.read_text(encoding="utf-8"))
+hooks = settings.get("hooks")
+if not isinstance(hooks, dict):
+    raise SystemExit(0)
+
+pattern = re.compile(r"(?:\$HOME|%s)/\.claude/hooks/[A-Za-z0-9._-]+" % re.escape(target_home))
+dropped = []
+
+
+def runnable(command):
+    for match in pattern.findall(command):
+        script = match.replace("$HOME", target_home, 1)
+        if not os.access(script, os.X_OK):
+            dropped.append(script)
+            return False
+    return True
+
+
+for event_name in list(hooks):
+    entries = hooks[event_name]
+    if not isinstance(entries, list):
+        continue
+
+    kept_entries = []
+    for entry in entries:
+        kept = [h for h in entry.get("hooks", []) if runnable(h.get("command", ""))]
+        if kept:
+            kept_entries.append({**entry, "hooks": kept})
+
+    if kept_entries:
+        hooks[event_name] = kept_entries
+    else:
+        hooks.pop(event_name)
+
+if not hooks:
+    settings.pop("hooks", None)
+
+if dropped:
+    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print("\n".join("Dropped hook entry for missing script: %s" % s for s in dropped))
+PY
+}
+
 report_optional_plugins() {
   local settings_path="$TARGET_HOME/.claude/settings.json"
 
@@ -227,6 +288,11 @@ done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 # or every matching event fails with exit 127.
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
+
+# The merge is additive, so a hook this repo used to manage stays registered after
+# it leaves config/claude-hooks.json. Drop any ~/.claude/hooks entry whose script is
+# gone; otherwise every matching event fails with exit 127.
+prune_orphan_hooks "$TARGET_HOME/.claude/settings.json" "$TARGET_HOME"
 
 log "Install complete."
 report_optional_plugins

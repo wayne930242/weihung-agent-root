@@ -102,30 +102,53 @@ clean_claude_settings() {
     return
   fi
 
-  python3 - "$settings_path" "$HOOKS_CONFIG" <<'PY'
+  python3 - "$settings_path" "$HOOKS_CONFIG" "$CLAUDE_HOOKS_DIR" "$TARGET_HOME" <<'PY'
 import json
+import re
 import sys
 from pathlib import Path
 
 settings_path = Path(sys.argv[1])
 fragment_path = Path(sys.argv[2])
+managed_hooks_dir = Path(sys.argv[3])
+target_home = sys.argv[4]
 
 settings = json.loads(settings_path.read_text(encoding="utf-8"))
 fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
 
+# Every script under claude/hooks/ is about to be removed, so its registration has
+# to go too - even when the entry no longer matches the current fragment because an
+# older release registered it. A surviving entry fails with exit 127 on every event.
+managed_names = {path.name for path in managed_hooks_dir.glob("*.sh")}
+managed_pattern = re.compile(
+    r"(?:\$HOME|%s)/\.claude/hooks/([A-Za-z0-9._-]+)" % re.escape(target_home)
+)
+
+
+def is_managed(command):
+    return any(name in managed_names for name in managed_pattern.findall(command))
+
+
 fragment_hooks = fragment.get("hooks", {})
 current_hooks = settings.get("hooks")
 if isinstance(current_hooks, dict):
-    for event_name, fragment_entries in fragment_hooks.items():
+    for event_name in list(current_hooks):
         current_entries = current_hooks.get(event_name)
         if not isinstance(current_entries, list):
             continue
 
-        fragment_serialized = {json.dumps(entry, sort_keys=True) for entry in fragment_entries}
-        filtered_entries = [
-            entry for entry in current_entries
-            if json.dumps(entry, sort_keys=True) not in fragment_serialized
-        ]
+        fragment_serialized = {
+            json.dumps(entry, sort_keys=True)
+            for entry in fragment_hooks.get(event_name, [])
+        }
+
+        filtered_entries = []
+        for entry in current_entries:
+            if json.dumps(entry, sort_keys=True) in fragment_serialized:
+                continue
+            kept = [h for h in entry.get("hooks", []) if not is_managed(h.get("command", ""))]
+            if kept:
+                filtered_entries.append({**entry, "hooks": kept})
 
         if filtered_entries:
             current_hooks[event_name] = filtered_entries

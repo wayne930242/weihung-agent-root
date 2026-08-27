@@ -200,9 +200,100 @@ aborted_uninstall_never_leaves_missing_hooks_registered() {
   rm -rf "$temp_dir"
 }
 
+uninstall_drops_registration_left_by_an_older_fragment() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/hooks/log-notification.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+
+  run_install "$fake_home"
+
+  [[ -x "$fake_home/.claude/hooks/log-notification.sh" ]] || fail "expected install to link log-notification.sh"
+
+  run_uninstall "$fake_home"
+
+  [[ ! -e "$fake_home/.claude/hooks/log-notification.sh" ]] || fail "expected uninstall to remove log-notification.sh"
+
+  assert_registered_hooks_runnable "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings_path = Path("$fake_home/.claude/settings.json")
+if settings_path.exists():
+    settings = json.loads(settings_path.read_text())
+    assert "hooks" not in settings, settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+uninstall_keeps_unmanaged_hook_registrations() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home"
+
+  run_install "$fake_home"
+
+  mkdir -p "$fake_home/.claude/hooks"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$fake_home/.claude/hooks/third-party.sh"
+  chmod +x "$fake_home/.claude/hooks/third-party.sh"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings_path = Path("$fake_home/.claude/settings.json")
+settings = json.loads(settings_path.read_text())
+settings["hooks"]["SessionStart"] = [
+    {
+        "matcher": "*",
+        "hooks": [
+            {"type": "command", "command": '"\$HOME/.claude/hooks/third-party.sh"', "timeout": 10}
+        ],
+    }
+]
+settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+PY
+
+  run_uninstall "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert "Stop" not in settings.get("hooks", {}), settings
+entry = settings["hooks"]["SessionStart"][0]
+assert entry["hooks"][0]["command"] == '"\$HOME/.claude/hooks/third-party.sh"', settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
 run_all_tests() {
   restore_from_backup_and_clean_hooks
   aborted_uninstall_never_leaves_missing_hooks_registered
+  uninstall_drops_registration_left_by_an_older_fragment
+  uninstall_keeps_unmanaged_hook_registrations
   fresh_install_uninstall_removes_managed_files
   latest_backup_directory_wins
   uninstall_keeps_user_edited_model

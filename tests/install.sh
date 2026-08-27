@@ -217,9 +217,91 @@ aborted_install_never_registers_missing_hooks() {
   rm -rf "$temp_dir"
 }
 
+install_drops_registration_left_by_an_older_fragment() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/hooks/log-legacy.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+
+  run_install "$fake_home"
+
+  assert_registered_hooks_runnable "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert "Notification" not in settings["hooks"], settings
+assert "Stop" in settings["hooks"], settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+install_keeps_unmanaged_hook_registrations() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude/hooks"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$fake_home/.claude/hooks/third-party.sh"
+  chmod +x "$fake_home/.claude/hooks/third-party.sh"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/hooks/third-party.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
+EOF
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+entry = settings["hooks"]["SessionStart"][0]
+assert entry["matcher"] == "*", settings
+assert entry["hooks"][0]["command"] == '"\$HOME/.claude/hooks/third-party.sh"', settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
 run_all_tests() {
   fresh_install_creates_expected_symlinks
   aborted_install_never_registers_missing_hooks
+  install_drops_registration_left_by_an_older_fragment
+  install_keeps_unmanaged_hook_registrations
   conflict_without_force_fails
   force_replaces_and_backs_up_conflicts
   existing_settings_are_merged_not_replaced

@@ -192,6 +192,8 @@ The installer manages only these user-root surfaces.
 - `~/.claude/hooks/*.sh`
 - `~/.claude/statusline.sh`
 - merge into `~/.claude/settings.json` using `config/claude-hooks.json` (hooks + `statusLine` block)
+- drop any `~/.claude/hooks/*` registration whose script no longer exists, so a hook this repo
+  used to manage cannot survive its own removal and fail every event with exit 127
 
 ### Codex
 
@@ -235,7 +237,9 @@ Uninstall drops the pinned env var only while it still holds the installed value
 - `scripts/uninstall.sh` looks for the latest backup under `~/.local/state/weihung-user-claude/backups/`.
 - If a backup exists for a managed path, that file is restored.
 - If no backup exists for a managed path, the managed symlink is removed.
-- Managed Claude hooks are removed from `~/.claude/settings.json`.
+- Every `~/.claude/settings.json` entry pointing at a `claude/hooks/*.sh` script is removed, not
+  only the entries that still match `config/claude-hooks.json`, so an older release's
+  registration cannot outlive the script it names.
 - Managed `model` and `advisorModel` are dropped when they still hold the installed value.
 - `~/.codex/config.toml` is still left untouched, because it is not installer-managed.
 
