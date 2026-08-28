@@ -38,7 +38,9 @@ Installs this repository as the source of truth for:
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
-  - config/claude-settings.json subagent model pin (env.CLAUDE_CODE_SUBAGENT_MODEL)
+  - config/claude-settings.json user-independent Claude settings
+
+Model, advisor, and worker model selections inherit the user's preferences.
 
 Defaults to failing on conflicts. Pass --force to back up conflicting targets
 before replacing them with symlinks.
@@ -134,6 +136,46 @@ settings_path.parent.mkdir(parents=True, exist_ok=True)
 settings_path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
   log "Merged $(basename "$fragment_path") into $settings_path"
+}
+
+migrate_legacy_worker_model_pin() {
+  local settings_path="$1"
+
+  if [[ ! -f "$settings_path" ]]; then
+    return
+  fi
+
+  local migration_result
+  migration_result="$(python3 - "$settings_path" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+settings_path = Path(sys.argv[1])
+settings = json.loads(settings_path.read_text(encoding="utf-8"))
+env = settings.get("env")
+
+if not isinstance(env, dict):
+    raise SystemExit(0)
+
+if env.get("CLAUDE_CODE_SUBAGENT_MODEL") != "sonnet":
+    raise SystemExit(0)
+
+env.pop("CLAUDE_CODE_SUBAGENT_MODEL")
+if not env:
+    settings.pop("env")
+
+settings_path.write_text(
+    json.dumps(settings, indent=2, ensure_ascii=False) + "\n",
+    encoding="utf-8",
+)
+print("migrated")
+PY
+)"
+
+  if [[ "$migration_result" == "migrated" ]]; then
+    log "Migrated legacy worker model pin from $settings_path"
+  fi
 }
 
 prune_orphan_hooks() {
@@ -286,6 +328,7 @@ done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 # Merge last: a hook entry in settings.json must never outlive a missing script,
 # or every matching event fails with exit 127.
+migrate_legacy_worker_model_pin "$TARGET_HOME/.claude/settings.json"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
 

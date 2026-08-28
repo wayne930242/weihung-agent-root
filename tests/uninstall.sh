@@ -145,7 +145,7 @@ latest_backup_directory_wins() {
   rm -rf "$temp_dir"
 }
 
-uninstall_keeps_user_edited_model() {
+uninstall_keeps_user_model_preferences() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
@@ -159,7 +159,9 @@ import json
 from pathlib import Path
 settings_path = Path("$fake_home/.claude/settings.json")
 settings = json.loads(settings_path.read_text())
-settings["model"] = "opus[1m]"
+settings["model"] = "user-main-model"
+settings["advisorModel"] = "user-advisor-model"
+settings["env"] = {"CLAUDE_CODE_SUBAGENT_MODEL": "user-worker-model"}
 settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 PY
 
@@ -169,9 +171,9 @@ PY
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "opus[1m]", settings
-assert "advisorModel" not in settings, settings
-assert "env" not in settings, settings
+assert settings["model"] == "user-main-model", settings
+assert settings["advisorModel"] == "user-advisor-model", settings
+assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "user-worker-model", settings
 PY
 
   rm -rf "$temp_dir"
@@ -296,7 +298,7 @@ run_all_tests() {
   uninstall_keeps_unmanaged_hook_registrations
   fresh_install_uninstall_removes_managed_files
   latest_backup_directory_wins
-  uninstall_keeps_user_edited_model
+  uninstall_keeps_user_model_preferences
 }
 
 if [[ "${1:-}" == "" ]]; then

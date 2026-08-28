@@ -25,7 +25,7 @@ Uninstall flow:
   - restore managed files from the latest backup directory when a backup exists
   - otherwise remove repo-managed symlinks
   - remove repo-managed Claude hook entries from ~/.claude/settings.json
-  - drop managed model settings when they still hold the installed value
+  - drop current managed Claude settings when they still hold the installed value
 
 This script does not modify ~/.codex/config.toml.
 EOF
@@ -171,7 +171,7 @@ PY
   log "Cleaned managed Claude hooks from $settings_path"
 }
 
-clean_scalar_settings() {
+clean_managed_settings() {
   local settings_path="$1"
   local fragment_path="$2"
 
@@ -200,7 +200,7 @@ else:
     settings_path.unlink()
 PY
 
-  log "Cleaned managed model settings from $settings_path"
+  log "Cleaned managed Claude settings from $settings_path"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -228,7 +228,7 @@ fi
 
 # Clean first: a hook entry in settings.json must never outlive a removed script,
 # or every matching event fails with exit 127.
-clean_scalar_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
+clean_managed_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
 clean_claude_settings "$TARGET_HOME/.claude/settings.json"
 
 restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"

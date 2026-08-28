@@ -83,7 +83,7 @@ scripts/
   bootstrap.sh
 config/
   claude-hooks.json
-  claude-settings.json             # subagent model pin, not main/advisor model
+  claude-settings.json             # user-independent Claude settings
   codex-config.toml                # optional snippet, not auto-merged
 ```
 
@@ -219,11 +219,13 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Main model and advisor model are personal preferences, so they stay off this list: pick them yourself in `~/.claude/settings.local.json` or with `/model`.
+Main model, advisor model, and dispatched worker model are personal preferences,
+so this repository does not select any of them. Configure them yourself through
+Claude's user settings or model controls; workers inherit those choices.
 
-Worker dispatch is the one model entry that moved off this list. `config/claude-settings.json` pins `env.CLAUDE_CODE_SUBAGENT_MODEL` to `sonnet`, because subagents doing general programming work should stay on a known-good model regardless of whichever main model you happen to be running interactively. This env var overrides even a per-invocation model override, so it holds on every machine you work from.
-
-Uninstall drops the pinned env var only while it still holds the installed value, so a hand-edited setting survives.
+On upgrade, the installer removes the former repository-managed
+`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` value. It preserves another worker-model
+value and every unrelated environment setting.
 
 ## Conflict And Backup Behavior
 
@@ -240,7 +242,7 @@ Uninstall drops the pinned env var only while it still holds the installed value
 - Every `~/.claude/settings.json` entry pointing at a `claude/hooks/*.sh` script is removed, not
   only the entries that still match `config/claude-hooks.json`, so an older release's
   registration cannot outlive the script it names.
-- Managed `model` and `advisorModel` are dropped when they still hold the installed value.
+- User-owned main, advisor, and worker model selections are left untouched.
 - `~/.codex/config.toml` is still left untouched, because it is not installer-managed.
 
 ## Claude Notes

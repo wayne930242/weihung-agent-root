@@ -94,6 +94,16 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
 
   python3 - <<PY
+from pathlib import Path
+
+for name in ("docs-researcher.toml", "safety-reviewer.toml"):
+    lines = (
+        Path("$fake_home") / ".codex/agents" / name
+    ).read_text(encoding="utf-8").splitlines()
+    assert not any(line.strip().startswith("model =") for line in lines), (name, lines)
+PY
+
+  python3 - <<PY
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
@@ -175,7 +185,7 @@ PY
   rm -rf "$temp_dir"
 }
 
-model_settings_are_merged() {
+fresh_install_inherits_model_settings() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
@@ -190,10 +200,118 @@ from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert "model" not in settings, settings
 assert "advisorModel" not in settings, settings
-assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "sonnet", settings
+assert "env" not in settings, settings
 assert settings["crossSessionInbound"] == "accept", settings
 assert "Stop" in settings["hooks"], settings
 assert "statusLine" in settings, settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+legacy_worker_pin_is_removed_without_touching_user_preferences() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "model": "user-main-model",
+  "advisorModel": "user-advisor-model",
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "USER_ENV": "keep-me"
+  }
+}
+EOF
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert settings["model"] == "user-main-model", settings
+assert settings["advisorModel"] == "user-advisor-model", settings
+assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
+assert settings["env"]["USER_ENV"] == "keep-me", settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+legacy_only_worker_pin_removes_empty_env() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
+  }
+}
+EOF
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert "env" not in settings, settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+user_selected_worker_model_survives_install() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "user-worker-model"
+  }
+}
+EOF
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "user-worker-model", settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+non_object_env_does_not_break_install() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "env": "user-value"
+}
+EOF
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert settings["env"] == "user-value", settings
 PY
 
   rm -rf "$temp_dir"
@@ -305,7 +423,11 @@ run_all_tests() {
   conflict_without_force_fails
   force_replaces_and_backs_up_conflicts
   existing_settings_are_merged_not_replaced
-  model_settings_are_merged
+  fresh_install_inherits_model_settings
+  legacy_worker_pin_is_removed_without_touching_user_preferences
+  legacy_only_worker_pin_removes_empty_env
+  user_selected_worker_model_survives_install
+  non_object_env_does_not_break_install
 }
 
 if [[ "${1:-}" == "" ]]; then
