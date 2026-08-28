@@ -19,7 +19,6 @@ finding travels, the work does not restart.
 - Show your reasoning. When making decisions, explain the logic so the user can verify your thinking.
 - Proactively report problems. If you see something suboptimal, say it immediately, even if the user did not ask.
 - Read before write. Understand existing patterns before editing.
-- Do only what is asked. No unrelated cleanup.
 - Run relevant verification before claiming success.
 - Commit messages must not mention AI tools.
 
