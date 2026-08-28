@@ -60,8 +60,8 @@ Reserve direct `/codex:rescue` use for self-contained, non-complex consultation.
 - Generating an image → delegate, and state that the asset is project-bound, or it stays under `$CODEX_HOME/generated_images/`
 - Reviewing a document (spec, plan, docs — not code) → read-only; findings get judged, not adopted
 - A significant decision → read-only, for perspective; Codex informs, it never decides
+- Writing or substantially rewriting an article → delegate with `--model gpt-5.6-sol`; verify the draft against the approved brief and sources
 - Translation, formatting, extraction — mechanical single-shot tasks → route with `--model gpt-5.6-luna --effort low`
-- Deep/adversarial review, high-stakes debugging → route with `--effort high` (leave model unset)
 
 # Browser Automation
 

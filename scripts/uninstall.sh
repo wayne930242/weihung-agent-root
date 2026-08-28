@@ -78,6 +78,16 @@ restore_or_remove() {
   fi
 }
 
+remove_retired_repo_link() {
+  local dest="$1"
+  local former_src="$2"
+
+  if [[ -L "$dest" ]] && [[ "$(readlink "$dest")" == "$former_src" ]]; then
+    rm "$dest"
+    log "Removed retired repository link $dest"
+  fi
+}
+
 cleanup_empty_dirs() {
   local dirs=(
     "$TARGET_HOME/.claude/agents"
@@ -225,6 +235,10 @@ LATEST_BACKUP_DIR="$(latest_backup_dir || true)"
 if [[ -n "$LATEST_BACKUP_DIR" ]]; then
   log "Using latest backup directory: $LATEST_BACKUP_DIR"
 fi
+
+remove_retired_repo_link \
+  "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
+  "$REPO_ROOT/codex/agents/safety-reviewer.toml"
 
 # Clean first: a hook entry in settings.json must never outlive a removed script,
 # or every matching event fails with exit 127.

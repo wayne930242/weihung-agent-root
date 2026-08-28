@@ -87,7 +87,8 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/skills/providing-knowledge" "$REPO_ROOT/skills/providing-knowledge"
   assert_symlink_target "$fake_home/.codex/skills/reflecting-to-root" "$REPO_ROOT/skills/reflecting-to-root"
   assert_symlink_target "$fake_home/.codex/agents/docs-researcher.toml" "$REPO_ROOT/codex/agents/docs-researcher.toml"
-  assert_symlink_target "$fake_home/.codex/agents/safety-reviewer.toml" "$REPO_ROOT/codex/agents/safety-reviewer.toml"
+  assert_symlink_target "$fake_home/.codex/agents/article-writer.toml" "$REPO_ROOT/codex/agents/article-writer.toml"
+  [[ ! -e "$fake_home/.codex/agents/safety-reviewer.toml" && ! -L "$fake_home/.codex/agents/safety-reviewer.toml" ]] || fail "did not expect retired safety reviewer"
   assert_symlink_target "$fake_home/.codex/rules/default.rules" "$REPO_ROOT/codex/rules/default.rules"
   assert_symlink_target "$fake_home/.codex/hooks/log-session-start.sh" "$REPO_ROOT/codex/hooks/log-session-start.sh"
   assert_symlink_target "$fake_home/.codex/hooks/log-stop.sh" "$REPO_ROOT/codex/hooks/log-stop.sh"
@@ -96,12 +97,19 @@ fresh_install_creates_expected_symlinks() {
   python3 - <<PY
 from pathlib import Path
 
-for name in ("docs-researcher.toml", "safety-reviewer.toml"):
+expected_models = {
+    "docs-researcher.toml": "gpt-5.6-luna",
+    "article-writer.toml": "gpt-5.6-sol",
+}
+for name, expected_model in expected_models.items():
     lines = (
         Path("$fake_home") / ".codex/agents" / name
     ).read_text(encoding="utf-8").splitlines()
-    assert not any(line.strip().startswith("model =") for line in lines), (name, lines)
+    assert f'model = "{expected_model}"' in lines, (name, lines)
 PY
+
+  rg -Fq 'Writing or substantially rewriting an article' "$fake_home/.claude/CLAUDE.md"
+  rg -Fq -- '--model gpt-5.6-sol' "$fake_home/.claude/CLAUDE.md"
 
   python3 - <<PY
 import json
@@ -111,6 +119,8 @@ assert "hooks" in settings, settings
 assert "Stop" in settings["hooks"], settings
 assert "Notification" not in settings["hooks"], settings
 assert settings["crossSessionInbound"] == "accept", settings
+assert settings["model"] == "sonnet", settings
+assert settings["advisorModel"] == "opus", settings
 PY
 
   [[ ! -e "$fake_home/.codex/config.toml" ]] || fail "did not expect installer to rewrite ~/.codex/config.toml in the light layout"
@@ -185,7 +195,7 @@ PY
   rm -rf "$temp_dir"
 }
 
-fresh_install_inherits_model_settings() {
+fresh_install_manages_explicit_model_settings() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
@@ -198,8 +208,8 @@ fresh_install_inherits_model_settings() {
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert "model" not in settings, settings
-assert "advisorModel" not in settings, settings
+assert settings["model"] == "sonnet", settings
+assert settings["advisorModel"] == "opus", settings
 assert "env" not in settings, settings
 assert settings["crossSessionInbound"] == "accept", settings
 assert "Stop" in settings["hooks"], settings
@@ -209,7 +219,7 @@ PY
   rm -rf "$temp_dir"
 }
 
-legacy_worker_pin_is_removed_without_touching_user_preferences() {
+legacy_worker_pin_is_replaced_by_explicit_pairing() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
@@ -232,8 +242,8 @@ EOF
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "user-main-model", settings
-assert settings["advisorModel"] == "user-advisor-model", settings
+assert settings["model"] == "sonnet", settings
+assert settings["advisorModel"] == "opus", settings
 assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
 assert settings["env"]["USER_ENV"] == "keep-me", settings
 PY
@@ -262,6 +272,8 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert "env" not in settings, settings
+assert settings["model"] == "sonnet", settings
+assert settings["advisorModel"] == "opus", settings
 PY
 
   rm -rf "$temp_dir"
@@ -288,6 +300,8 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "user-worker-model", settings
+assert settings["model"] == "sonnet", settings
+assert settings["advisorModel"] == "opus", settings
 PY
 
   rm -rf "$temp_dir"
@@ -312,7 +326,41 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["env"] == "user-value", settings
+assert settings["model"] == "sonnet", settings
+assert settings["advisorModel"] == "opus", settings
 PY
+
+  rm -rf "$temp_dir"
+}
+
+install_removes_only_repository_managed_retired_safety_reviewer() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.codex/agents"
+  ln -s "$REPO_ROOT/codex/agents/safety-reviewer.toml" "$fake_home/.codex/agents/safety-reviewer.toml"
+
+  run_install "$fake_home"
+
+  [[ ! -e "$fake_home/.codex/agents/safety-reviewer.toml" && ! -L "$fake_home/.codex/agents/safety-reviewer.toml" ]] || fail "expected retired repository safety reviewer to be removed"
+
+  rm -rf "$temp_dir"
+}
+
+install_preserves_user_owned_safety_reviewer() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  local user_agent="$temp_dir/user-safety-reviewer.toml"
+  mkdir -p "$fake_home/.codex/agents"
+  printf 'name = "user_safety_reviewer"\n' > "$user_agent"
+  ln -s "$user_agent" "$fake_home/.codex/agents/safety-reviewer.toml"
+
+  run_install "$fake_home"
+
+  assert_symlink_target "$fake_home/.codex/agents/safety-reviewer.toml" "$user_agent"
 
   rm -rf "$temp_dir"
 }
@@ -423,11 +471,13 @@ run_all_tests() {
   conflict_without_force_fails
   force_replaces_and_backs_up_conflicts
   existing_settings_are_merged_not_replaced
-  fresh_install_inherits_model_settings
-  legacy_worker_pin_is_removed_without_touching_user_preferences
+  fresh_install_manages_explicit_model_settings
+  legacy_worker_pin_is_replaced_by_explicit_pairing
   legacy_only_worker_pin_removes_empty_env
   user_selected_worker_model_survives_install
   non_object_env_does_not_break_install
+  install_removes_only_repository_managed_retired_safety_reviewer
+  install_preserves_user_owned_safety_reviewer
 }
 
 if [[ "${1:-}" == "" ]]; then

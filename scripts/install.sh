@@ -38,9 +38,9 @@ Installs this repository as the source of truth for:
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
-  - config/claude-settings.json user-independent Claude settings
+  - config/claude-settings.json Sonnet main, Opus advisor, and cross-session settings
 
-Model, advisor, and worker model selections inherit the user's preferences.
+Codex agents use their role-specific GPT-5.6 model selections.
 
 Defaults to failing on conflicts. Pass --force to back up conflicting targets
 before replacing them with symlinks.
@@ -97,6 +97,16 @@ install_link() {
 
   ln -s "$src" "$dest"
   log "Linked $dest -> $src"
+}
+
+remove_retired_repo_link() {
+  local dest="$1"
+  local former_src="$2"
+
+  if [[ -L "$dest" ]] && [[ "$(readlink "$dest")" == "$former_src" ]]; then
+    rm "$dest"
+    log "Removed retired repository link $dest"
+  fi
 }
 
 merge_claude_settings() {
@@ -288,6 +298,10 @@ done
 mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
 mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills"
 mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.codex/skills"
+
+remove_retired_repo_link \
+  "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
+  "$REPO_ROOT/codex/agents/safety-reviewer.toml"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"

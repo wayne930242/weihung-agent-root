@@ -81,6 +81,7 @@ EOF
   [[ ! -e "$fake_home/.claude/shared/communication.md" ]] || fail "expected managed shared file to be removed"
   [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected managed codex skill to be removed"
   [[ ! -e "$fake_home/.codex/agents/docs-researcher.toml" ]] || fail "expected managed codex agent to be removed"
+  [[ ! -e "$fake_home/.codex/agents/article-writer.toml" ]] || fail "expected managed article writer to be removed"
   [[ ! -e "$fake_home/.codex/hooks.json" ]] || fail "expected managed codex hooks.json to be removed"
 
   python3 - <<PY
@@ -94,6 +95,39 @@ assert "model" not in settings, settings
 assert "advisorModel" not in settings, settings
 assert "env" not in settings, settings
 PY
+
+  rm -rf "$temp_dir"
+}
+
+uninstall_removes_only_repository_managed_retired_safety_reviewer() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.codex/agents"
+  ln -s "$REPO_ROOT/codex/agents/safety-reviewer.toml" "$fake_home/.codex/agents/safety-reviewer.toml"
+
+  run_uninstall "$fake_home"
+
+  [[ ! -e "$fake_home/.codex/agents/safety-reviewer.toml" && ! -L "$fake_home/.codex/agents/safety-reviewer.toml" ]] || fail "expected retired repository safety reviewer to be removed"
+
+  rm -rf "$temp_dir"
+}
+
+uninstall_preserves_user_owned_safety_reviewer() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  local user_agent="$temp_dir/user-safety-reviewer.toml"
+  mkdir -p "$fake_home/.codex/agents"
+  printf 'name = "user_safety_reviewer"\n' > "$user_agent"
+  ln -s "$user_agent" "$fake_home/.codex/agents/safety-reviewer.toml"
+
+  run_uninstall "$fake_home"
+
+  [[ -L "$fake_home/.codex/agents/safety-reviewer.toml" ]] || fail "expected user-owned safety reviewer to survive uninstall"
+  [[ "$(readlink "$fake_home/.codex/agents/safety-reviewer.toml")" == "$user_agent" ]] || fail "expected user-owned safety reviewer target to survive uninstall"
 
   rm -rf "$temp_dir"
 }
@@ -299,6 +333,8 @@ run_all_tests() {
   fresh_install_uninstall_removes_managed_files
   latest_backup_directory_wins
   uninstall_keeps_user_model_preferences
+  uninstall_removes_only_repository_managed_retired_safety_reviewer
+  uninstall_preserves_user_owned_safety_reviewer
 }
 
 if [[ "${1:-}" == "" ]]; then

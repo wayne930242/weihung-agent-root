@@ -46,8 +46,8 @@ claude/
   statusline.sh
 codex/
   agents/
+    article-writer.toml
     docs-researcher.toml
-    safety-reviewer.toml
   rules/
     default.rules
   hooks/
@@ -83,7 +83,7 @@ scripts/
   bootstrap.sh
 config/
   claude-hooks.json
-  claude-settings.json             # user-independent Claude settings
+  claude-settings.json             # Sonnet main + Opus advisor pairing
   codex-config.toml                # optional snippet, not auto-merged
 ```
 
@@ -219,13 +219,14 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Main model, advisor model, and dispatched worker model are personal preferences,
-so this repository does not select any of them. Configure them yourself through
-Claude's user settings or model controls; workers inherit those choices.
+Claude uses a repository-managed Sonnet main model with an Opus advisor. Codex
+agents use role-specific current models: Luna for documentation research and Sol
+for article writing.
 
 On upgrade, the installer removes the former repository-managed
 `env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` value. It preserves another worker-model
-value and every unrelated environment setting.
+value and every unrelated environment setting before installing the main/advisor
+pairing.
 
 ## Conflict And Backup Behavior
 
@@ -242,7 +243,8 @@ value and every unrelated environment setting.
 - Every `~/.claude/settings.json` entry pointing at a `claude/hooks/*.sh` script is removed, not
   only the entries that still match `config/claude-hooks.json`, so an older release's
   registration cannot outlive the script it names.
-- User-owned main, advisor, and worker model selections are left untouched.
+- Managed `model` and `advisorModel` are removed only while they still hold the
+  installed values; user-edited values survive.
 - `~/.codex/config.toml` is still left untouched, because it is not installer-managed.
 
 ## Claude Notes
