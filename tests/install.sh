@@ -80,7 +80,8 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/skills/inspecting" "$REPO_ROOT/skills/inspecting"
   assert_symlink_target "$fake_home/.codex/skills/investigating" "$REPO_ROOT/skills/investigating"
   assert_symlink_target "$fake_home/.codex/skills/leveraging-tasks" "$REPO_ROOT/skills/leveraging-tasks"
-  assert_symlink_target "$fake_home/.codex/skills/tdd" "$REPO_ROOT/skills/tdd"
+  [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
+  [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "did not expect retired tdd skill in Codex root"
   assert_symlink_target "$fake_home/.codex/skills/codebase-design" "$REPO_ROOT/skills/codebase-design"
   assert_symlink_target "$fake_home/.codex/skills/domain-modeling" "$REPO_ROOT/skills/domain-modeling"
   assert_symlink_target "$fake_home/.codex/skills/prototype" "$REPO_ROOT/skills/prototype"
@@ -119,8 +120,8 @@ assert "hooks" in settings, settings
 assert "Stop" in settings["hooks"], settings
 assert "Notification" not in settings["hooks"], settings
 assert settings["crossSessionInbound"] == "accept", settings
-assert settings["model"] == "sonnet", settings
-assert settings["advisorModel"] == "opus", settings
+assert settings["model"] == "opus", settings
+assert "advisorModel" not in settings, settings
 PY
 
   [[ ! -e "$fake_home/.codex/config.toml" ]] || fail "did not expect installer to rewrite ~/.codex/config.toml in the light layout"
@@ -208,8 +209,8 @@ fresh_install_manages_explicit_model_settings() {
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "sonnet", settings
-assert settings["advisorModel"] == "opus", settings
+assert settings["model"] == "opus", settings
+assert "advisorModel" not in settings, settings
 assert "env" not in settings, settings
 assert settings["crossSessionInbound"] == "accept", settings
 assert "Stop" in settings["hooks"], settings
@@ -219,7 +220,60 @@ PY
   rm -rf "$temp_dir"
 }
 
-legacy_worker_pin_is_replaced_by_explicit_pairing() {
+former_managed_opus_advisor_is_removed_on_upgrade() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "model": "sonnet",
+  "advisorModel": "opus",
+  "customSetting": true
+}
+EOF
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert settings["model"] == "opus", settings
+assert "advisorModel" not in settings, settings
+assert settings["customSetting"] is True, settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+user_selected_advisor_survives_install() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude"
+  cat > "$fake_home/.claude/settings.json" <<'EOF'
+{
+  "advisorModel": "user-advisor-model"
+}
+EOF
+
+  run_install "$fake_home"
+
+  python3 - <<PY
+import json
+from pathlib import Path
+settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
+assert settings["model"] == "opus", settings
+assert settings["advisorModel"] == "user-advisor-model", settings
+PY
+
+  rm -rf "$temp_dir"
+}
+
+legacy_worker_pin_is_replaced_by_opus_main() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
@@ -242,8 +296,8 @@ EOF
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "sonnet", settings
-assert settings["advisorModel"] == "opus", settings
+assert settings["model"] == "opus", settings
+assert settings["advisorModel"] == "user-advisor-model", settings
 assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
 assert settings["env"]["USER_ENV"] == "keep-me", settings
 PY
@@ -272,8 +326,8 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert "env" not in settings, settings
-assert settings["model"] == "sonnet", settings
-assert settings["advisorModel"] == "opus", settings
+assert settings["model"] == "opus", settings
+assert "advisorModel" not in settings, settings
 PY
 
   rm -rf "$temp_dir"
@@ -300,8 +354,8 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "user-worker-model", settings
-assert settings["model"] == "sonnet", settings
-assert settings["advisorModel"] == "opus", settings
+assert settings["model"] == "opus", settings
+assert "advisorModel" not in settings, settings
 PY
 
   rm -rf "$temp_dir"
@@ -326,8 +380,8 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["env"] == "user-value", settings
-assert settings["model"] == "sonnet", settings
-assert settings["advisorModel"] == "opus", settings
+assert settings["model"] == "opus", settings
+assert "advisorModel" not in settings, settings
 PY
 
   rm -rf "$temp_dir"
@@ -361,6 +415,41 @@ install_preserves_user_owned_safety_reviewer() {
   run_install "$fake_home"
 
   assert_symlink_target "$fake_home/.codex/agents/safety-reviewer.toml" "$user_agent"
+
+  rm -rf "$temp_dir"
+}
+
+install_removes_only_repository_managed_retired_tdd_skills() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills"
+  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.claude/skills/tdd"
+  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.codex/skills/tdd"
+
+  run_install "$fake_home"
+
+  [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "expected retired Claude tdd skill to be removed"
+  [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "expected retired Codex tdd skill to be removed"
+
+  rm -rf "$temp_dir"
+}
+
+install_preserves_user_owned_tdd_skills() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  local user_skill="$temp_dir/user-tdd"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$user_skill"
+  ln -s "$user_skill" "$fake_home/.claude/skills/tdd"
+  ln -s "$user_skill" "$fake_home/.codex/skills/tdd"
+
+  run_install "$fake_home"
+
+  assert_symlink_target "$fake_home/.claude/skills/tdd" "$user_skill"
+  assert_symlink_target "$fake_home/.codex/skills/tdd" "$user_skill"
 
   rm -rf "$temp_dir"
 }
@@ -472,12 +561,16 @@ run_all_tests() {
   force_replaces_and_backs_up_conflicts
   existing_settings_are_merged_not_replaced
   fresh_install_manages_explicit_model_settings
-  legacy_worker_pin_is_replaced_by_explicit_pairing
+  former_managed_opus_advisor_is_removed_on_upgrade
+  user_selected_advisor_survives_install
+  legacy_worker_pin_is_replaced_by_opus_main
   legacy_only_worker_pin_removes_empty_env
   user_selected_worker_model_survives_install
   non_object_env_does_not_break_install
   install_removes_only_repository_managed_retired_safety_reviewer
   install_preserves_user_owned_safety_reviewer
+  install_removes_only_repository_managed_retired_tdd_skills
+  install_preserves_user_owned_tdd_skills
 }
 
 if [[ "${1:-}" == "" ]]; then

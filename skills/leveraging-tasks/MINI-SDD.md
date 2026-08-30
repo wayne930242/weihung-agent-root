@@ -16,8 +16,7 @@ decisions; open questions, empty before the spec is confirmed.
 
 Opens with the approval header, then observable behavior and edge cases;
 compatibility constraints and non-goals; applied standards with their impact;
-evidence and precedent links; the agent-owned correctness strategy and its
-interface; any separate human appropriateness question.
+evidence and precedent links; the selected reality anchor and checkpoint.
 
 ```
 Status: proposed | approved
@@ -28,9 +27,9 @@ Approved from: <the user reply that approved it, empty while proposed>
 ## `design.md`
 
 Chosen approach; interfaces and data flow affected; existing precedent;
-decisions, trade-offs, and risks; the selected correctness method and its
-executable or operational seam. This is the implementation-ready handoff — a
-straightforward design may be short, but it still names precedent and seam.
+decisions, trade-offs, and risks; the method selected inside the reality anchor.
+This is the implementation-ready handoff — a straightforward design may be
+short, but it still names precedent and seam.
 
 ## `verification.md`
 

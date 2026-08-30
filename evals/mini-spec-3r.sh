@@ -18,7 +18,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-EVAL_MODEL="${EVAL_MODEL:-sonnet}"
+EVAL_MODEL="${EVAL_MODEL:-opus}"
 EVAL_TIMEOUT="${EVAL_TIMEOUT:-900}"
 RUN_ROOT="$(mktemp -d -t mini-spec-3r-XXXXXX)"
 FAILURES=0
@@ -159,6 +159,49 @@ assert_changed() {
   fi
 }
 
+assert_alignment_and_anchor_precede_source_edit() {
+  local stream="$1" what="$2"
+
+  python3 - "$stream" <<'PY' || { fail "$what"; return; }
+import json
+import re
+import sys
+
+seen_alignment = False
+seen_anchor = False
+
+for line in open(sys.argv[1], encoding="utf-8"):
+    event = json.loads(line)
+    if event.get("type") != "assistant":
+        continue
+
+    for block in event.get("message", {}).get("content", []):
+        if block.get("type") == "text":
+            text = block.get("text", "")
+            seen_alignment |= re.search(r"(?im)^Alignment:", text) is not None
+            seen_anchor |= re.search(r"(?im)^Reality anchor:", text) is not None
+            continue
+
+        if block.get("type") != "tool_use":
+            continue
+
+        name = block.get("name", "")
+        payload = json.dumps(block.get("input", {}), ensure_ascii=False)
+        direct_edit = name in {"Edit", "Write", "MultiEdit", "NotebookEdit"}
+        shell_edit = name == "Bash" and re.search(
+            r"(?:sed\s+-i|perl\s+-pi|tee\b|(?:^|[;&|]\s*)mv\b|(?:^|[;&|]\s*)cp\b|>{1,2})",
+            block.get("input", {}).get("command", ""),
+        )
+        edits_source = "src/greet.sh" in payload and (direct_edit or shell_edit)
+        if edits_source:
+            raise SystemExit(0 if seen_alignment and seen_anchor else 1)
+
+raise SystemExit(1)
+PY
+
+  pass "$what"
+}
+
 first_match() { find "$1" -path "$2" -print -quit 2>/dev/null; }
 
 # --- case: inline ------------------------------------------------------------
@@ -183,6 +226,8 @@ case_inline_executes_directly() {
     "inline: the agent stated an observable contract"
   assert_text_matches "$reply" 'authoriz' \
     "inline: the agent recorded the request as its authorization"
+  assert_alignment_and_anchor_precede_source_edit "$stream" \
+    "inline: Alignment and Reality anchor preceded the production edit"
 
   if [[ -n "$(first_match "$sandbox/project" '*/docs/specs/*')" ]]; then
     fail "inline: the agent wrote durable artifacts for a low-reuse local change"
@@ -277,10 +322,38 @@ case_approved_durable_reports_evidence() {
   assert_file_matches "$verification" 'Requirement.*\|.*Evidence.*\|.*Result' \
     "approved: verification.md maps requirements to evidence and result"
 
-  # Every data row must end in a pass/fail/unknown verdict, and there must be
-  # more than one of them — a single summary row is not per-requirement evidence.
-  rows="$(grep -cE '^\|[^|]+\|[^|]+\|[[:space:]]*(pass|fail|unknown)[[:space:]]*\|?[[:space:]]*$' \
-    <(tr 'A-Z' 'a-z' <"$verification") || true)"
+  # Inspect only the table introduced by the Requirement/Evidence/Result header;
+  # later evidence tables may have their own domain-specific columns.
+  read -r rows bad < <(python3 - "$verification" <<'PY'
+import re
+import sys
+
+lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
+header = re.compile(r"^\|\s*requirement\s*\|\s*evidence\s*\|\s*result\s*\|$", re.I)
+separator = re.compile(r"^\|(?:\s*:?-+:?\s*\|){3}$")
+verdict = re.compile(r"\|\s*(pass|fail|unknown)\s*\|$", re.I)
+
+rows = 0
+bad = 0
+inside = False
+for line in lines:
+    if header.match(line):
+        inside = True
+        continue
+    if not inside:
+        continue
+    if not line.startswith("|"):
+        if rows:
+            break
+        continue
+    if separator.match(line):
+        continue
+    rows += 1
+    bad += verdict.search(line) is None
+
+print(rows, bad)
+PY
+)
   if (( rows >= 2 )); then
     pass "approved: $rows requirements carry an individual pass/fail/unknown verdict"
   else
@@ -288,13 +361,10 @@ case_approved_durable_reports_evidence() {
     sed -n '1,60p' "$verification" >&2
   fi
 
-  bad="$(grep -E '^\|[^|]+\|[^|]+\|[^|]*\|?[[:space:]]*$' <(tr 'A-Z' 'a-z' <"$verification") \
-    | grep -vE '\|[[:space:]]*(pass|fail|unknown|result|-+)[[:space:]]*\|?[[:space:]]*$' || true)"
-  if [[ -z "$bad" ]]; then
+  if (( bad == 0 )); then
     pass "approved: every verdict is one of pass, fail, or unknown"
   else
-    fail "approved: a row carries a verdict outside pass/fail/unknown"
-    printf '%s\n' "$bad" >&2
+    fail "approved: $bad requirement row(s) carry a verdict outside pass/fail/unknown"
   fi
 }
 

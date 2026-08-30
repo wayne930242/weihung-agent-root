@@ -113,35 +113,50 @@ mini_spec_keeps_its_load_bearing_rules() {
 
   assert_file_contains "$skill" "**Inline:**"
   assert_file_contains "$skill" "**Durable:**"
-  assert_file_contains "$skill" "\`tdd\` for every programming change"
-  assert_file_contains "$skill" "Correctness is agent-owned"
-  assert_file_contains "$skill" "never substitutes for missing correctness evidence"
+  assert_file_contains "$skill" "Alignment:"
+  assert_file_contains "$skill" "Reality anchor:"
+  assert_file_contains "$skill" "target project's native practices"
+  assert_file_contains "$skill" "chosen reality anchor"
   assert_file_contains "$skill" "no \`tasks.md\`"
   assert_file_contains "$skill" "DEBUGGING.md"
   assert_file_contains "$skill" "MINI-SDD.md"
+}
+
+root_prompts_carry_the_exact_positive_writing_principle() {
+  local principle="提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。"
+
+  assert_file_contains "$REPO_ROOT/CLAUDE.md" "$principle"
+  assert_file_contains "$REPO_ROOT/AGENTS.md" "$principle"
+}
+
+root_prompts_trigger_the_source_change_graph() {
+  local trigger="Source-changing work invokes \`leveraging-tasks\` and states its Alignment and Reality anchor before the first production edit."
+
+  assert_file_contains "$REPO_ROOT/CLAUDE.md" "$trigger"
+  assert_file_contains "$REPO_ROOT/AGENTS.md" "$trigger"
 }
 
 mini_spec_route_declares_inline_or_durable() {
   local skill="$SKILL_DIR/SKILL.md"
 
   assert_file_contains "$skill" "Declare the change **Inline** or **Durable** before the first production edit"
-  assert_file_contains "$skill" "Escalate to durable instead when the request carries material ambiguity"
-  assert_file_contains "$skill" "expands scope beyond what was asked, or when the user wants to see the spec first"
+  assert_file_contains "$skill" "Escalate to durable when the request carries material ambiguity"
+  assert_file_contains "$skill" "expands scope, or requests a spec first"
 }
 
 mini_spec_ratify_records_authority_to_edit() {
   local skill="$SKILL_DIR/SKILL.md"
   local artifact="$SKILL_DIR/MINI-SDD.md"
 
-  assert_file_contains "$skill" "Inline work opens its reply with these two lines, then executes"
-  assert_file_contains "$skill" "required output, not preamble, and no brevity rule removes them"
+  assert_file_contains "$skill" "Inline work follows Alignment with these two lines"
+  assert_file_contains "$skill" "They are required output"
   assert_file_contains "$skill" "Inline — Contract: <one sentence of the observable behavior after the change>"
   assert_file_contains "$skill" "Authorization: <the user's explicit source-change request>"
   assert_file_contains "$skill" "Approval already given is not requested again"
   assert_file_contains "$skill" "creates or resumes its folder before it specifies anything; that folder is its declaration"
-  assert_file_contains "$skill" "a spec that exists only in the reply is not a durable spec"
-  assert_file_contains "$skill" "\`proposed\` forbids production-source editing"
-  assert_file_contains "$skill" "Only the user's explicit approving reply sets"
+  assert_file_contains "$skill" "Persist the durable contract in \`spec.md\` under \`Status: proposed\` before presenting"
+  assert_file_contains "$skill" "\`proposed\` keeps production source untouched"
+  assert_file_contains "$skill" "Only the user's approving reply sets"
   assert_file_contains "$artifact" "Status: proposed | approved"
   assert_file_contains "$artifact" "Approved at:"
   assert_file_contains "$artifact" "Approved from:"
@@ -206,11 +221,13 @@ active_instructions_carry_no_openspec_route() {
   local hits
 
   hits="$(cd "$REPO_ROOT" && git ls-files -z \
-    | tr '\0' '\n' \
-    | grep -v '^docs/' \
-    | grep -v '^tests/prompts.sh$' \
-    | tr '\n' '\0' \
-    | xargs -0 grep -lil -e openspec -e opsx || true)"
+    | while IFS= read -r -d '' file; do
+        case "$file" in
+          docs/*|tests/prompts.sh) continue ;;
+        esac
+        [[ -f "$file" ]] || continue
+        grep -Eil -e openspec -e opsx "$file" || true
+      done)"
 
   [[ -z "$hits" ]] || fail "active files still route to OpenSpec: $hits"
 }
@@ -221,6 +238,8 @@ run_all_tests() {
   codex_refinement_is_no_longer_mandatory_for_user_facing_work
   codex_refinement_keeps_its_scope_limits
   mini_spec_keeps_its_load_bearing_rules
+  root_prompts_carry_the_exact_positive_writing_principle
+  root_prompts_trigger_the_source_change_graph
   mini_spec_route_declares_inline_or_durable
   mini_spec_ratify_records_authority_to_edit
   mini_spec_result_is_per_requirement_evidence

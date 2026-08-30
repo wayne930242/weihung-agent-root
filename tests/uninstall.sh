@@ -132,6 +132,41 @@ uninstall_preserves_user_owned_safety_reviewer() {
   rm -rf "$temp_dir"
 }
 
+uninstall_removes_only_repository_managed_retired_tdd_skills() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills"
+  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.claude/skills/tdd"
+  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.codex/skills/tdd"
+
+  run_uninstall "$fake_home"
+
+  [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "expected retired Claude tdd skill to be removed"
+  [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "expected retired Codex tdd skill to be removed"
+
+  rm -rf "$temp_dir"
+}
+
+uninstall_preserves_user_owned_tdd_skills() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  local user_skill="$temp_dir/user-tdd"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$user_skill"
+  ln -s "$user_skill" "$fake_home/.claude/skills/tdd"
+  ln -s "$user_skill" "$fake_home/.codex/skills/tdd"
+
+  run_uninstall "$fake_home"
+
+  [[ "$(readlink "$fake_home/.claude/skills/tdd")" == "$user_skill" ]] || fail "expected user-owned Claude tdd skill to survive"
+  [[ "$(readlink "$fake_home/.codex/skills/tdd")" == "$user_skill" ]] || fail "expected user-owned Codex tdd skill to survive"
+
+  rm -rf "$temp_dir"
+}
+
 fresh_install_uninstall_removes_managed_files() {
   local temp_dir
   temp_dir="$(mktemp -d)"
@@ -335,6 +370,8 @@ run_all_tests() {
   uninstall_keeps_user_model_preferences
   uninstall_removes_only_repository_managed_retired_safety_reviewer
   uninstall_preserves_user_owned_safety_reviewer
+  uninstall_removes_only_repository_managed_retired_tdd_skills
+  uninstall_preserves_user_owned_tdd_skills
 }
 
 if [[ "${1:-}" == "" ]]; then

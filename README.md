@@ -8,7 +8,7 @@ The repo keeps global behavior in version control, but deliberately separates:
 - Claude-specific prompt, agents, and hooks
 - Codex-specific prompt, subagents, rules, and hooks
 
-The goal is to keep the user-root layer thin and stable, while leaving personal machine config such as credentials, MCP servers, model choices, and trusted project state under direct user control.
+The goal is to keep the user-root layer thin and stable, while leaving personal machine config such as credentials, MCP servers, and trusted project state under direct user control.
 
 ## Design
 
@@ -67,7 +67,6 @@ skills/
   leveraging-tasks/
     MINI-SDD.md
     DEBUGGING.md
-  tdd/
   codebase-design/
   domain-modeling/
   prototype/
@@ -83,7 +82,7 @@ scripts/
   bootstrap.sh
 config/
   claude-hooks.json
-  claude-settings.json             # Sonnet main + Opus advisor pairing
+  claude-settings.json             # Opus main + cross-session settings
   codex-config.toml                # optional snippet, not auto-merged
 ```
 
@@ -95,12 +94,14 @@ agent enters the target project.
 
 Three rules carry it, and nothing else is enforced:
 
-- **Route.** Every source change declares itself Inline or Durable before the
-  first production edit. Clear, localized, low-reuse work stays inline and writes
-  no files; ambiguity, cross-module or cross-session scope, a lasting contract,
-  high risk, scope expansion, or a user who wants the spec first makes it durable
-  and leaves `requirements.md`, `spec.md`, `design.md`, and `verification.md`
-  under `docs/specs/YYYY-MM-DD-<slug>/`.
+- **Align and route.** Every source change restates the task and intended outcome
+  in the model's own words, chooses the simplest credible reality anchor, and
+  declares itself Inline or Durable before the first production edit. Clear,
+  localized, low-reuse work stays inline and writes no files; ambiguity,
+  cross-module or cross-session scope, a lasting contract, high risk, scope
+  expansion, or a user who wants the spec first makes it durable and leaves
+  `requirements.md`, `spec.md`, `design.md`, and `verification.md` under
+  `docs/specs/YYYY-MM-DD-<slug>/`.
 - **Ratify.** Inline work states one observable `Contract:` and records the
   user's request as its `Authorization:`, then executes without re-asking.
   Durable work sits at `Status: proposed` — which forbids production edits —
@@ -219,14 +220,14 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Claude uses a repository-managed Sonnet main model with an Opus advisor. Codex
-agents use role-specific current models: Luna for documentation research and Sol
-for article writing.
+Claude uses a repository-managed Opus main model without a repository-managed
+advisor. Codex agents use role-specific current models: Luna for documentation
+research and Sol for article writing.
 
 On upgrade, the installer removes the former repository-managed
-`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` value. It preserves another worker-model
-value and every unrelated environment setting before installing the main/advisor
-pairing.
+`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` and `advisorModel=opus` values. It
+preserves another worker-model or advisor value and every unrelated environment
+setting before installing the Opus main model.
 
 ## Conflict And Backup Behavior
 
@@ -243,8 +244,8 @@ pairing.
 - Every `~/.claude/settings.json` entry pointing at a `claude/hooks/*.sh` script is removed, not
   only the entries that still match `config/claude-hooks.json`, so an older release's
   registration cannot outlive the script it names.
-- Managed `model` and `advisorModel` are removed only while they still hold the
-  installed values; user-edited values survive.
+- The managed `model` is removed only while it still holds the installed value;
+  user-edited model and advisor values survive.
 - `~/.codex/config.toml` is still left untouched, because it is not installer-managed.
 
 ## Claude Notes

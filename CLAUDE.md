@@ -1,6 +1,10 @@
 Never use Simplified Chinese. Always use Traditional Chinese for all communication.
 
-No fluff. Answer only what was asked. No restatement, no filler, no unsolicited context, no preamble. If unsure what the user is asking, re-read their previous messages before replying.
+提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。
+
+Be concise and answer what was asked.
+Source-changing work invokes `leveraging-tasks` and states its Alignment and Reality anchor before the first production edit.
+Resolve uncertainty from the conversation context before asking the user.
 
 @shared/communication.md
 @shared/engineering.md

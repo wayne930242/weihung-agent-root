@@ -240,6 +240,13 @@ remove_retired_repo_link \
   "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
   "$REPO_ROOT/codex/agents/safety-reviewer.toml"
 
+remove_retired_repo_link \
+  "$TARGET_HOME/.claude/skills/tdd" \
+  "$REPO_ROOT/skills/tdd"
+remove_retired_repo_link \
+  "$TARGET_HOME/.codex/skills/tdd" \
+  "$REPO_ROOT/skills/tdd"
+
 # Clean first: a hook entry in settings.json must never outlive a removed script,
 # or every matching event fails with exit 127.
 clean_managed_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"

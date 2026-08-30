@@ -16,7 +16,7 @@ is cheaper or clearer than deciding from existing evidence.
 
 When the experiment can prove correctness, the agent exercises its real
 interface. When the remaining verdict is whether the result is suitable, use
-`tdd`'s human final-check contract to agree on the reviewer and checkpoint first.
+the parent task's human reality anchor to agree on the reviewer and checkpoint.
 
 **Complete when:** one falsifiable question and its oracle are explicit.
 

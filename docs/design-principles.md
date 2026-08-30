@@ -27,9 +27,9 @@ Use the lightest process that preserves intent and proof.
   Observable behavior change alone is not a trigger.
 - Keep each artifact readable in one pass and link to existing sources instead
   of copying them.
-- Every programming change uses TDD, and the agent owns correctness through the
-  closest practical interface. Human review owns appropriateness only; keep that
-  verdict distinct from correctness evidence.
+- Before implementation, choose the simplest credible reality anchor and its
+  checkpoint. The user, task, and target project determine the method inside it;
+  verification records what that anchor observed.
 - Do not stack planning frameworks with overlapping jobs, and do not restate a
   rule in a second file. `leveraging-tasks` owns phase transitions, native
   planning owns execution tasks, dispatch tools own routing and operational

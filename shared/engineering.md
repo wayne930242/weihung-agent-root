@@ -44,9 +44,9 @@ Every changed line should trace directly to the user's request.
 
 Transform tasks into verifiable goals before starting.
 
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
+- "Add validation" → "Invalid inputs are rejected at the public interface"
+- "Fix the bug" → "The reported scenario completes successfully"
+- "Refactor X" → "Observable behavior is unchanged"
 
 For multi-step tasks, state a brief plan:
 ```

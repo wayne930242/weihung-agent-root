@@ -38,7 +38,7 @@ Installs this repository as the source of truth for:
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
-  - config/claude-settings.json Sonnet main, Opus advisor, and cross-session settings
+  - config/claude-settings.json Opus main and cross-session settings
 
 Codex agents use their role-specific GPT-5.6 model selections.
 
@@ -148,7 +148,7 @@ PY
   log "Merged $(basename "$fragment_path") into $settings_path"
 }
 
-migrate_legacy_worker_model_pin() {
+migrate_legacy_model_settings() {
   local settings_path="$1"
 
   if [[ ! -f "$settings_path" ]]; then
@@ -164,27 +164,33 @@ from pathlib import Path
 settings_path = Path(sys.argv[1])
 settings = json.loads(settings_path.read_text(encoding="utf-8"))
 env = settings.get("env")
+changes = []
 
-if not isinstance(env, dict):
+if isinstance(env, dict) and env.get("CLAUDE_CODE_SUBAGENT_MODEL") == "sonnet":
+    env.pop("CLAUDE_CODE_SUBAGENT_MODEL")
+    if not env:
+        settings.pop("env")
+    changes.append("legacy worker model pin")
+
+if settings.get("advisorModel") == "opus":
+    settings.pop("advisorModel")
+    changes.append("former Opus advisor setting")
+
+if not changes:
     raise SystemExit(0)
-
-if env.get("CLAUDE_CODE_SUBAGENT_MODEL") != "sonnet":
-    raise SystemExit(0)
-
-env.pop("CLAUDE_CODE_SUBAGENT_MODEL")
-if not env:
-    settings.pop("env")
 
 settings_path.write_text(
     json.dumps(settings, indent=2, ensure_ascii=False) + "\n",
     encoding="utf-8",
 )
-print("migrated")
+print("\n".join(changes))
 PY
 )"
 
-  if [[ "$migration_result" == "migrated" ]]; then
-    log "Migrated legacy worker model pin from $settings_path"
+  if [[ -n "$migration_result" ]]; then
+    while IFS= read -r change; do
+      log "Migrated $change from $settings_path"
+    done <<< "$migration_result"
   fi
 }
 
@@ -303,6 +309,13 @@ remove_retired_repo_link \
   "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
   "$REPO_ROOT/codex/agents/safety-reviewer.toml"
 
+remove_retired_repo_link \
+  "$TARGET_HOME/.claude/skills/tdd" \
+  "$REPO_ROOT/skills/tdd"
+remove_retired_repo_link \
+  "$TARGET_HOME/.codex/skills/tdd" \
+  "$REPO_ROOT/skills/tdd"
+
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
@@ -342,7 +355,7 @@ done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 # Merge last: a hook entry in settings.json must never outlive a missing script,
 # or every matching event fails with exit 127.
-migrate_legacy_worker_model_pin "$TARGET_HOME/.claude/settings.json"
+migrate_legacy_model_settings "$TARGET_HOME/.claude/settings.json"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
 

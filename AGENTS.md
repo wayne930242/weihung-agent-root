@@ -1,5 +1,9 @@
 Never use Simplified Chinese. Always use Traditional Chinese for all communication.
 
+提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。
+
+Source-changing work invokes `leveraging-tasks` and states its Alignment and Reality anchor before the first production edit.
+
 # Routing
 
 IMPORTANT: Before responding to a significant request, choose one owner:
