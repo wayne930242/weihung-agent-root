@@ -18,7 +18,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-EVAL_MODEL="${EVAL_MODEL:-opus}"
+EVAL_MODEL="${EVAL_MODEL:-opus[1m]}"
 EVAL_TIMEOUT="${EVAL_TIMEOUT:-900}"
 RUN_ROOT="$(mktemp -d -t mini-spec-3r-XXXXXX)"
 FAILURES=0

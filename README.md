@@ -82,7 +82,7 @@ scripts/
   bootstrap.sh
 config/
   claude-hooks.json
-  claude-settings.json             # Opus main + cross-session settings
+  claude-settings.json             # Opus 1M main + cross-session settings
   codex-config.toml                # optional snippet, not auto-merged
 ```
 
@@ -220,14 +220,14 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Claude uses a repository-managed Opus main model without a repository-managed
-advisor. Codex agents use role-specific current models: Luna for documentation
-research and Sol for article writing.
+Claude uses a repository-managed Opus 1M-context main model (`opus[1m]`)
+without a repository-managed advisor. Codex agents use role-specific
+current models: Luna for documentation research and Sol for article writing.
 
 On upgrade, the installer removes the former repository-managed
 `env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` and `advisorModel=opus` values. It
 preserves another worker-model or advisor value and every unrelated environment
-setting before installing the Opus main model.
+setting before installing the Opus 1M main model.
 
 ## Conflict And Backup Behavior
 

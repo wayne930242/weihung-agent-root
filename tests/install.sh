@@ -120,7 +120,7 @@ assert "hooks" in settings, settings
 assert "Stop" in settings["hooks"], settings
 assert "Notification" not in settings["hooks"], settings
 assert settings["crossSessionInbound"] == "accept", settings
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 PY
 
@@ -209,7 +209,7 @@ fresh_install_manages_explicit_model_settings() {
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 assert "env" not in settings, settings
 assert settings["crossSessionInbound"] == "accept", settings
@@ -240,7 +240,7 @@ EOF
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 assert settings["customSetting"] is True, settings
 PY
@@ -266,7 +266,7 @@ EOF
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert settings["advisorModel"] == "user-advisor-model", settings
 PY
 
@@ -296,7 +296,7 @@ EOF
 import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert settings["advisorModel"] == "user-advisor-model", settings
 assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
 assert settings["env"]["USER_ENV"] == "keep-me", settings
@@ -326,7 +326,7 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert "env" not in settings, settings
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 PY
 
@@ -354,7 +354,7 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "user-worker-model", settings
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 PY
 
@@ -380,7 +380,7 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["env"] == "user-value", settings
-assert settings["model"] == "opus", settings
+assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 PY
 
