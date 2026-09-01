@@ -129,6 +129,15 @@ root_prompts_carry_the_exact_positive_writing_principle() {
   assert_file_contains "$REPO_ROOT/AGENTS.md" "$principle"
 }
 
+complaint_refinement_targets_root_friction() {
+  local skill="$REPO_ROOT/skills/refining-from-complaints/SKILL.md"
+
+  assert_file_contains "$skill" "the player's observed experience and the need left unmet"
+  assert_file_contains "$skill" "justification added to a response or document as a workaround signal"
+  assert_file_contains "$skill" "root cause → positive correction"
+  assert_file_contains "$skill" "observable expected behavior for the player and any document reader"
+}
+
 root_prompts_trigger_the_source_change_graph() {
   local trigger="Source-changing work invokes \`leveraging-tasks\` and states its Alignment and Reality anchor before the first production edit."
 
@@ -239,6 +248,7 @@ run_all_tests() {
   codex_refinement_keeps_its_scope_limits
   mini_spec_keeps_its_load_bearing_rules
   root_prompts_carry_the_exact_positive_writing_principle
+  complaint_refinement_targets_root_friction
   root_prompts_trigger_the_source_change_graph
   mini_spec_route_declares_inline_or_durable
   mini_spec_ratify_records_authority_to_edit
