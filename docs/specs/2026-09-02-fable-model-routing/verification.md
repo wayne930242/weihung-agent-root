@@ -1,25 +1,28 @@
-# Fable model routing verification
+# Claude model routing verification
 
 ## Requirement evidence
 
 | Requirement | Evidence | Result |
 |---|---|---|
-| Repository settings select `claude-fable-5-1`, preserve cross-session inbound, and add no advisor or worker pin | `python3 -m json.tool config/claude-settings.json`; direct source inspection | pass |
-| `CLAUDE.md` is the canonical model-routing policy for fragmentary work, highest-complexity work, pure code writing, and the default model | `bash tests/prompts.sh`; `claude_model_routing_is_canonical` checks every required route | pass |
+| Repository settings select `opus[1m]`, preserve cross-session inbound, and add no advisor or worker pin | `python3 -m json.tool config/claude-settings.json`; focused install test observed `model=opus[1m]` | pass |
+| `CLAUDE.md` keeps directly instructed simple work with the orchestrator and delegates other fragments through Straw Boss or a subagent | `bash tests/prompts.sh`; `claude_model_routing_is_canonical` checks both branches and rejects the former universal-dispatch sentence | pass |
+| The ordered work routes use the orchestrator's current model for highest-complexity and remaining work, Codex for document writing, and Sonnet for code writing, investigation, and lookup | `bash tests/prompts.sh`; focused route assertions all passed | pass |
 | The prompt carries the authorized Straw Boss repair, bump, push, reload, and resume lifecycle | `bash tests/prompts.sh`; direct diff review of `Model Work Routing` | pass |
+| `Orchestrator 權限移交` recommends Fable 5.1 only for extreme complexity judged by Opus, waits for user approval, starts Fable `boss-say` in an independent Herdr pane, then closes the original pane | `bash tests/prompts.sh orchestrator_authority_handoff_is_user_gated`; whitespace-normalized inspection of the real installed prompt observed the complete ordered flow | pass |
 | Fresh and upgrade installs write the exact main model while preserving unrelated user state | `bash tests/install.sh`; all fresh, upgrade, advisor, worker-model, environment, hook, and link cases passed | pass |
 | Uninstall remains value-sensitive and preserves user-owned model and advisor values | `bash tests/uninstall.sh`; full suite passed | pass |
-| Current installer help and README describe the exact model and routing authority | Static search and independent diff review found no stale active Opus-main description | pass |
-| Real installed settings and prompt match the repository | `bash scripts/install.sh` exited 0; focused inspection observed `model=claude-fable-5-1`, `crossSessionInbound=accept`, no advisor or worker pin, and `~/.claude/CLAUDE.md` resolving to this repo with every required routing phrase | pass |
-| Claude Code accepts the exact Fable 5.1 model name and Fable supplies a 1M context by default | Claude Code 2.1.258 accepted `--model claude-fable-5-1`; the earlier runtime probe resolved canonical `claude-fable-5-1` with `contextWindow=1000000`; Anthropic's current migration guidance states that Fable 5 uses a 1M context window by default | pass |
+| Current installer help and README describe the Opus 1M default and dynamic orchestrator routing | Static search and diff review found no stale active Fable-default description | pass |
+| Real installed settings and prompt match the repository | `bash scripts/install.sh` exited 0; focused inspection observed `model=opus[1m]`, `crossSessionInbound=accept`, no advisor, the repository prompt symlink, and every new routing phrase | pass |
 
 ## Red and green evidence
 
-- Red: initial focused tests observed the old `opus[1m]` setting and missing
-  `Model Work Routing` section.
-- Red: after the final correction, focused tests expected
-  `claude-fable-5-1` and observed the prior `[1m]`-suffixed value and prompt.
-- Green: focused installer and prompt tests passed after implementation.
+- Red: the focused prompt test required direct execution for a simple user
+  instruction and observed the former universal-dispatch rule.
+- Red: focused installer and prompt tests expected `opus[1m]` plus dynamic
+  orchestrator inheritance and observed the previous Fable setting and route.
+- Red: the focused authority-handoff test observed that the named section was
+  absent before implementation.
+- Green: focused prompt and fresh-install tests passed after implementation.
 - Regression: full `tests/prompts.sh`, `tests/install.sh`, and
   `tests/uninstall.sh` suites exited 0.
 
@@ -27,20 +30,24 @@
 
 - `bash -n scripts/install.sh scripts/uninstall.sh tests/install.sh tests/uninstall.sh tests/prompts.sh` passed.
 - Both managed Claude JSON fragments parsed successfully.
-- `git diff --check` passed.
-- Independent diff review found no conflicting model route or stale active
-  Opus-main documentation.
-- The earlier model-resolution probe reached canonical `claude-fable-5-1`
-  with a 1M context but stopped before completing its reply because the imposed
-  USD 0.10 limit was lower than the reported USD 0.13974575 usage.
-- A no-suffix parse probe accepted `claude-fable-5-1` and entered the runtime;
-  its deliberately tiny budget stopped before the selected model was called,
-  costing USD 0.000934. No second full paid probe was run.
+- `git diff --check` passed before the real install.
+- The expected negative conflict cases printed errors during installer and
+  uninstaller tests while both suites still exited 0.
+- Real installation reported success and the focused post-install assertions
+  passed without exposing unrelated user settings.
+- The first post-install line-oriented search could not match wrapped prose;
+  whitespace-normalized inspection then observed every required handoff phrase.
 
 ## Human appropriateness
 
-The final exact model string comes from the user's latest correction:
-`claude-fable-5-1` is both the main model and the highest-complexity model.
+The exact `opus[1m]` default comes from the user's latest correction. Inheriting
+the orchestrator's current model for the most complex work preserves the user's
+ability to switch a work session to Fable 5.1 without another prompt edit. The
+ordered routes also resolve overlap deterministically: highest complexity,
+document writing, Sonnet work types, then the current orchestrator model.
+The named authority handoff keeps the model recommendation separate from the
+irreversible pane transition, which remains gated by explicit user approval and
+a running destination `boss-say`.
 
 ## Deviations
 
@@ -48,7 +55,7 @@ None from the approved observable behavior.
 
 ## Unresolved gaps
 
-- No commit or push was performed because the request covered modification and
-  installation, not repository delivery.
+- No commit or push was performed for this revision because the latest requests
+  covered modification and installation, not repository delivery.
 - `~/projects/straw-boss` was not modified because no confirmed Straw Boss
-  defect was part of the requested final work.
+  defect was part of the requested work.

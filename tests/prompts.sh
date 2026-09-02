@@ -149,15 +149,32 @@ claude_model_routing_is_canonical() {
   local prompt="$REPO_ROOT/CLAUDE.md"
 
   assert_file_contains "$prompt" "# Model Work Routing"
-  assert_file_contains "$prompt" "Delegate every fragmentary task through Straw Boss or a subagent."
+  assert_file_contains "$prompt" "Carry simple work from a direct user instruction yourself."
+  assert_file_contains "$prompt" "Delegate other fragmentary tasks through Straw Boss or a subagent."
+  assert_file_lacks "$prompt" "Delegate every fragmentary task through Straw Boss or a subagent."
   assert_file_contains "$prompt" "Use Straw Boss when the task needs a managed app workroom"
   assert_file_contains "$prompt" "Use a subagent for a self-contained fragment"
-  assert_file_contains "$prompt" 'Select `claude-fable-5-1` for the most complex delegated work.'
-  assert_file_contains "$prompt" 'Select `sonnet` when the delegated task consists only of code writing.'
-  assert_file_contains "$prompt" 'All other work uses the configured `claude-fable-5-1` default.'
+  assert_file_contains "$prompt" "For the most complex delegated work, inherit the orchestrator's current model."
+  assert_file_lacks "$prompt" 'Select `claude-fable-5-1` for the most complex delegated work.'
+  assert_file_contains "$prompt" 'Otherwise, delegate document-writing work to `codex`.'
+  assert_file_contains "$prompt" 'Otherwise, select `sonnet` for code-writing, investigation, and lookup work.'
+  assert_file_contains "$prompt" "All remaining work uses the orchestrator's current model."
   assert_file_contains "$prompt" 'repair it in `~/projects/straw-boss`'
   assert_file_contains "$prompt" "bump and push the plugin"
   assert_file_contains "$prompt" 'run `herdr reload plugin`'
+}
+
+orchestrator_authority_handoff_is_user_gated() {
+  local prompt="$REPO_ROOT/CLAUDE.md"
+
+  assert_file_contains "$prompt" "# Orchestrator 權限移交"
+  assert_file_contains "$prompt" "When the current orchestrator is running Opus and judges the work to have extreme complexity"
+  assert_file_contains "$prompt" 'recommend transferring authority to `claude-fable-5-1`.'
+  assert_file_contains "$prompt" "Wait for the user's explicit approval."
+  assert_file_contains "$prompt" "After approval, this handoff supersedes the normal current-model route for that work."
+  assert_file_contains "$prompt" "open an independent Herdr pane"
+  assert_file_contains "$prompt" 'invoke the Straw Boss `boss-say` skill there with `claude-fable-5-1`.'
+  assert_file_contains "$prompt" 'Once `boss-say` is running in the new pane, close the original orchestrator pane.'
 }
 
 mini_spec_route_declares_inline_or_durable() {
@@ -266,6 +283,7 @@ run_all_tests() {
   complaint_refinement_targets_root_friction
   root_prompts_trigger_the_source_change_graph
   claude_model_routing_is_canonical
+  orchestrator_authority_handoff_is_user_gated
   mini_spec_route_declares_inline_or_durable
   mini_spec_ratify_records_authority_to_edit
   mini_spec_result_is_per_requirement_evidence

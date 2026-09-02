@@ -82,7 +82,7 @@ scripts/
   bootstrap.sh
 config/
   claude-hooks.json
-  claude-settings.json             # Fable 5.1 main + cross-session settings
+  claude-settings.json             # Opus 1M main + cross-session settings
   codex-config.toml                # optional snippet, not auto-merged
 ```
 
@@ -220,17 +220,26 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Claude uses the repository-managed `claude-fable-5-1` main model without a
-repository-managed advisor. Fable 5.1 provides a 1M context window by default.
-`CLAUDE.md` owns the delegated-work model policy: the most complex work uses
-the same Fable 5.1 model, pure code writing uses Sonnet, and fragmentary work
-runs through Straw Boss or a subagent. Codex agents retain their role-specific
-models: Luna for documentation research and Sol for article writing.
+Claude uses the repository-managed `opus[1m]` main model without a
+repository-managed advisor. `CLAUDE.md` owns the work-routing policy. Simple
+work directly instructed by the user stays with the orchestrator. The most
+complex delegated work inherits the orchestrator's current model, so switching
+the session to Fable 5.1 also switches that route. Otherwise, document writing
+is delegated to Codex, while code writing, investigation, and lookup use
+Sonnet. Other fragmentary work runs through Straw Boss or a subagent. Codex
+agents retain their role-specific models: Luna for documentation research and
+Sol for article writing.
+
+For work that an Opus orchestrator judges to have extreme complexity,
+`CLAUDE.md` names an approval-gated `Orchestrator 權限移交`: after the user
+agrees, the handoff supersedes the normal current-model route, a new independent
+Herdr pane starts Straw Boss `boss-say` with `claude-fable-5-1`, and the original
+orchestrator pane closes after the new dispatch is running.
 
 On upgrade, the installer removes the former repository-managed
 `env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` and `advisorModel=opus` values. It
 preserves another worker-model or advisor value and every unrelated environment
-setting before installing the Fable 5.1 main model.
+setting before installing the Opus 1M main model.
 
 ## Conflict And Backup Behavior
 

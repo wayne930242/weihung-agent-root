@@ -36,21 +36,33 @@ continues from there — the finding travels, the work does not restart.
 
 `CLAUDE.md` is the authority for Claude model division.
 
-Delegate every fragmentary task through Straw Boss or a subagent.
+Carry simple work from a direct user instruction yourself.
+Delegate other fragmentary tasks through Straw Boss or a subagent.
 Use Straw Boss when the task needs a managed app workroom, its real harness,
 durable coordination, or source-changing work in that app.
 Use a subagent for a self-contained fragment that does not need the managed
 app's own workroom.
 
-Select `claude-fable-5-1` for the most complex delegated work.
-Select `sonnet` when the delegated task consists only of code writing.
-A task that also needs design, investigation, coordination, or verification is
-not pure code writing. All other work uses the configured
-`claude-fable-5-1` default.
+Apply the following routes in order.
+For the most complex delegated work, inherit the orchestrator's current model.
+Otherwise, delegate document-writing work to `codex`.
+Otherwise, select `sonnet` for code-writing, investigation, and lookup work.
+All remaining work uses the orchestrator's current model.
 
 When Straw Boss itself causes friction, repair it in
 `~/projects/straw-boss`, bump and push the plugin, run
 `herdr reload plugin`, then resume the original work.
+
+# Orchestrator 權限移交
+
+When the current orchestrator is running Opus and judges the work to have
+extreme complexity, recommend transferring authority to
+`claude-fable-5-1`.
+Wait for the user's explicit approval.
+After approval, this handoff supersedes the normal current-model route for that work.
+After approval, open an independent Herdr pane and invoke the Straw Boss
+`boss-say` skill there with `claude-fable-5-1`.
+Once `boss-say` is running in the new pane, close the original orchestrator pane.
 
 # Complex Delegation
 
