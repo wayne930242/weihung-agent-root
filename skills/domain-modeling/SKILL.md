@@ -7,7 +7,7 @@ description: Use when project terminology or domain boundaries need refinement.
 
 Actively reconcile the user's language, the project's glossary, and code. Direct
 source-changing requests enter `leveraging-tasks`; return confirmed terms and
-decisions to its Requirements or Design phase.
+decisions to its Advance phase.
 
 ## Discipline
 
@@ -36,7 +36,7 @@ decisions to its Requirements or Design phase.
   domain model by accident.
 - Use tactical DDD patterns only when they clarify real domain rules. Do not
   manufacture entities, aggregates, value objects, or repositories as ceremony.
-- Return to Requirements or Design when implementation reveals a domain
+- Return to Advance when implementation reveals a domain
   contradiction. Do not encode an unconfirmed model silently.
 
 Verification checks code and test vocabulary, invariant placement, context

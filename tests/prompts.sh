@@ -111,6 +111,8 @@ assert_line_budget() {
 mini_spec_keeps_its_load_bearing_rules() {
   local skill="$SKILL_DIR/SKILL.md"
 
+  assert_file_contains "$skill" "ADAAV: Align → Advance → Anchor → Act → Verify"
+  assert_file_contains "$skill" "Advance carries Decision → Spec → Design"
   assert_file_contains "$skill" "**Inline:**"
   assert_file_contains "$skill" "**Durable:**"
   assert_file_contains "$skill" "Alignment:"
@@ -120,6 +122,22 @@ mini_spec_keeps_its_load_bearing_rules() {
   assert_file_contains "$skill" "no \`tasks.md\`"
   assert_file_contains "$skill" "DEBUGGING.md"
   assert_file_contains "$skill" "MINI-SDD.md"
+}
+
+mini_spec_advances_from_a_grounded_decision() {
+  local skill="$SKILL_DIR/SKILL.md"
+  local artifact="$SKILL_DIR/MINI-SDD.md"
+  local grill="$REPO_ROOT/skills/grill-with-docs/SKILL.md"
+
+  assert_file_contains "$skill" "Invoke \`grill-with-docs\` for every durable Decision step"
+  assert_file_contains "$skill" "no open decision blocks observable behavior"
+  assert_file_contains "$artifact" "## \`decision.md\`"
+  assert_file_contains "$artifact" "Question | Answer | Basis | Status"
+  assert_file_contains "$artifact" "\`grounded\`, \`confirmed\`, or \`open\`"
+  assert_file_contains "$artifact" "already contains \`requirements.md\`"
+  assert_file_contains "$grill" "write every consequential question"
+  assert_file_contains "$grill" "When the document has no open consequential decision, return it directly"
+  assert_file_contains "$grill" "Invoke \`grilling\` only for the open user-owned frontier"
 }
 
 root_prompts_carry_the_exact_positive_writing_principle() {
@@ -242,12 +260,12 @@ mini_spec_has_a_real_agent_behavior_eval() {
 
 mini_spec_stays_within_its_line_budget() {
   assert_line_budget "$SKILL_DIR/SKILL.md" 100
-  assert_line_budget "$SKILL_DIR/MINI-SDD.md" 50
+  assert_line_budget "$SKILL_DIR/MINI-SDD.md" 60
   assert_line_budget "$SKILL_DIR/DEBUGGING.md" 35
 
   local total
   total="$(cat "$SKILL_DIR"/*.md | wc -l)"
-  (( total <= 185 )) || fail "mini-spec surface is $total lines, budget is 185"
+  (( total <= 195 )) || fail "mini-spec surface is $total lines, budget is 195"
 }
 
 mini_spec_states_the_persistence_threshold_once() {
@@ -279,6 +297,7 @@ run_all_tests() {
   codex_refinement_is_no_longer_mandatory_for_user_facing_work
   codex_refinement_keeps_its_scope_limits
   mini_spec_keeps_its_load_bearing_rules
+  mini_spec_advances_from_a_grounded_decision
   root_prompts_carry_the_exact_positive_writing_principle
   complaint_refinement_targets_root_friction
   root_prompts_trigger_the_source_change_graph

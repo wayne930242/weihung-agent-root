@@ -83,6 +83,7 @@ run_turn() {
   local sandbox="$1" label="$2" prompt="$3"
   shift 3
   local stream="$sandbox/$label.jsonl"
+  local run_status=0
 
   ( cd "$sandbox/project" \
     && CLAUDE_CONFIG_DIR="$sandbox/home/.claude" \
@@ -94,9 +95,20 @@ run_turn() {
          --disallowed-tools WebSearch WebFetch \
          "$@" \
   ) >"$stream" 2>"$sandbox/$label.err"
+  run_status=$?
+
+  if (( run_status != 0 )); then
+    printf 'agent process failed; see %s and %s\n' "$stream" "$sandbox/$label.err" >&2
+    return "$run_status"
+  fi
 
   if ! jq -se 'map(select(.type == "result")) | length > 0' "$stream" >/dev/null 2>&1; then
     printf 'no usable stream; see %s and %s\n' "$stream" "$sandbox/$label.err" >&2
+    return 1
+  fi
+  if ! jq -se 'map(select(.type == "result" and .is_error == true)) | length == 0' \
+    "$stream" >/dev/null 2>&1; then
+    printf 'agent turn failed; see %s and %s\n' "$stream" "$sandbox/$label.err" >&2
     return 1
   fi
   printf '%s\n' "$stream"
@@ -202,6 +214,37 @@ PY
   pass "$what"
 }
 
+assert_decision_precedes_spec() {
+  local stream="$1" what="$2"
+
+  python3 - "$stream" <<'PY' || { fail "$what"; return; }
+import json
+import sys
+
+first = {}
+position = 0
+editing_tools = {"Write", "Edit", "MultiEdit", "NotebookEdit", "Bash"}
+
+for line in open(sys.argv[1], encoding="utf-8"):
+    event = json.loads(line)
+    if event.get("type") != "assistant":
+        continue
+    for block in event.get("message", {}).get("content", []):
+        if block.get("type") != "tool_use" or block.get("name") not in editing_tools:
+            continue
+        payload = json.dumps(block.get("input", {}), ensure_ascii=False)
+        for artifact in ("decision.md", "spec.md"):
+            offset = payload.find(artifact)
+            if offset >= 0 and artifact not in first:
+                first[artifact] = position + offset
+        position += len(payload) + 1
+
+raise SystemExit(0 if first.get("decision.md", float("inf")) < first.get("spec.md", -1) else 1)
+PY
+
+  pass "$what"
+}
+
 first_match() { find "$1" -path "$2" -print -quit 2>/dev/null; }
 
 # --- case: inline ------------------------------------------------------------
@@ -240,7 +283,7 @@ case_inline_executes_directly() {
 
 # Decision-complete on purpose: every product choice is already made, so nothing
 # open blocks the specification and the case tests the approval gate rather than
-# the requirements interview. What makes it durable is the lasting public
+# the decision interview. What makes it durable is the lasting public
 # contract, the stated reuse, and the user asking to see the spec first.
 DURABLE_PROMPT='Add a --format option to src/greet.sh. It accepts "text", which is the default and keeps today'"'"'s exact output, and "json", which prints {"message":"Hello, world"}. Accept both "--format json" and "--format=json". Any other value exits non-zero with an error on stderr. Treat that JSON shape as a stable public output contract that other tools will depend on and that we will reuse later, and update tests/greet.sh to cover it. Write the specification and show it to me first, and do not modify anything under src/ until I approve it.'
 
@@ -248,6 +291,7 @@ APPROVAL_PROMPT='Approved. The specification is right — go ahead and implement
 
 DURABLE_SANDBOX=""
 DURABLE_SESSION=""
+DURABLE_STREAM=""
 
 prepare_durable_proposal() {
   [[ -n "$DURABLE_SANDBOX" ]] && return 0
@@ -260,15 +304,38 @@ prepare_durable_proposal() {
 
   DURABLE_SANDBOX="$sandbox"
   DURABLE_SESSION="$(session_id "$stream")"
+  DURABLE_STREAM="$stream"
 }
 
 case_durable_stops_before_source_edit() {
   prepare_durable_proposal || return
-  local sandbox="$DURABLE_SANDBOX" spec
+  local sandbox="$DURABLE_SANDBOX" decision spec legacy
   log "--- case_durable_stops_before_source_edit ($sandbox)"
 
   assert_unchanged "$sandbox" src/greet.sh \
     "durable: production source is untouched while the spec is unapproved"
+
+  decision="$(first_match "$sandbox/project" '*/docs/specs/*/decision.md')"
+  if [[ -z "$decision" ]]; then
+    fail "durable: no docs/specs/<date>-<slug>/decision.md was created"
+    return
+  fi
+  pass "durable: a decision.md was created at ${decision#"$sandbox/project/"}"
+
+  assert_decision_precedes_spec "$DURABLE_STREAM" \
+    "durable: decision.md was written before spec.md"
+
+  assert_file_matches "$decision" 'Question.*\|.*Answer.*\|.*Basis.*\|.*Status' \
+    "durable: decision.md records exploratory questions, answers, bases, and statuses"
+  assert_file_matches "$decision" '\|[[:space:]]*(grounded|confirmed)[[:space:]]*\|' \
+    "durable: decision-complete answers are resolved without an interview"
+
+  legacy="$(first_match "$sandbox/project" '*/docs/specs/*/requirements.md')"
+  if [[ -z "$legacy" ]]; then
+    pass "durable: new work creates no legacy requirements.md"
+  else
+    fail "durable: new work created legacy artifact ${legacy#"$sandbox/project/"}"
+  fi
 
   spec="$(first_match "$sandbox/project" '*/docs/specs/*/spec.md')"
   if [[ -z "$spec" ]]; then

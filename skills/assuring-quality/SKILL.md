@@ -25,7 +25,7 @@ For each finding:
 
 1. Trace the symptom to a falsifiable root-cause hypothesis.
 2. Hand any source-changing fix to `leveraging-tasks` with the finding and repro
-   as its requirements input.
+   as its decision input.
 3. Re-run the repro and affected suite after the fix.
 4. Record the evidence or unresolved gap before moving to the next finding.
 

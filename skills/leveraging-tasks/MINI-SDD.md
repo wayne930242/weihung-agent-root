@@ -7,10 +7,23 @@ Artifacts live in `docs/specs/YYYY-MM-DD-<slug>/`. Create each file when its
 phase is reached, not up front. Link to project instructions, ADRs, code,
 research, tickets, and visuals rather than copying them.
 
-## `requirements.md`
+## `decision.md`
 
 Outcome and actors; in and out of scope; concrete scenarios; confirmed
-decisions; open questions, empty before the spec is confirmed.
+decisions; open consequential decisions. Explore every consequential branch in:
+
+```
+| Question | Answer | Basis | Status |
+|---|---|---|---|
+| ... | ... | request, evidence, or decision link | grounded, confirmed, or open |
+```
+
+Status is `grounded`, `confirmed`, or `open`. `grounded` comes from the request,
+source facts, or existing decisions; `confirmed` comes from the user; `open` is
+a consequential user-owned decision. Open rows are empty before `spec.md`.
+
+A folder that already contains `requirements.md` continues using it as its
+decision artifact. New folders create `decision.md`.
 
 ## `spec.md`
 
@@ -41,6 +54,6 @@ separate claims.
 
 ## Updates
 
-Update the owning phase file when new information changes it. A change to user
-intent or observable behavior returns to the Spec phase and to user
-confirmation.
+Update the owning phase file when new information changes it. A new
+consequential decision returns to `decision.md`; a change to user intent or
+observable behavior returns to Spec and user confirmation.

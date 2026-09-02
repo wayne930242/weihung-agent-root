@@ -56,7 +56,7 @@ input.
 
 ## 4. Hand off
 
-Return the confirmed chain to `leveraging-tasks` as requirements input for the
+Return the confirmed chain to `leveraging-tasks` as decision input for the
 source-changing fix. It classifies artifact depth itself: a localized correction
 runs inline there, and only durable decisions produce artifacts. Handing the
 chain over is what keeps it from being re-derived, not a checkpoint the fix has

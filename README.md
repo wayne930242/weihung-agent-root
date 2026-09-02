@@ -88,25 +88,34 @@ config/
 
 ## Mini SDD
 
-Mini SDD is the phased development lifecycle embedded in `leveraging-tasks`:
-Ground → Requirements → Spec → Design → Implement → Verify, applied after the
-agent enters the target project.
+Mini SDD is the durable branch of the ADAAV personal development workflow
+embedded in `leveraging-tasks`: Align → Advance → Anchor → Act → Verify.
+In Chinese: 對齊 → 延續 → 定錨 → 實作 → 驗證. Advance carries Decision → Spec →
+Design without changing owner or restarting context after the agent enters the
+target project.
 
-Three rules carry it, and nothing else is enforced:
+Five rules carry it, and nothing else is enforced:
 
 - **Align and route.** Every source change restates the task and intended outcome
-  in the model's own words, chooses the simplest credible reality anchor, and
-  declares itself Inline or Durable before the first production edit. Clear,
+  in the model's own words and declares itself Inline or Durable. Clear,
   localized, low-reuse work stays inline and writes no files; ambiguity,
   cross-module or cross-session scope, a lasting contract, high risk, scope
   expansion, or a user who wants the spec first makes it durable and leaves
-  `requirements.md`, `spec.md`, `design.md`, and `verification.md` under
-  `docs/specs/YYYY-MM-DD-<slug>/`.
+  `decision.md`, `spec.md`, `design.md`, and `verification.md` under
+  `docs/specs/YYYY-MM-DD-<slug>/`. Existing folders keep `requirements.md` as
+  their decision artifact.
+- **Advance decisions.** New durable work writes exploratory questions, answers,
+  bases, and statuses to `decision.md`. Grounded answers advance directly;
+  `grill-with-docs` asks only the unresolved user-owned frontier. The same run
+  then prepares the spec and design.
 - **Ratify.** Inline work states one observable `Contract:` and records the
   user's request as its `Authorization:`, then executes without re-asking.
   Durable work sits at `Status: proposed` — which forbids production edits —
   until the user's explicit reply sets `Status: approved`, `Approved at`, and
   `Approved from`.
+- **Anchor and act.** Before the first production edit, choose the simplest
+  credible reality anchor and checkpoint, then implement through the target
+  project's native practices.
 - **Result.** Verification gives every requirement its own
   `Requirement | Evidence | Result` row, with `pass`, `fail`, or `unknown`. A
   green suite is not evidence for a requirement nothing exercised.

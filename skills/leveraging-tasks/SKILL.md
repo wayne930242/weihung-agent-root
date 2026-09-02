@@ -1,21 +1,19 @@
 ---
 name: leveraging-tasks
-description: Use for source-changing development; keep low-reuse local work inline and persist only durable decisions.
+description: Use for source-changing development through ADAAV; keep low-reuse local work inline and persist only durable decisions.
 ---
-
 # Leveraging Tasks
 
 Own source-changing work after entering the target project; its instructions and
-skills govern execution. Phases run Ground → Requirements → Spec → Design →
-Implement → Verify. Return when user intent or observable behavior changes.
+skills govern execution. Follow **ADAAV: Align → Advance → Anchor → Act → Verify**
+(對齊 → 延續 → 定錨 → 實作 → 驗證). Advance carries Decision → Spec → Design for
+durable Mini SDD work. Return when user intent or observable behavior changes.
+
+## Align
 
 Open every run with one working interpretation in the model's own words:
 
     Alignment: <the requested task and intended outcome>
-
-Proceed when decision-complete; route a consequential user-owned decision to `grilling`.
-
-## Ground
 
 Declare the change **Inline** or **Durable** before the first production edit:
 
@@ -35,30 +33,22 @@ Inline work follows Alignment with these two lines. They are required output:
     Inline — Contract: <one sentence of the observable behavior after the change>
     Authorization: <the user's explicit source-change request>
 
-Approval already given is not requested again.
+Approval already given is not requested again. Durable work reads
+[MINI-SDD.md](MINI-SDD.md) and creates or resumes its folder before it specifies
+anything; that folder is its declaration.
 
-Before the first production edit, state:
+## Advance
 
-    Reality anchor: <the simplest credible contact with reality and its checkpoint>
-
-Choose it from the task, user, and target project. The method inside may use an
-executable check, user operation, human judgment, or focused review.
-
-Durable work reads [MINI-SDD.md](MINI-SDD.md) and creates or resumes its folder
-before it specifies anything; that folder is its declaration.
-Debugging reads [DEBUGGING.md](DEBUGGING.md) and establishes its red-capable
-loop before diagnosing.
-
-## Requirements
+### Decision
 
 Resolve facts from their source; use `investigating` or `inspecting` when search
-is wide. Send user decisions to `grilling`, or `grill-with-docs` when domain
-terms or an ADR should persist. Invoke
+is wide. Invoke `grill-with-docs` for every durable Decision step. Create
+`decision.md` for new work and resume a legacy artifact in place. Invoke
 `domain-modeling` when terminology, invariants, or context boundaries move.
 
-**Complete when:** no open question blocks an observable specification.
+**Complete when:** no open decision blocks observable behavior.
 
-## Spec
+### Spec
 
 State the observable contract, edge cases, compatibility constraints, non-goals,
 and the applied project standards. Name the reality anchor and checkpoint.
@@ -68,14 +58,25 @@ it, then await explicit user confirmation.
 stay open. Only the user's approving reply sets `Status: approved`, `Approved at`,
 and `Approved from`. An inline `Contract:` is approved by its `Authorization:`.
 
-## Design
+### Design
 
 Choose the smallest approach that fits the confirmed contract and architecture.
 Invoke `codebase-design` when interfaces or seams change, `prototype` when a
 named question is cheaper to settle by experiment, and the project's exact skill.
 Design is done when implementation invents no product behavior or architecture.
 
-## Implement
+## Anchor
+
+Before the first production edit, state:
+
+    Reality anchor: <the simplest credible contact with reality and its checkpoint>
+
+Choose it from the task, user, and target project. The method inside may use an
+executable check, user operation, human judgment, or focused review. Debugging
+reads [DEBUGGING.md](DEBUGGING.md) and establishes its red-capable loop before
+diagnosing.
+
+## Act
 
 The harness-native plan owns sequencing. Follow the target project's native
 practices and work in the smallest useful increments. Mini SDD creates no
