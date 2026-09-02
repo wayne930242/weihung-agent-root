@@ -38,7 +38,7 @@ Installs this repository as the source of truth for:
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
-  - config/claude-settings.json Opus 1M main and cross-session settings
+  - config/claude-settings.json Fable 5.1 main and cross-session settings
 
 Codex agents use their role-specific GPT-5.6 model selections.
 

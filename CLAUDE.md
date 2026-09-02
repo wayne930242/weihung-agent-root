@@ -32,6 +32,26 @@ dispatched session rather than here. See Complex Delegation below.
 A specialized skill hands what it established to the implementation owner, which
 continues from there — the finding travels, the work does not restart.
 
+# Model Work Routing
+
+`CLAUDE.md` is the authority for Claude model division.
+
+Delegate every fragmentary task through Straw Boss or a subagent.
+Use Straw Boss when the task needs a managed app workroom, its real harness,
+durable coordination, or source-changing work in that app.
+Use a subagent for a self-contained fragment that does not need the managed
+app's own workroom.
+
+Select `claude-fable-5-1` for the most complex delegated work.
+Select `sonnet` when the delegated task consists only of code writing.
+A task that also needs design, investigation, coordination, or verification is
+not pure code writing. All other work uses the configured
+`claude-fable-5-1` default.
+
+When Straw Boss itself causes friction, repair it in
+`~/projects/straw-boss`, bump and push the plugin, run
+`herdr reload plugin`, then resume the original work.
+
 # Complex Delegation
 
 A delegation is complex when it needs the target app's real harness or worktree, spans multiple steps or components, or benefits from mid-flight coordination.

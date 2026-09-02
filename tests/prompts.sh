@@ -145,6 +145,21 @@ root_prompts_trigger_the_source_change_graph() {
   assert_file_contains "$REPO_ROOT/AGENTS.md" "$trigger"
 }
 
+claude_model_routing_is_canonical() {
+  local prompt="$REPO_ROOT/CLAUDE.md"
+
+  assert_file_contains "$prompt" "# Model Work Routing"
+  assert_file_contains "$prompt" "Delegate every fragmentary task through Straw Boss or a subagent."
+  assert_file_contains "$prompt" "Use Straw Boss when the task needs a managed app workroom"
+  assert_file_contains "$prompt" "Use a subagent for a self-contained fragment"
+  assert_file_contains "$prompt" 'Select `claude-fable-5-1` for the most complex delegated work.'
+  assert_file_contains "$prompt" 'Select `sonnet` when the delegated task consists only of code writing.'
+  assert_file_contains "$prompt" 'All other work uses the configured `claude-fable-5-1` default.'
+  assert_file_contains "$prompt" 'repair it in `~/projects/straw-boss`'
+  assert_file_contains "$prompt" "bump and push the plugin"
+  assert_file_contains "$prompt" 'run `herdr reload plugin`'
+}
+
 mini_spec_route_declares_inline_or_durable() {
   local skill="$SKILL_DIR/SKILL.md"
 
@@ -250,6 +265,7 @@ run_all_tests() {
   root_prompts_carry_the_exact_positive_writing_principle
   complaint_refinement_targets_root_friction
   root_prompts_trigger_the_source_change_graph
+  claude_model_routing_is_canonical
   mini_spec_route_declares_inline_or_durable
   mini_spec_ratify_records_authority_to_edit
   mini_spec_result_is_per_requirement_evidence

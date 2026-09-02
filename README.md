@@ -82,7 +82,7 @@ scripts/
   bootstrap.sh
 config/
   claude-hooks.json
-  claude-settings.json             # Opus 1M main + cross-session settings
+  claude-settings.json             # Fable 5.1 main + cross-session settings
   codex-config.toml                # optional snippet, not auto-merged
 ```
 
@@ -220,14 +220,17 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Claude uses a repository-managed Opus 1M-context main model (`opus[1m]`)
-without a repository-managed advisor. Codex agents use role-specific
-current models: Luna for documentation research and Sol for article writing.
+Claude uses the repository-managed `claude-fable-5-1` main model without a
+repository-managed advisor. Fable 5.1 provides a 1M context window by default.
+`CLAUDE.md` owns the delegated-work model policy: the most complex work uses
+the same Fable 5.1 model, pure code writing uses Sonnet, and fragmentary work
+runs through Straw Boss or a subagent. Codex agents retain their role-specific
+models: Luna for documentation research and Sol for article writing.
 
 On upgrade, the installer removes the former repository-managed
 `env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` and `advisorModel=opus` values. It
 preserves another worker-model or advisor value and every unrelated environment
-setting before installing the Opus 1M main model.
+setting before installing the Fable 5.1 main model.
 
 ## Conflict And Backup Behavior
 
