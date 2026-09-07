@@ -75,7 +75,7 @@ codex_refinement_keeps_its_scope_limits() {
   local block
   block="$(extract_routing_block)"
 
-  assert_block_contains "$block" "Leave model and effort unset"
+  assert_block_contains "$block" "依 model-preference-profile.md 明確指定模型與 effort"
   assert_block_contains "$block" "repeat the real-interface check until no actionable finding remains"
   assert_block_contains "$block" "does not expand product scope"
 }
@@ -172,11 +172,11 @@ claude_model_routing_is_canonical() {
   assert_file_lacks "$prompt" "Delegate every fragmentary task through Straw Boss or a subagent."
   assert_file_contains "$prompt" "Use Straw Boss when the task needs a managed app workroom"
   assert_file_contains "$prompt" "Use a subagent for a self-contained fragment"
-  assert_file_contains "$prompt" "For the most complex delegated work, inherit the orchestrator's current model."
-  assert_file_lacks "$prompt" 'Select `claude-fable-5-1` for the most complex delegated work.'
-  assert_file_contains "$prompt" 'Otherwise, delegate document-writing work to `codex`.'
-  assert_file_contains "$prompt" 'Otherwise, select `sonnet` for code-writing, investigation, and lookup work.'
-  assert_file_contains "$prompt" "All remaining work uses the orchestrator's current model."
+  assert_file_contains "$prompt" 'skills/managing-model-preferences/model-preference-profile.md'
+  assert_file_contains "$REPO_ROOT/AGENTS.md" 'skills/managing-model-preferences/model-preference-profile.md'
+  assert_file_lacks "$prompt" 'claude-fable-5-1'
+  assert_file_lacks "$prompt" 'gpt-5.6-'
+  assert_file_lacks "$prompt" 'select `sonnet`'
   assert_file_contains "$prompt" 'repair it in `~/projects/straw-boss`'
   assert_file_contains "$prompt" "bump and push the plugin"
   assert_file_contains "$prompt" 'run `herdr reload plugin`'
@@ -186,13 +186,9 @@ orchestrator_authority_handoff_is_user_gated() {
   local prompt="$REPO_ROOT/CLAUDE.md"
 
   assert_file_contains "$prompt" "# Orchestrator 權限移交"
-  assert_file_contains "$prompt" "When the current orchestrator is running Opus and judges the work to have extreme complexity"
-  assert_file_contains "$prompt" 'recommend transferring authority to `claude-fable-5-1`.'
-  assert_file_contains "$prompt" "Wait for the user's explicit approval."
-  assert_file_contains "$prompt" "After approval, this handoff supersedes the normal current-model route for that work."
-  assert_file_contains "$prompt" "open an independent Herdr pane"
-  assert_file_contains "$prompt" 'invoke the Straw Boss `boss-say` skill there with `claude-fable-5-1`.'
-  assert_file_contains "$prompt" 'Once `boss-say` is running in the new pane, close the original orchestrator pane.'
+  assert_file_contains "$prompt" 'handoff-orchestrator'
+  assert_file_contains "$prompt" 'docs/roles.md'
+  assert_file_contains "$prompt" '使用者的明確指定'
 }
 
 mini_spec_route_declares_inline_or_durable() {

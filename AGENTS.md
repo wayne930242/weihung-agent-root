@@ -6,6 +6,8 @@ Source-changing work invokes `leveraging-tasks` and states its Alignment and Rea
 
 # Routing
 
+執行 `boss-say` 或選擇委派模型前，讀取 `~/.codex/skills/managing-model-preferences/model-preference-profile.md`；在本專案內使用 `skills/managing-model-preferences/model-preference-profile.md`。依當期 profile 明確指定模型與 effort。調整偏好使用 `managing-model-preferences` skill。
+
 IMPORTANT: Before responding to a significant request, choose one owner:
 
 - A named or exact specialized skill -> use it.

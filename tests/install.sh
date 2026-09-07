@@ -80,6 +80,13 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/skills/inspecting" "$REPO_ROOT/skills/inspecting"
   assert_symlink_target "$fake_home/.codex/skills/investigating" "$REPO_ROOT/skills/investigating"
   assert_symlink_target "$fake_home/.codex/skills/leveraging-tasks" "$REPO_ROOT/skills/leveraging-tasks"
+  for provider in claude codex; do
+    assert_symlink_target "$fake_home/.$provider/skills/managing-model-preferences" "$REPO_ROOT/skills/managing-model-preferences"
+    cmp "$fake_home/.$provider/skills/managing-model-preferences/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
+    for strategy in codex-first claude-coding-codex-doc; do
+      cmp "$fake_home/.$provider/skills/managing-model-preferences/strategies/$strategy.md" "$REPO_ROOT/skills/managing-model-preferences/strategies/$strategy.md"
+    done
+  done
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
   [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "did not expect retired tdd skill in Codex root"
   assert_symlink_target "$fake_home/.codex/skills/codebase-design" "$REPO_ROOT/skills/codebase-design"
@@ -110,7 +117,7 @@ for name, expected_model in expected_models.items():
 PY
 
   rg -Fq 'Writing or substantially rewriting an article' "$fake_home/.claude/CLAUDE.md"
-  rg -Fq -- '--model gpt-5.6-sol' "$fake_home/.claude/CLAUDE.md"
+  rg -Fq 'model-preference-profile.md' "$fake_home/.claude/CLAUDE.md"
 
   python3 - <<PY
 import json

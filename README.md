@@ -229,21 +229,16 @@ Plugin enablement stays yours, but the installer prints the Codex plugin install
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 
-Claude uses the repository-managed `opus[1m]` main model without a
-repository-managed advisor. `CLAUDE.md` owns the work-routing policy. Simple
-work directly instructed by the user stays with the orchestrator. The most
-complex delegated work inherits the orchestrator's current model, so switching
-the session to Fable 5.1 also switches that route. Otherwise, document writing
-is delegated to Codex, while code writing, investigation, and lookup use
-Sonnet. Other fragmentary work runs through Straw Boss or a subagent. Codex
-agents retain their role-specific models: Luna for documentation research and
-Sol for article writing.
+派工模型由 [模型偏好 profile](skills/managing-model-preferences/model-preference-profile.md)
+集中管理。Claude 與 Codex 的根提示在 `boss-say` 派工前讀取它，明確傳入模型與 effort。
+每期調整可使用 `managing-model-preferences` skill，例如：「更新本期模型偏好，一般工作改用指定模型」。
+profile、具名策略與 skill 透過現有安裝腳本一起連結到兩個平台。
+目前最佳策略為 `codex-first`；原有策略保存為 `claude-coding-codex-doc`。
+每套策略獨立存檔並以 Git 追蹤修訂，切換時更新 profile 的啟用連結。
 
-For work that an Opus orchestrator judges to have extreme complexity,
-`CLAUDE.md` names an approval-gated `Orchestrator 權限移交`: after the user
-agrees, the handoff supersedes the normal current-model route, a new independent
-Herdr pane starts Straw Boss `boss-say` with `claude-fable-5-1`, and the original
-orchestrator pane closes after the new dispatch is running.
+簡單工作可沿用直接完成的流程；主代理權限移交由 Straw Boss 的
+`handoff-orchestrator` 處理。主會話的 Opus 1M 設定及原生專用角色 TOML
+各自維持原用途；套用 profile 的派工明確指定其選定的模型與 effort。
 
 On upgrade, the installer removes the former repository-managed
 `env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` and `advisorModel=opus` values. It
