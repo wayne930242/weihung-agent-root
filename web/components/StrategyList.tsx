@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { switchStrategy } from "@/app/actions";
 import { initialSwitchState } from "@/lib/switch-state";
 
@@ -24,8 +24,20 @@ export function StrategyList({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [switching, setSwitching] = useState<string | null>(null);
 
+  // A successful switch has already re-rendered the page with the new active
+  // strategy, so leaving its form open contradicts what the row now says.
+  useEffect(() => {
+    if (state.tone === "ok") setSwitching(null);
+  }, [state]);
+
   return (
     <>
+      {state.tone === "ok" && (
+        <p className="message" data-tone="ok">
+          {state.message}
+        </p>
+      )}
+
       {strategies.map((strategy) => {
         const isActive = strategy.name === active;
         const isOpen = expanded === strategy.name;
@@ -84,17 +96,17 @@ export function StrategyList({
                     {pending ? "commit 中…" : "確認切換並 commit"}
                   </button>
                 </div>
+
+                {state.tone === "error" && (
+                  <p className="message" data-tone="error">
+                    {state.message}
+                  </p>
+                )}
               </form>
             )}
           </article>
         );
       })}
-
-      {state.tone !== "idle" && (
-        <p className="message" data-tone={state.tone}>
-          {state.message}
-        </p>
-      )}
     </>
   );
 }
