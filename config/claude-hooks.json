@@ -5,12 +5,29 @@
     "padding": 0
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/hooks/sync-repo.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "\"$HOME/.claude/hooks/log-stop.sh\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/hooks/warn-unpushed.sh\"",
             "timeout": 5
           }
         ]
