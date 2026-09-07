@@ -76,7 +76,33 @@ PY
   rm -rf "$temp_dir"
 }
 
+herdr_session_hook_uses_current_home() {
+  python3 - "$REPO_ROOT/codex/hooks.json" <<'PY'
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+config = json.loads(Path(sys.argv[1]).read_text())
+commands = [hook["command"] for group in config["hooks"]["SessionStart"]
+            for hook in group["hooks"] if "herdr-agent-state.sh" in hook["command"]]
+assert len(commands) == 1, commands
+with tempfile.TemporaryDirectory(prefix="codex home ") as directory:
+    home = Path(directory)
+    script = home / ".codex/herdr-agent-state.sh"
+    script.parent.mkdir()
+    script.write_text('#!/bin/sh\nprintf "%s" "$1"\n')
+    result = subprocess.run(commands[0], shell=True, input="{}", text=True,
+                            capture_output=True, env={**os.environ, "HOME": str(home)})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "session", result.stdout
+PY
+}
+
 run_all_tests() {
+  herdr_session_hook_uses_current_home
   stop_hook_logs_payload
   session_start_hook_logs_payload
 }
