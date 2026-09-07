@@ -63,3 +63,10 @@ commands/sc/
 # Existing user skills (not part of this system)
 skills/agent-browser/
 skills/find-skills
+
+# Vercel model-profile console
+web/node_modules/
+web/.next/
+web/.vercel/
+web/next-env.d.ts
+web/*.tsbuildinfo
