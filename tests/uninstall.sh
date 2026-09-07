@@ -79,6 +79,7 @@ EOF
   [[ "$(cat "$fake_home/.codex/AGENTS.md")" == "old codex agents" ]] || fail "expected AGENTS.md to be restored from backup"
   [[ "$(cat "$fake_home/.codex/rules/default.rules")" == "old rule" ]] || fail "expected default.rules to be restored from backup"
   [[ ! -e "$fake_home/.claude/shared/communication.md" ]] || fail "expected managed shared file to be removed"
+  [[ ! -e "$fake_home/.claude/commands/model-profile.md" && ! -L "$fake_home/.claude/commands/model-profile.md" ]] || fail "expected managed Claude command to be removed"
   [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected managed codex skill to be removed"
   for provider in claude codex; do
     [[ ! -e "$fake_home/.$provider/skills/managing-model-preferences" && ! -L "$fake_home/.$provider/skills/managing-model-preferences" ]] || fail "expected model preference skill and profile to be removed"

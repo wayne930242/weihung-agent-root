@@ -7,6 +7,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
 SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
+CLAUDE_COMMANDS_DIR="$REPO_ROOT/claude/commands"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
 CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
 CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
@@ -27,6 +28,7 @@ Installs this repository as the source of truth for:
   - ~/.claude/shared/*.md
   - ~/.claude/skills/*/
   - ~/.claude/agents/*.md
+  - ~/.claude/commands/*.md
   - ~/.claude/hooks/*.sh
   - ~/.claude/statusline.sh
   - ~/.codex/AGENTS.md
@@ -303,6 +305,7 @@ done
 
 mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
 mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills"
+mkdir -p "$TARGET_HOME/.claude/commands"
 mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.codex/skills"
 
 remove_retired_repo_link \
@@ -324,6 +327,10 @@ install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.claude/agents/$(basename "$agent_file")"
 done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+while IFS= read -r command_file; do
+  install_link "$command_file" "$TARGET_HOME/.claude/commands/$(basename "$command_file")"
+done < <(find "$CLAUDE_COMMANDS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r hook_file; do
   install_link "$hook_file" "$TARGET_HOME/.claude/hooks/$(basename "$hook_file")"

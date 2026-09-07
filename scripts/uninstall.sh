@@ -7,6 +7,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
 SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
+CLAUDE_COMMANDS_DIR="$REPO_ROOT/claude/commands"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
 CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
 CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
@@ -91,6 +92,7 @@ remove_retired_repo_link() {
 cleanup_empty_dirs() {
   local dirs=(
     "$TARGET_HOME/.claude/agents"
+    "$TARGET_HOME/.claude/commands"
     "$TARGET_HOME/.claude/hooks"
     "$TARGET_HOME/.claude/shared"
     "$TARGET_HOME/.claude/skills"
@@ -260,6 +262,10 @@ restore_or_remove "$TARGET_HOME/.codex/hooks.json"
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"
 done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+while IFS= read -r file; do
+  restore_or_remove "$TARGET_HOME/.claude/commands/$(basename "$file")"
+done < <(find "$CLAUDE_COMMANDS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/hooks/$(basename "$file")"

@@ -74,6 +74,7 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.claude/shared/context-management.md" "$REPO_ROOT/shared/context-management.md"
   assert_symlink_target "$fake_home/.claude/hooks/log-notification.sh" "$REPO_ROOT/claude/hooks/log-notification.sh"
   assert_symlink_target "$fake_home/.claude/hooks/log-stop.sh" "$REPO_ROOT/claude/hooks/log-stop.sh"
+  assert_symlink_target "$fake_home/.claude/commands/model-profile.md" "$REPO_ROOT/claude/commands/model-profile.md"
   assert_symlink_target "$fake_home/.claude/agents/security-reviewer.md" "$REPO_ROOT/claude/agents/security-reviewer.md"
   assert_symlink_target "$fake_home/.claude/agents/silent-failure-hunter.md" "$REPO_ROOT/claude/agents/silent-failure-hunter.md"
   assert_symlink_target "$fake_home/.codex/skills/assuring-quality" "$REPO_ROOT/skills/assuring-quality"
@@ -83,7 +84,7 @@ fresh_install_creates_expected_symlinks() {
   for provider in claude codex; do
     assert_symlink_target "$fake_home/.$provider/skills/managing-model-preferences" "$REPO_ROOT/skills/managing-model-preferences"
     cmp "$fake_home/.$provider/skills/managing-model-preferences/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
-    for strategy in codex-first claude-coding-codex-doc; do
+    for strategy in claude-only claude-drive-codex codex-first claude-coding-codex-doc; do
       cmp "$fake_home/.$provider/skills/managing-model-preferences/strategies/$strategy.md" "$REPO_ROOT/skills/managing-model-preferences/strategies/$strategy.md"
     done
   done
