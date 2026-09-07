@@ -233,7 +233,8 @@ This is especially important for Codex. `config.toml` often carries machine-loca
 集中管理。Claude 與 Codex 的根提示在 `boss-say` 派工前讀取它，明確傳入模型與 effort。
 每期調整可使用 `managing-model-preferences` skill，例如：「更新本期模型偏好，一般工作改用指定模型」。
 profile、具名策略與 skill 透過現有安裝腳本一起連結到兩個平台。
-目前最佳策略為 `codex-first`；原有策略保存為 `claude-coding-codex-doc`。
+目前最佳策略為 `claude-drive-codex`：Opus xhigh 協調，Sonnet low 承接明確小修改與查找整理，Astra low 一般實作，medium 複雜功能與深入研究。
+既有策略保存為 `codex-drive-claude`、`codex-first` 與 `claude-coding-codex-doc`。
 每套策略獨立存檔並以 Git 追蹤修訂，切換時更新 profile 的啟用連結。
 
 簡單工作可沿用直接完成的流程；主代理權限移交由 Straw Boss 的
