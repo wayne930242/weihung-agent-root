@@ -3,13 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { commitFile, readFile } from "@/lib/github";
 import { PROFILE_PATH, applySwitch, taipeiToday } from "@/lib/profile";
-
-export type SwitchState = {
-  tone: "idle" | "ok" | "error";
-  message: string;
-};
-
-export const initialSwitchState: SwitchState = { tone: "idle", message: "" };
+import type { SwitchState } from "@/lib/switch-state";
 
 export async function switchStrategy(
   _prev: SwitchState,

@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { initialSwitchState, switchStrategy } from "@/app/actions";
+import { switchStrategy } from "@/app/actions";
+import { initialSwitchState } from "@/lib/switch-state";
 
 export type Strategy = {
   name: string;
@@ -31,17 +32,17 @@ export function StrategyList({
         const isSwitching = switching === strategy.name;
 
         return (
-          <article key={strategy.name} className="card" data-active={isActive}>
-            <div className="card-head">
-              <h2 className="card-name">{strategy.name}</h2>
-              {isActive && <span className="badge">啟用中</span>}
+          <article key={strategy.name} className="row" data-active={isActive}>
+            <div className="row-head">
+              <h2 className="row-name">{strategy.name}</h2>
+              {isActive && <span className="active-tag">啟用中</span>}
             </div>
 
             {strategy.purpose && (
-              <p className="card-purpose">{strategy.purpose}</p>
+              <p className="row-purpose">{strategy.purpose}</p>
             )}
 
-            <div className="card-actions">
+            <div className="row-actions">
               <button
                 type="button"
                 aria-expanded={isOpen}
@@ -53,7 +54,7 @@ export function StrategyList({
               {!isActive && (
                 <button
                   type="button"
-                  className={isSwitching ? "" : "primary"}
+                  className={isSwitching ? "" : "accent"}
                   onClick={() =>
                     setSwitching(isSwitching ? null : strategy.name)
                   }
@@ -79,7 +80,7 @@ export function StrategyList({
                   placeholder="例如：Codex 額度回補，複雜實作改回 Astra medium"
                 />
                 <div className="form-actions">
-                  <button type="submit" className="primary" disabled={pending}>
+                  <button type="submit" className="accent" disabled={pending}>
                     {pending ? "commit 中…" : "確認切換並 commit"}
                   </button>
                 </div>
