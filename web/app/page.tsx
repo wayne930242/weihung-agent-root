@@ -44,12 +44,10 @@ export default async function Page() {
     <>
       <h1>模型偏好主控台</h1>
 
-      <section className="active-card">
-        <p className="active-label">目前啟用</p>
-        <p className="active-name">{profile.active || "（無法解析）"}</p>
-        <p className="active-meta">啟用日期 {profile.activatedOn || "—"}</p>
-        <p className="active-rationale">{profile.rationale}</p>
-      </section>
+      <p className="label">目前啟用</p>
+      <p className="active-name">{profile.active || "（無法解析）"}</p>
+      <p className="active-meta">啟用日期 {profile.activatedOn || "—"}</p>
+      <p className="active-rationale">{profile.rationale}</p>
 
       <p className="section-label">策略目錄</p>
       <StrategyList strategies={strategies} active={profile.active} />
