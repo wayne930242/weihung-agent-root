@@ -47,7 +47,7 @@ app's own workroom.
 
 When Straw Boss itself causes friction, repair it in
 `~/projects/straw-boss`, bump and push the plugin, run
-`herdr reload plugin`, then resume the original work.
+`bash scripts/install.sh` in that checkout, then resume the original work.
 
 # Orchestrator 權限移交
 

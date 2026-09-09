@@ -179,7 +179,7 @@ claude_model_routing_is_canonical() {
   assert_file_lacks "$prompt" 'select `sonnet`'
   assert_file_contains "$prompt" 'repair it in `~/projects/straw-boss`'
   assert_file_contains "$prompt" "bump and push the plugin"
-  assert_file_contains "$prompt" 'run `herdr reload plugin`'
+  assert_file_contains "$prompt" 'run `bash scripts/install.sh`'
 }
 
 orchestrator_authority_handoff_is_user_gated() {
