@@ -87,7 +87,9 @@ practices and work in the smallest useful increments. Mini SDD creates no
 Exercise the chosen reality anchor and capture what it observed. Then review the
 diff separately against project standards, the approved contract, and the
 confirmed domain model. A human checkpoint owns criteria that require human
-judgment; record its verdict distinctly from executable or review evidence.
+judgment; record its verdict distinctly from executable or review evidence. When
+those criteria cover UI or a human-use scenario, ask the user whether to run a
+`human-feedback` pass, and carry its verdict the same way.
 
 Give every requirement in the contract its own `Requirement | Evidence | Result`
 row, where `Result` is `pass`, `fail`, or `unknown` and `Evidence` names the real

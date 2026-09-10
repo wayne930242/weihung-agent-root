@@ -14,6 +14,7 @@ IMPORTANT: Before responding to a significant request, choose one owner:
 - Explanation or comparison -> `providing-knowledge`.
 - Research -> `investigating`.
 - Check, audit, or review -> `inspecting`.
+- Human feedback on working output -> `human-feedback`.
 - Any source-changing work -> `leveraging-tasks`.
 - A user-owned unresolved decision -> `grilling`.
 

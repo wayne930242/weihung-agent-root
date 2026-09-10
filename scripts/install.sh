@@ -117,6 +117,7 @@ merge_claude_settings() {
 
   python3 - "$settings_path" "$fragment_path" <<'PY'
 import json
+import re
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -137,6 +138,42 @@ def deep_merge(base, overlay):
             result[key] = deepcopy(value)
     return result
 
+MANAGED_SCRIPT = re.compile(r"/\.claude/hooks/([A-Za-z0-9._-]+)")
+
+
+def managed_scripts(fragment_hooks):
+    names = set()
+    for entries in fragment_hooks.values():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            for hook in entry.get("hooks", []):
+                names.update(MANAGED_SCRIPT.findall(hook.get("command", "")))
+    return names
+
+
+def merge_hooks(current_hooks, fragment_hooks):
+    """Repo-managed registrations are replaced; every other registration stays."""
+    names = managed_scripts(fragment_hooks)
+    merged_hooks = deepcopy(current_hooks) if isinstance(current_hooks, dict) else {}
+
+    for event_name, fragment_entries in fragment_hooks.items():
+        current_entries = merged_hooks.get(event_name)
+        kept = []
+        if isinstance(current_entries, list):
+            for entry in current_entries:
+                unmanaged = [
+                    hook
+                    for hook in entry.get("hooks", [])
+                    if not names.intersection(MANAGED_SCRIPT.findall(hook.get("command", "")))
+                ]
+                if unmanaged:
+                    kept.append({**entry, "hooks": unmanaged})
+        merged_hooks[event_name] = kept + deepcopy(fragment_entries)
+
+    return merged_hooks
+
+
 if settings_path.exists():
     current = json.loads(settings_path.read_text(encoding="utf-8"))
 else:
@@ -144,6 +181,8 @@ else:
 
 fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
 merged = deep_merge(current, fragment)
+if isinstance(fragment.get("hooks"), dict):
+    merged["hooks"] = merge_hooks(current.get("hooks"), fragment["hooks"])
 settings_path.parent.mkdir(parents=True, exist_ok=True)
 settings_path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
@@ -318,6 +357,12 @@ remove_retired_repo_link \
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
+remove_retired_repo_link \
+  "$TARGET_HOME/.claude/skills/refining-from-complaints" \
+  "$REPO_ROOT/skills/refining-from-complaints"
+remove_retired_repo_link \
+  "$TARGET_HOME/.codex/skills/refining-from-complaints" \
+  "$REPO_ROOT/skills/refining-from-complaints"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"

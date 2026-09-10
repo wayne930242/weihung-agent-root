@@ -248,6 +248,12 @@ remove_retired_repo_link \
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
+remove_retired_repo_link \
+  "$TARGET_HOME/.claude/skills/refining-from-complaints" \
+  "$REPO_ROOT/skills/refining-from-complaints"
+remove_retired_repo_link \
+  "$TARGET_HOME/.codex/skills/refining-from-complaints" \
+  "$REPO_ROOT/skills/refining-from-complaints"
 
 # Clean first: a hook entry in settings.json must never outlive a removed script,
 # or every matching event fails with exit 127.

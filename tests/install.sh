@@ -90,6 +90,8 @@ fresh_install_creates_expected_symlinks() {
   done
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
   [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "did not expect retired tdd skill in Codex root"
+  assert_symlink_target "$fake_home/.claude/skills/human-feedback" "$REPO_ROOT/skills/human-feedback"
+  assert_symlink_target "$fake_home/.codex/skills/human-feedback" "$REPO_ROOT/skills/human-feedback"
   assert_symlink_target "$fake_home/.codex/skills/codebase-design" "$REPO_ROOT/skills/codebase-design"
   assert_symlink_target "$fake_home/.codex/skills/domain-modeling" "$REPO_ROOT/skills/domain-modeling"
   assert_symlink_target "$fake_home/.codex/skills/prototype" "$REPO_ROOT/skills/prototype"
@@ -444,6 +446,23 @@ install_removes_only_repository_managed_retired_tdd_skills() {
   rm -rf "$temp_dir"
 }
 
+install_removes_only_repository_managed_retired_complaint_skills() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills"
+  ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.claude/skills/refining-from-complaints"
+  ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.codex/skills/refining-from-complaints"
+
+  run_install "$fake_home"
+
+  [[ ! -e "$fake_home/.claude/skills/refining-from-complaints" && ! -L "$fake_home/.claude/skills/refining-from-complaints" ]] || fail "expected retired Claude complaint skill to be removed"
+  [[ ! -e "$fake_home/.codex/skills/refining-from-complaints" && ! -L "$fake_home/.codex/skills/refining-from-complaints" ]] || fail "expected retired Codex complaint skill to be removed"
+
+  rm -rf "$temp_dir"
+}
+
 install_preserves_user_owned_tdd_skills() {
   local temp_dir
   temp_dir="$(mktemp -d)"
@@ -578,6 +597,7 @@ run_all_tests() {
   install_removes_only_repository_managed_retired_safety_reviewer
   install_preserves_user_owned_safety_reviewer
   install_removes_only_repository_managed_retired_tdd_skills
+  install_removes_only_repository_managed_retired_complaint_skills
   install_preserves_user_owned_tdd_skills
 }
 

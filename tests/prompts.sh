@@ -147,13 +147,27 @@ root_prompts_carry_the_exact_positive_writing_principle() {
   assert_file_contains "$REPO_ROOT/AGENTS.md" "$principle"
 }
 
-complaint_refinement_targets_root_friction() {
-  local skill="$REPO_ROOT/skills/refining-from-complaints/SKILL.md"
+human_feedback_corrects_at_the_root() {
+  local skill="$REPO_ROOT/skills/human-feedback/SKILL.md"
 
-  assert_file_contains "$skill" "the player's observed experience and the need left unmet"
+  [[ ! -e "$REPO_ROOT/skills/refining-from-complaints" ]] \
+    || fail "the retired refining-from-complaints skill is back"
+
+  assert_file_contains "$skill" "the person's observed experience and the need left unmet"
   assert_file_contains "$skill" "justification added to a response or document as a workaround signal"
   assert_file_contains "$skill" "root cause → positive correction"
-  assert_file_contains "$skill" "observable expected behavior for the player and any document reader"
+  assert_file_contains "$skill" "Attend to the problem the person has, ahead of the fix they propose"
+  assert_file_contains "$skill" "It lands on the causal decision"
+  assert_file_contains "$skill" "A defensive guard belongs where the input is genuinely untrusted"
+  assert_file_contains "$skill" "A fallback or special case belongs where its branch is a real case of the domain"
+}
+
+human_feedback_is_reachable_from_verification_and_routing() {
+  local skill="$SKILL_DIR/SKILL.md"
+
+  assert_file_contains "$skill" "those criteria cover UI or a human-use scenario, ask the user whether to run a \`human-feedback\` pass"
+  assert_file_contains "$REPO_ROOT/CLAUDE.md" "Human feedback on working output → \`human-feedback\`"
+  assert_file_contains "$REPO_ROOT/AGENTS.md" "Human feedback on working output -> \`human-feedback\`"
 }
 
 root_prompts_trigger_the_source_change_graph() {
@@ -255,13 +269,13 @@ mini_spec_has_a_real_agent_behavior_eval() {
 }
 
 mini_spec_stays_within_its_line_budget() {
-  assert_line_budget "$SKILL_DIR/SKILL.md" 100
+  assert_line_budget "$SKILL_DIR/SKILL.md" 102
   assert_line_budget "$SKILL_DIR/MINI-SDD.md" 60
   assert_line_budget "$SKILL_DIR/DEBUGGING.md" 35
 
   local total
   total="$(cat "$SKILL_DIR"/*.md | wc -l)"
-  (( total <= 195 )) || fail "mini-spec surface is $total lines, budget is 195"
+  (( total <= 197 )) || fail "mini-spec surface is $total lines, budget is 197"
 }
 
 mini_spec_states_the_persistence_threshold_once() {
@@ -295,7 +309,8 @@ run_all_tests() {
   mini_spec_keeps_its_load_bearing_rules
   mini_spec_advances_from_a_grounded_decision
   root_prompts_carry_the_exact_positive_writing_principle
-  complaint_refinement_targets_root_friction
+  human_feedback_corrects_at_the_root
+  human_feedback_is_reachable_from_verification_and_routing
   root_prompts_trigger_the_source_change_graph
   claude_model_routing_is_canonical
   orchestrator_authority_handoff_is_user_gated
