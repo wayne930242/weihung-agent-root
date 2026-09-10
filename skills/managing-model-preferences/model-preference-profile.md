@@ -1,8 +1,8 @@
 # 模型偏好 Profile
 
-目前最佳且啟用的策略：[claude-drive-codex](strategies/claude-drive-codex.md)。
-啟用日期：2026-09-09。
-選擇依據：Token 回來了，本期最佳策略。
+目前最佳且啟用的策略：[claude-only](strategies/claude-only.md)。
+啟用日期：2026-09-10。
+選擇依據：Token 用完。
 
 進入 `boss-say` 或選擇委派模型時，先讀本檔，再完整讀取目前啟用的策略，依該策略選擇派工參數。使用者本次的明確指定優先。新派工使用當前策略，既有 dispatch instruction 維持原設定。
 
