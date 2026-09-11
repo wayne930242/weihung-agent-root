@@ -128,7 +128,7 @@ collect_entries() {
 
   local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-}"
   if [[ -z "$loop_boot_dir" ]]; then
-    for candidate in "$REPO_ROOT/../../../weihung-loop-boot" "$HOME/weihung-loop-boot" "/home/weihung/weihung-loop-boot"; do
+    for candidate in "$REPO_ROOT/../../../aaaav-loop-boot" "$HOME/aaaav-loop-boot" "/home/weihung/aaaav-loop-boot"; do
       if [[ -d "$candidate" ]]; then
         loop_boot_dir="$candidate"
         break

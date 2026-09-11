@@ -80,7 +80,7 @@ codex_refinement_keeps_its_scope_limits() {
   assert_block_contains "$block" "does not expand product scope"
 }
 
-LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../weihung-loop-boot}"
+LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../aaaav-loop-boot}"
 SKILL_DIR="$LOOP_BOOT_DIR/skills/aaaav-do"
 
 assert_file_contains() {

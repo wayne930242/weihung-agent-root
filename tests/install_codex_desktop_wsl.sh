@@ -39,7 +39,7 @@ fresh_install_copies_managed_surface_and_preserves_unrelated_content() {
   assert_same_file "$windows_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
   assert_same_file "$windows_home/.codex/agents/docs-researcher.toml" "$REPO_ROOT/codex/agents/docs-researcher.toml"
   assert_same_file "$windows_home/.codex/rules/default.rules" "$REPO_ROOT/codex/rules/default.rules"
-  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../weihung-loop-boot}"
+  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../aaaav-loop-boot}"
   assert_same_file "$windows_home/.codex/skills/aaaav-do/SKILL.md" "$loop_boot_dir/skills/aaaav-do/SKILL.md"
   [[ "$(cat "$windows_home/.codex/skills/.system/keep.txt")" == "keep" ]] || fail "expected unrelated .system skill to remain"
   [[ ! -e "$windows_home/.codex/config.toml" ]] || fail "did not expect config.toml to be installed"

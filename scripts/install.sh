@@ -423,7 +423,7 @@ remove_retired_repo_link \
 
 LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-}"
 if [[ -z "$LOOP_BOOT_DIR" ]]; then
-  for candidate in "$REPO_ROOT/../../../weihung-loop-boot" "$TARGET_HOME/weihung-loop-boot" "$HOME/weihung-loop-boot" "/home/weihung/weihung-loop-boot"; do
+  for candidate in "$REPO_ROOT/../../../aaaav-loop-boot" "$TARGET_HOME/aaaav-loop-boot" "$HOME/aaaav-loop-boot" "/home/weihung/aaaav-loop-boot"; do
     if [[ -d "$candidate" ]]; then
       LOOP_BOOT_DIR="$candidate"
       break
@@ -529,9 +529,9 @@ for skill_name in "${root_skills[@]}"; do
 done
 
 if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
-  log "Installing weihung-loop-boot plugin across agy, claude, and codex..."
-  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.gemini/config/plugins/weihung-loop-boot"
-  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.claude/plugins/weihung-loop-boot"
+  log "Installing aaaav-loop-boot plugin across agy, claude, and codex..."
+  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.gemini/config/plugins/aaaav-loop-boot"
+  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.claude/plugins/aaaav-loop-boot"
   if [[ -d "$LOOP_BOOT_DIR/skills" ]]; then
     while IFS= read -r plugin_skill; do
       install_link "$plugin_skill" "$TARGET_HOME/.codex/skills/$(basename "$plugin_skill")"

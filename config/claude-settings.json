@@ -2,6 +2,6 @@
   "model": "opus[1m]",
   "crossSessionInbound": "accept",
   "enabledPlugins": {
-    "weihung-loop-boot@weihung-loop-boot": true
+    "aaaav-loop-boot@aaaav-loop-boot": true
   }
 }

@@ -261,7 +261,7 @@ fi
 
 LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-}"
 if [[ -z "$LOOP_BOOT_DIR" ]]; then
-  for candidate in "$REPO_ROOT/../../../weihung-loop-boot" "$TARGET_HOME/weihung-loop-boot" "$HOME/weihung-loop-boot" "/home/weihung/weihung-loop-boot"; do
+  for candidate in "$REPO_ROOT/../../../aaaav-loop-boot" "$TARGET_HOME/aaaav-loop-boot" "$HOME/aaaav-loop-boot" "/home/weihung/aaaav-loop-boot"; do
     if [[ -d "$candidate" ]]; then
       LOOP_BOOT_DIR="$candidate"
       break
@@ -309,8 +309,8 @@ restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
 restore_or_remove "$TARGET_HOME/.gemini/config/skills.json"
 
 if [[ -n "$LOOP_BOOT_DIR" ]]; then
-  restore_or_remove "$TARGET_HOME/.gemini/config/plugins/weihung-loop-boot"
-  restore_or_remove "$TARGET_HOME/.claude/plugins/weihung-loop-boot"
+  restore_or_remove "$TARGET_HOME/.gemini/config/plugins/aaaav-loop-boot"
+  restore_or_remove "$TARGET_HOME/.claude/plugins/aaaav-loop-boot"
 fi
 
 while IFS= read -r file; do

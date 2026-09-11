@@ -93,7 +93,7 @@ config/
 
 ## AAAAV Development Loop (Mini SDD)
 
-The durable and inline development workflow is provided by `leveraging-tasks` from the `weihung-loop-boot` plugin: Align → Advance → Anchor → Act → Verify.
+The durable and inline development workflow is provided by `leveraging-tasks` from the `aaaav-loop-boot` plugin: Align → Advance → Anchor → Act → Verify.
 In Chinese: 對齊 → 推進/延續 → 定錨 → 實作 → 驗證. Advance carries Decision → Spec →
 Design without changing owner or restarting context after the agent enters the
 target project.

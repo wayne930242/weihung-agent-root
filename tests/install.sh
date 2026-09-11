@@ -80,10 +80,10 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.claude/commands/model-profile.md" "$REPO_ROOT/claude/commands/model-profile.md"
   assert_symlink_target "$fake_home/.claude/agents/security-reviewer.md" "$REPO_ROOT/claude/agents/security-reviewer.md"
   assert_symlink_target "$fake_home/.claude/agents/silent-failure-hunter.md" "$REPO_ROOT/claude/agents/silent-failure-hunter.md"
-  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../weihung-loop-boot}"
+  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../aaaav-loop-boot}"
   [[ -d "$loop_boot_dir" ]] && loop_boot_dir="$(cd "$loop_boot_dir" && pwd -P)"
-  assert_symlink_target "$fake_home/.claude/plugins/weihung-loop-boot" "$loop_boot_dir"
-  assert_symlink_target "$fake_home/.gemini/config/plugins/weihung-loop-boot" "$loop_boot_dir"
+  assert_symlink_target "$fake_home/.claude/plugins/aaaav-loop-boot" "$loop_boot_dir"
+  assert_symlink_target "$fake_home/.gemini/config/plugins/aaaav-loop-boot" "$loop_boot_dir"
   assert_symlink_target "$fake_home/.codex/skills/aaaav-do" "$loop_boot_dir/skills/aaaav-do"
   assert_symlink_target "$fake_home/.codex/skills/solid-loop" "$loop_boot_dir/skills/solid-loop"
   assert_symlink_target "$fake_home/.codex/skills/assuring-quality" "$loop_boot_dir/skills/assuring-quality"
@@ -517,7 +517,7 @@ install_prunes_obsolete_and_broken_managed_skills() {
 
   local fake_home="$temp_dir/home"
   local user_skill="$temp_dir/my-custom-skill"
-  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../weihung-loop-boot}"
+  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../aaaav-loop-boot}"
   [[ -d "$loop_boot_dir" ]] && loop_boot_dir="$(cd "$loop_boot_dir" && pwd -P)"
   mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills" "$user_skill"
 
