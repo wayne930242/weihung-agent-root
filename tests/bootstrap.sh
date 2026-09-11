@@ -27,6 +27,18 @@ prepare_origin_repo() {
   git clone --bare "$REPO_ROOT" "$bare_repo" >/dev/null 2>&1
   git --git-dir="$bare_repo" symbolic-ref HEAD refs/heads/main
 
+  local status
+  status="$(git -C "$REPO_ROOT" status --porcelain)"
+  if [[ -n "$status" ]]; then
+    local work_tree_dir="$temp_dir/wt-sync"
+    git clone "$bare_repo" "$work_tree_dir" >/dev/null 2>&1
+    rsync -a --delete --exclude='.git' "$REPO_ROOT/" "$work_tree_dir/"
+    git -C "$work_tree_dir" add -A
+    git -C "$work_tree_dir" -c user.name="Test" -c user.email="test@example.com" commit -m "test: working tree sync" >/dev/null 2>&1
+    git -C "$work_tree_dir" push origin HEAD:main >/dev/null 2>&1
+    rm -rf "$work_tree_dir"
+  fi
+
   printf '%s\n' "$bare_repo"
 }
 
@@ -49,6 +61,7 @@ fresh_bootstrap_clones_and_installs() {
   assert_symlink_target "$fake_home/.codex/AGENTS.md" "$target_repo/AGENTS.md"
   assert_symlink_target "$fake_home/.gemini/config/AGENTS.md" "$target_repo/AGENTS.md"
   assert_symlink_target "$fake_home/.gemini/config/GEMINI.md" "$target_repo/AGENTS.md"
+  assert_symlink_target "$fake_home/.gemini/config/skills.json" "$target_repo/config/gemini-skills.json"
 
   rm -rf "$temp_dir"
 }

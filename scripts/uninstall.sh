@@ -277,6 +277,7 @@ restore_or_remove "$TARGET_HOME/.codex/AGENTS.md"
 restore_or_remove "$TARGET_HOME/.codex/hooks.json"
 restore_or_remove "$TARGET_HOME/.gemini/config/AGENTS.md"
 restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
+restore_or_remove "$TARGET_HOME/.gemini/config/skills.json"
 
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"

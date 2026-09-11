@@ -47,6 +47,11 @@ finding travels, the work does not restart.
   because its unconverted Windows path is unavailable inside WSL. Check the
   translated path first.
 
+# Project Guidance Interoperability
+
+- If the current workspace contains a `CLAUDE.md` and no project-level `AGENTS.md` or `GEMINI.md`, treat `CLAUDE.md` as the authoritative project guide and inspect it before taking project-specific actions.
+- If the current workspace contains `.claude/skills/`, check for relevant project-specific skills in that directory when addressing project workflows.
+
 # Browser Automation
 
 - If the current harness has a browser tool and the task does not require login, use the faster non-auth path first.

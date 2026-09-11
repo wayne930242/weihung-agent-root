@@ -83,10 +83,12 @@ scripts/
   install.sh
   uninstall.sh
   bootstrap.sh
+  bridge-claude-projects.sh
 config/
   claude-hooks.json
   claude-settings.json             # Opus 1M main + cross-session settings
   codex-config.toml                # optional snippet, not auto-merged
+  gemini-skills.json               # registers .claude/skills for Antigravity
 ```
 
 ## Mini SDD
@@ -221,8 +223,18 @@ The installer manages only these user-root surfaces.
 
 - `~/.gemini/config/AGENTS.md`
 - `~/.gemini/config/GEMINI.md`
+- `~/.gemini/config/skills.json`
 - `~/.gemini/config/skills/*/`
 - `~/.gemini/config/rules/*.md`
+
+## Bridging Existing Claude Projects to Antigravity
+
+To use Antigravity with your existing Claude Code projects without manual migration:
+
+1. **Global Skills Auto-Discovery**: `~/.gemini/config/skills.json` automatically registers `.claude/skills` for any open workspace.
+2. **Batch Project Bridge**: Run `bash scripts/bridge-claude-projects.sh [DIR...]` (defaults to current directory) to scan projects and establish relative symlinks:
+   - `AGENTS.md -> CLAUDE.md`
+   - `.agents/skills -> ../.claude/skills`
 
 ## Intentionally Not Managed
 

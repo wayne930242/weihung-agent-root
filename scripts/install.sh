@@ -15,6 +15,7 @@ CODEX_HOOKS_DIR="$REPO_ROOT/codex/hooks"
 SHARED_DIR="$REPO_ROOT/shared"
 SKILLS_DIR="$REPO_ROOT/skills"
 RULES_DIR="$REPO_ROOT/rules"
+GEMINI_SKILLS_CONFIG="$REPO_ROOT/config/gemini-skills.json"
 
 TARGET_HOME="${HOME}"
 FORCE=0
@@ -40,6 +41,7 @@ Installs this repository as the source of truth for:
   - ~/.codex/hooks/*.sh
   - ~/.gemini/config/AGENTS.md
   - ~/.gemini/config/GEMINI.md
+  - ~/.gemini/config/skills.json
   - ~/.gemini/config/skills/*/
   - ~/.gemini/config/rules/*.md
 
@@ -382,6 +384,7 @@ install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
 install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/AGENTS.md"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/GEMINI.md"
+install_link "$GEMINI_SKILLS_CONFIG" "$TARGET_HOME/.gemini/config/skills.json"
 
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.claude/agents/$(basename "$agent_file")"

@@ -71,6 +71,7 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/AGENTS.md" "$REPO_ROOT/AGENTS.md"
   assert_symlink_target "$fake_home/.gemini/config/AGENTS.md" "$REPO_ROOT/AGENTS.md"
   assert_symlink_target "$fake_home/.gemini/config/GEMINI.md" "$REPO_ROOT/AGENTS.md"
+  assert_symlink_target "$fake_home/.gemini/config/skills.json" "$REPO_ROOT/config/gemini-skills.json"
   assert_symlink_target "$fake_home/.claude/shared/communication.md" "$REPO_ROOT/shared/communication.md"
   assert_symlink_target "$fake_home/.claude/shared/engineering.md" "$REPO_ROOT/shared/engineering.md"
   assert_symlink_target "$fake_home/.claude/shared/context-management.md" "$REPO_ROOT/shared/context-management.md"
