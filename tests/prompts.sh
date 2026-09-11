@@ -147,6 +147,13 @@ root_prompts_carry_the_exact_positive_writing_principle() {
   assert_file_contains "$REPO_ROOT/AGENTS.md" "$principle"
 }
 
+root_prompts_require_prompts_in_english() {
+  local rule="All prompts and agent instructions must be in English."
+
+  assert_file_contains "$REPO_ROOT/CLAUDE.md" "$rule"
+  assert_file_contains "$REPO_ROOT/AGENTS.md" "$rule"
+}
+
 human_feedback_corrects_at_the_root() {
   local skill="$REPO_ROOT/skills/human-feedback/SKILL.md"
 
@@ -309,6 +316,7 @@ run_all_tests() {
   mini_spec_keeps_its_load_bearing_rules
   mini_spec_advances_from_a_grounded_decision
   root_prompts_carry_the_exact_positive_writing_principle
+  root_prompts_require_prompts_in_english
   human_feedback_corrects_at_the_root
   human_feedback_is_reachable_from_verification_and_routing
   root_prompts_trigger_the_source_change_graph

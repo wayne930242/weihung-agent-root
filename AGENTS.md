@@ -1,4 +1,5 @@
 Never use Simplified Chinese. Always use Traditional Chinese for all communication.
+All prompts and agent instructions must be in English.
 
 提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。
 
