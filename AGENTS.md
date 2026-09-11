@@ -3,7 +3,7 @@ All prompts and agent instructions must be in English.
 
 提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。
 
-Source-changing work invokes `leveraging-tasks` and states its Alignment and Reality anchor before the first production edit.
+Source-changing work invokes `aaaav-do` and states its Alignment and Reality anchor before the first production edit.
 
 # Routing
 
@@ -16,10 +16,10 @@ IMPORTANT: Before responding to a significant request, choose one owner:
 - Research -> `investigating`.
 - Check, audit, or review -> `inspecting`.
 - Human feedback on working output -> `human-feedback`.
-- Any source-changing work -> `leveraging-tasks`.
+- Any source-changing work -> `aaaav-do`.
 - A user-owned unresolved decision -> `grilling`.
 
-Specialized skills return source-changing work to `leveraging-tasks`; the
+Specialized skills return source-changing work to `aaaav-do`; the
 finding travels, the work does not restart.
 
 # Working Agreements

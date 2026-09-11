@@ -126,6 +126,21 @@ collect_entries() {
     add_entry "$src" "$codex_home/skills/$(basename "$src")"
   done < <(find "$REPO_ROOT/skills" -maxdepth 1 -mindepth 1 -type d | sort)
 
+  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-}"
+  if [[ -z "$loop_boot_dir" ]]; then
+    for candidate in "$REPO_ROOT/../../../weihung-loop-boot" "$HOME/weihung-loop-boot" "/home/weihung/weihung-loop-boot"; do
+      if [[ -d "$candidate" ]]; then
+        loop_boot_dir="$candidate"
+        break
+      fi
+    done
+  fi
+  if [[ -n "$loop_boot_dir" && -d "$loop_boot_dir/skills" ]]; then
+    while IFS= read -r src; do
+      add_entry "$src" "$codex_home/skills/$(basename "$src")"
+    done < <(find "$loop_boot_dir/skills" -maxdepth 1 -mindepth 1 -type d | sort)
+  fi
+
   while IFS= read -r src; do
     add_entry "$src" "$codex_home/agents/$(basename "$src")"
   done < <(find "$REPO_ROOT/codex/agents" -maxdepth 1 -type f -name '*.toml' | sort)

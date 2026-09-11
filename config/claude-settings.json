@@ -1,4 +1,7 @@
 {
   "model": "opus[1m]",
-  "crossSessionInbound": "accept"
+  "crossSessionInbound": "accept",
+  "enabledPlugins": {
+    "weihung-loop-boot@weihung-loop-boot": true
+  }
 }

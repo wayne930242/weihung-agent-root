@@ -377,6 +377,15 @@ remove_retired_repo_link \
 remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
+remove_retired_repo_link \
+  "$TARGET_HOME/.claude/skills/leveraging-tasks" \
+  "$REPO_ROOT/skills/leveraging-tasks"
+remove_retired_repo_link \
+  "$TARGET_HOME/.codex/skills/leveraging-tasks" \
+  "$REPO_ROOT/skills/leveraging-tasks"
+remove_retired_repo_link \
+  "$TARGET_HOME/.gemini/config/skills/leveraging-tasks" \
+  "$REPO_ROOT/skills/leveraging-tasks"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
@@ -414,8 +423,17 @@ while IFS= read -r skill_dir; do
   install_link "$skill_dir" "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
 
-LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-$HOME/weihung-loop-boot}"
-if [[ -d "$LOOP_BOOT_DIR" ]]; then
+LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-}"
+if [[ -z "$LOOP_BOOT_DIR" ]]; then
+  for candidate in "$REPO_ROOT/../../../weihung-loop-boot" "$TARGET_HOME/weihung-loop-boot" "$HOME/weihung-loop-boot" "/home/weihung/weihung-loop-boot"; do
+    if [[ -d "$candidate" ]]; then
+      LOOP_BOOT_DIR="$candidate"
+      break
+    fi
+  done
+fi
+if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
+  LOOP_BOOT_DIR="$(cd "$LOOP_BOOT_DIR" && pwd -P)"
   log "Installing weihung-loop-boot plugin across agy, claude, and codex..."
   install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.gemini/config/plugins/weihung-loop-boot"
   install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.claude/plugins/weihung-loop-boot"

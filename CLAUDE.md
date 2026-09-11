@@ -4,7 +4,7 @@ All prompts and agent instructions must be in English.
 提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。
 
 Be concise and answer what was asked.
-Source-changing work invokes `leveraging-tasks` and states its Alignment and Reality anchor before the first production edit.
+Source-changing work invokes `aaaav-do` and states its Alignment and Reality anchor before the first production edit.
 Resolve uncertainty from the conversation context before asking the user.
 
 @shared/communication.md
@@ -24,11 +24,11 @@ IMPORTANT: Before responding to a significant request, choose one owner:
 - Research → `investigating`.
 - Check, audit, or review → `inspecting`.
 - Human feedback on working output → `human-feedback`.
-- Any source-changing work → `leveraging-tasks`.
+- Any source-changing work → `aaaav-do`.
 - A user-owned unresolved decision → `grilling`.
 
 Source-changing work that needs a managed app's own working directory routes
-through `boss-say` instead, and `leveraging-tasks` then runs inside the
+through `boss-say` instead, and `aaaav-do` then runs inside the
 dispatched session rather than here. See Complex Delegation below.
 
 A specialized skill hands what it established to the implementation owner, which

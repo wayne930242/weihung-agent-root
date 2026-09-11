@@ -80,7 +80,8 @@ codex_refinement_keeps_its_scope_limits() {
   assert_block_contains "$block" "does not expand product scope"
 }
 
-SKILL_DIR="$REPO_ROOT/skills/leveraging-tasks"
+LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../weihung-loop-boot}"
+SKILL_DIR="$LOOP_BOOT_DIR/skills/aaaav-do"
 
 assert_file_contains() {
   local path="$1"
@@ -126,8 +127,8 @@ mini_spec_keeps_its_load_bearing_rules() {
 
 mini_spec_advances_from_a_grounded_decision() {
   local skill="$SKILL_DIR/SKILL.md"
+  local grill="$LOOP_BOOT_DIR/skills/grill-with-docs/SKILL.md"
   local artifact="$SKILL_DIR/MINI-SDD.md"
-  local grill="$REPO_ROOT/skills/grill-with-docs/SKILL.md"
 
   assert_file_contains "$skill" "Invoke \`grill-with-docs\` for every durable Decision step"
   assert_file_contains "$skill" "no open decision blocks observable behavior"
@@ -155,7 +156,7 @@ root_prompts_require_prompts_in_english() {
 }
 
 human_feedback_corrects_at_the_root() {
-  local skill="$REPO_ROOT/skills/human-feedback/SKILL.md"
+  local skill="$LOOP_BOOT_DIR/skills/human-feedback/SKILL.md"
 
   [[ ! -e "$REPO_ROOT/skills/refining-from-complaints" ]] \
     || fail "the retired refining-from-complaints skill is back"
@@ -178,7 +179,7 @@ human_feedback_is_reachable_from_verification_and_routing() {
 }
 
 root_prompts_trigger_the_source_change_graph() {
-  local trigger="Source-changing work invokes \`leveraging-tasks\` and states its Alignment and Reality anchor before the first production edit."
+  local trigger="Source-changing work invokes \`aaaav-do\` and states its Alignment and Reality anchor before the first production edit."
 
   assert_file_contains "$REPO_ROOT/CLAUDE.md" "$trigger"
   assert_file_contains "$REPO_ROOT/AGENTS.md" "$trigger"
