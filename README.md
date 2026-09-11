@@ -91,11 +91,10 @@ config/
   gemini-skills.json               # registers .claude/skills for Antigravity
 ```
 
-## Mini SDD
+## AAAAV Development Loop (Mini SDD)
 
-Mini SDD is the durable branch of the ADAAV personal development workflow
-embedded in `leveraging-tasks`: Align → Advance → Anchor → Act → Verify.
-In Chinese: 對齊 → 延續 → 定錨 → 實作 → 驗證. Advance carries Decision → Spec →
+The durable and inline development workflow is provided by `leveraging-tasks` from the `weihung-loop-boot` plugin: Align → Advance → Anchor → Act → Verify.
+In Chinese: 對齊 → 推進/延續 → 定錨 → 實作 → 驗證. Advance carries Decision → Spec →
 Design without changing owner or restarting context after the agent enters the
 target project.
 

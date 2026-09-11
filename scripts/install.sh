@@ -404,15 +404,27 @@ done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r skill_dir; do
   install_link "$skill_dir" "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
-done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
 
 while IFS= read -r skill_dir; do
   install_link "$skill_dir" "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
-done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
 
 while IFS= read -r skill_dir; do
   install_link "$skill_dir" "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"
-done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
+
+LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-$HOME/weihung-loop-boot}"
+if [[ -d "$LOOP_BOOT_DIR" ]]; then
+  log "Installing weihung-loop-boot plugin across agy, claude, and codex..."
+  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.gemini/config/plugins/weihung-loop-boot"
+  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.claude/plugins/weihung-loop-boot"
+  if [[ -d "$LOOP_BOOT_DIR/skills" ]]; then
+    while IFS= read -r plugin_skill; do
+      install_link "$plugin_skill" "$TARGET_HOME/.codex/skills/$(basename "$plugin_skill")"
+    done < <(find "$LOOP_BOOT_DIR/skills" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
+  fi
+fi
 
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.codex/agents/$(basename "$agent_file")"
