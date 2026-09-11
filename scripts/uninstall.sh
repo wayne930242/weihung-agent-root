@@ -90,6 +90,20 @@ remove_retired_repo_link() {
   fi
 }
 
+prune_managed_links() {
+  local target_dir="$1"
+  [[ -d "$target_dir" ]] || return 0
+
+  while IFS= read -r link; do
+    local link_target
+    link_target="$(readlink "$link" || true)"
+
+    if [[ "$link_target" == "$REPO_ROOT"/* || ( -n "${LOOP_BOOT_DIR:-}" && "$link_target" == "$LOOP_BOOT_DIR"/* ) ]]; then
+      restore_or_remove "$link"
+    fi
+  done < <(find "$target_dir" -maxdepth 1 -mindepth 1 -type l | sort)
+}
+
 cleanup_empty_dirs() {
   local dirs=(
     "$TARGET_HOME/.claude/agents"
@@ -97,12 +111,14 @@ cleanup_empty_dirs() {
     "$TARGET_HOME/.claude/hooks"
     "$TARGET_HOME/.claude/shared"
     "$TARGET_HOME/.claude/skills"
+    "$TARGET_HOME/.claude/plugins"
     "$TARGET_HOME/.codex/agents"
     "$TARGET_HOME/.codex/rules"
     "$TARGET_HOME/.codex/hooks"
     "$TARGET_HOME/.codex/skills"
     "$TARGET_HOME/.gemini/config/skills"
     "$TARGET_HOME/.gemini/config/rules"
+    "$TARGET_HOME/.gemini/config/plugins"
     "$TARGET_HOME/.gemini/config"
     "$TARGET_HOME/.gemini"
   )
@@ -243,6 +259,19 @@ if [[ -n "$LATEST_BACKUP_DIR" ]]; then
   log "Using latest backup directory: $LATEST_BACKUP_DIR"
 fi
 
+LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-}"
+if [[ -z "$LOOP_BOOT_DIR" ]]; then
+  for candidate in "$REPO_ROOT/../../../weihung-loop-boot" "$TARGET_HOME/weihung-loop-boot" "$HOME/weihung-loop-boot" "/home/weihung/weihung-loop-boot"; do
+    if [[ -d "$candidate" ]]; then
+      LOOP_BOOT_DIR="$candidate"
+      break
+    fi
+  done
+fi
+if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
+  LOOP_BOOT_DIR="$(cd "$LOOP_BOOT_DIR" && pwd -P)"
+fi
+
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
   "$REPO_ROOT/codex/agents/safety-reviewer.toml"
@@ -278,6 +307,11 @@ restore_or_remove "$TARGET_HOME/.codex/hooks.json"
 restore_or_remove "$TARGET_HOME/.gemini/config/AGENTS.md"
 restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
 restore_or_remove "$TARGET_HOME/.gemini/config/skills.json"
+
+if [[ -n "$LOOP_BOOT_DIR" ]]; then
+  restore_or_remove "$TARGET_HOME/.gemini/config/plugins/weihung-loop-boot"
+  restore_or_remove "$TARGET_HOME/.claude/plugins/weihung-loop-boot"
+fi
 
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"
@@ -316,6 +350,19 @@ done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.codex/hooks/$(basename "$file")"
 done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
+
+prune_managed_links "$TARGET_HOME/.claude/skills"
+prune_managed_links "$TARGET_HOME/.gemini/config/skills"
+prune_managed_links "$TARGET_HOME/.codex/skills"
+prune_managed_links "$TARGET_HOME/.claude/agents"
+prune_managed_links "$TARGET_HOME/.claude/commands"
+prune_managed_links "$TARGET_HOME/.claude/hooks"
+prune_managed_links "$TARGET_HOME/.claude/shared"
+prune_managed_links "$TARGET_HOME/.codex/agents"
+prune_managed_links "$TARGET_HOME/.codex/rules"
+prune_managed_links "$TARGET_HOME/.gemini/config/rules"
+prune_managed_links "$TARGET_HOME/.codex/hooks"
+
 
 cleanup_empty_dirs
 

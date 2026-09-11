@@ -118,6 +118,40 @@ remove_retired_repo_link() {
   fi
 }
 
+is_in_list() {
+  local target="$1"
+  shift
+  local item
+  for item in "$@"; do
+    if [[ "$item" == "$target" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+prune_managed_entries() {
+  local target_dir="$1"
+  shift
+  local allowed=("$@")
+
+  [[ -d "$target_dir" ]] || return 0
+
+  while IFS= read -r link; do
+    local link_name
+    link_name="$(basename "$link")"
+    local link_target
+    link_target="$(readlink "$link" || true)"
+
+    if [[ "$link_target" == "$REPO_ROOT"/* || ( -n "${LOOP_BOOT_DIR:-}" && "$link_target" == "$LOOP_BOOT_DIR"/* ) ]]; then
+      if ! is_in_list "$link_name" "${allowed[@]}" || [[ ! -e "$link" ]]; then
+        rm "$link"
+        log "Pruned retired managed link $link"
+      fi
+    fi
+  done < <(find "$target_dir" -maxdepth 1 -mindepth 1 -type l | sort)
+}
+
 merge_claude_settings() {
   local settings_path="$1"
   local fragment_path="$2"
@@ -387,42 +421,6 @@ remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/leveraging-tasks" \
   "$REPO_ROOT/skills/leveraging-tasks"
 
-install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
-install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
-install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
-install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
-install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/AGENTS.md"
-install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/GEMINI.md"
-install_link "$GEMINI_SKILLS_CONFIG" "$TARGET_HOME/.gemini/config/skills.json"
-
-while IFS= read -r agent_file; do
-  install_link "$agent_file" "$TARGET_HOME/.claude/agents/$(basename "$agent_file")"
-done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
-while IFS= read -r command_file; do
-  install_link "$command_file" "$TARGET_HOME/.claude/commands/$(basename "$command_file")"
-done < <(find "$CLAUDE_COMMANDS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
-while IFS= read -r hook_file; do
-  install_link "$hook_file" "$TARGET_HOME/.claude/hooks/$(basename "$hook_file")"
-done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
-
-while IFS= read -r shared_file; do
-  install_link "$shared_file" "$TARGET_HOME/.claude/shared/$(basename "$shared_file")"
-done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
-while IFS= read -r skill_dir; do
-  install_link "$skill_dir" "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
-done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
-
-while IFS= read -r skill_dir; do
-  install_link "$skill_dir" "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
-done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
-
-while IFS= read -r skill_dir; do
-  install_link "$skill_dir" "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"
-done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
-
 LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-}"
 if [[ -z "$LOOP_BOOT_DIR" ]]; then
   for candidate in "$REPO_ROOT/../../../weihung-loop-boot" "$TARGET_HOME/weihung-loop-boot" "$HOME/weihung-loop-boot" "/home/weihung/weihung-loop-boot"; do
@@ -434,6 +432,103 @@ if [[ -z "$LOOP_BOOT_DIR" ]]; then
 fi
 if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
   LOOP_BOOT_DIR="$(cd "$LOOP_BOOT_DIR" && pwd -P)"
+fi
+
+root_skills=()
+while IFS= read -r skill_dir; do
+  root_skills+=("$(basename "$skill_dir")")
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
+
+codex_skills=("${root_skills[@]}")
+if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR/skills" ]]; then
+  while IFS= read -r plugin_skill; do
+    codex_skills+=("$(basename "$plugin_skill")")
+  done < <(find "$LOOP_BOOT_DIR/skills" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
+fi
+
+claude_agents=()
+while IFS= read -r agent_file; do
+  claude_agents+=("$(basename "$agent_file")")
+done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+claude_commands=()
+while IFS= read -r command_file; do
+  claude_commands+=("$(basename "$command_file")")
+done < <(find "$CLAUDE_COMMANDS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+claude_hooks=()
+while IFS= read -r hook_file; do
+  claude_hooks+=("$(basename "$hook_file")")
+done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
+
+shared_docs=()
+while IFS= read -r shared_file; do
+  shared_docs+=("$(basename "$shared_file")")
+done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+codex_agents=()
+while IFS= read -r agent_file; do
+  codex_agents+=("$(basename "$agent_file")")
+done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
+
+codex_rules=()
+while IFS= read -r rule_file; do
+  codex_rules+=("$(basename "$rule_file")")
+done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
+
+gemini_rules=()
+while IFS= read -r rule_file; do
+  gemini_rules+=("$(basename "$rule_file")")
+done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+
+codex_hooks=()
+while IFS= read -r hook_file; do
+  codex_hooks+=("$(basename "$hook_file")")
+done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
+
+prune_managed_entries "$TARGET_HOME/.claude/skills" "${root_skills[@]}"
+prune_managed_entries "$TARGET_HOME/.gemini/config/skills" "${root_skills[@]}"
+prune_managed_entries "$TARGET_HOME/.codex/skills" "${codex_skills[@]}"
+prune_managed_entries "$TARGET_HOME/.claude/agents" "${claude_agents[@]}"
+prune_managed_entries "$TARGET_HOME/.claude/commands" "${claude_commands[@]}"
+prune_managed_entries "$TARGET_HOME/.claude/hooks" "${claude_hooks[@]}"
+prune_managed_entries "$TARGET_HOME/.claude/shared" "${shared_docs[@]}"
+prune_managed_entries "$TARGET_HOME/.codex/agents" "${codex_agents[@]}"
+prune_managed_entries "$TARGET_HOME/.codex/rules" "${codex_rules[@]}"
+prune_managed_entries "$TARGET_HOME/.gemini/config/rules" "${gemini_rules[@]}"
+prune_managed_entries "$TARGET_HOME/.codex/hooks" "${codex_hooks[@]}"
+
+install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
+install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
+install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
+install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
+install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/AGENTS.md"
+install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/GEMINI.md"
+install_link "$GEMINI_SKILLS_CONFIG" "$TARGET_HOME/.gemini/config/skills.json"
+
+for agent_name in "${claude_agents[@]}"; do
+  install_link "$CLAUDE_AGENTS_DIR/$agent_name" "$TARGET_HOME/.claude/agents/$agent_name"
+done
+
+for command_name in "${claude_commands[@]}"; do
+  install_link "$CLAUDE_COMMANDS_DIR/$command_name" "$TARGET_HOME/.claude/commands/$command_name"
+done
+
+for hook_name in "${claude_hooks[@]}"; do
+  install_link "$CLAUDE_HOOKS_DIR/$hook_name" "$TARGET_HOME/.claude/hooks/$hook_name"
+done
+
+for shared_name in "${shared_docs[@]}"; do
+  install_link "$SHARED_DIR/$shared_name" "$TARGET_HOME/.claude/shared/$shared_name"
+done
+
+for skill_name in "${root_skills[@]}"; do
+  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.claude/skills/$skill_name"
+  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.codex/skills/$skill_name"
+  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.gemini/config/skills/$skill_name"
+done
+
+if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
   log "Installing weihung-loop-boot plugin across agy, claude, and codex..."
   install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.gemini/config/plugins/weihung-loop-boot"
   install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.claude/plugins/weihung-loop-boot"
@@ -444,21 +539,22 @@ if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
   fi
 fi
 
-while IFS= read -r agent_file; do
-  install_link "$agent_file" "$TARGET_HOME/.codex/agents/$(basename "$agent_file")"
-done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
+for agent_name in "${codex_agents[@]}"; do
+  install_link "$CODEX_AGENTS_DIR/$agent_name" "$TARGET_HOME/.codex/agents/$agent_name"
+done
 
-while IFS= read -r rule_file; do
-  install_link "$rule_file" "$TARGET_HOME/.codex/rules/$(basename "$rule_file")"
-done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
+for rule_name in "${codex_rules[@]}"; do
+  install_link "$CODEX_RULES_DIR/$rule_name" "$TARGET_HOME/.codex/rules/$rule_name"
+done
 
-while IFS= read -r rule_file; do
-  install_link "$rule_file" "$TARGET_HOME/.gemini/config/rules/$(basename "$rule_file")"
-done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
+for rule_name in "${gemini_rules[@]}"; do
+  install_link "$RULES_DIR/$rule_name" "$TARGET_HOME/.gemini/config/rules/$rule_name"
+done
 
-while IFS= read -r hook_file; do
-  install_link "$hook_file" "$TARGET_HOME/.codex/hooks/$(basename "$hook_file")"
-done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
+for hook_name in "${codex_hooks[@]}"; do
+  install_link "$CODEX_HOOKS_DIR/$hook_name" "$TARGET_HOME/.codex/hooks/$hook_name"
+done
+
 
 # Merge last: a hook entry in settings.json must never outlive a missing script,
 # or every matching event fails with exit 127.

@@ -511,6 +511,43 @@ install_preserves_user_owned_tdd_skills() {
   rm -rf "$temp_dir"
 }
 
+install_prunes_obsolete_and_broken_managed_skills() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  local user_skill="$temp_dir/my-custom-skill"
+  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../weihung-loop-boot}"
+  [[ -d "$loop_boot_dir" ]] && loop_boot_dir="$(cd "$loop_boot_dir" && pwd -P)"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills" "$user_skill"
+
+  # Obsolete broken link in Claude and Gemini
+  ln -s "$REPO_ROOT/skills/assuring-quality" "$fake_home/.claude/skills/assuring-quality"
+  ln -s "$REPO_ROOT/skills/codebase-design" "$fake_home/.gemini/config/skills/codebase-design"
+
+  # User-owned custom skill
+  ln -s "$user_skill" "$fake_home/.claude/skills/my-custom-skill"
+
+  # Obsolete broken link in Codex
+  ln -s "$loop_boot_dir/skills/leveraging-tasks" "$fake_home/.codex/skills/leveraging-tasks"
+  ln -s "$loop_boot_dir/skills/streamlining-skills" "$fake_home/.codex/skills/streamlining-skills"
+
+  # Misdirected link that will be updated to point to user-root
+  ln -s "$loop_boot_dir/skills/reflecting-to-root" "$fake_home/.codex/skills/reflecting-to-root"
+
+  run_install "$fake_home"
+
+  [[ ! -e "$fake_home/.claude/skills/assuring-quality" && ! -L "$fake_home/.claude/skills/assuring-quality" ]] || fail "expected obsolete Claude skill link to be pruned"
+  [[ ! -e "$fake_home/.gemini/config/skills/codebase-design" && ! -L "$fake_home/.gemini/config/skills/codebase-design" ]] || fail "expected obsolete Gemini skill link to be pruned"
+  [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" && ! -L "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected obsolete Codex leveraging-tasks to be pruned"
+  [[ ! -e "$fake_home/.codex/skills/streamlining-skills" && ! -L "$fake_home/.codex/skills/streamlining-skills" ]] || fail "expected obsolete Codex streamlining-skills to be pruned"
+
+  assert_symlink_target "$fake_home/.claude/skills/my-custom-skill" "$user_skill"
+  assert_symlink_target "$fake_home/.codex/skills/reflecting-to-root" "$REPO_ROOT/skills/reflecting-to-root"
+
+  rm -rf "$temp_dir"
+}
+
 
 aborted_install_never_registers_missing_hooks() {
   local temp_dir
@@ -629,6 +666,7 @@ run_all_tests() {
   install_removes_only_repository_managed_retired_tdd_skills
   install_removes_only_repository_managed_retired_complaint_skills
   install_preserves_user_owned_tdd_skills
+  install_prunes_obsolete_and_broken_managed_skills
 }
 
 if [[ "${1:-}" == "" ]]; then
