@@ -69,6 +69,8 @@ fresh_install_creates_expected_symlinks() {
 
   assert_symlink_target "$fake_home/.claude/CLAUDE.md" "$REPO_ROOT/CLAUDE.md"
   assert_symlink_target "$fake_home/.codex/AGENTS.md" "$REPO_ROOT/AGENTS.md"
+  assert_symlink_target "$fake_home/.gemini/config/AGENTS.md" "$REPO_ROOT/AGENTS.md"
+  assert_symlink_target "$fake_home/.gemini/config/GEMINI.md" "$REPO_ROOT/AGENTS.md"
   assert_symlink_target "$fake_home/.claude/shared/communication.md" "$REPO_ROOT/shared/communication.md"
   assert_symlink_target "$fake_home/.claude/shared/engineering.md" "$REPO_ROOT/shared/engineering.md"
   assert_symlink_target "$fake_home/.claude/shared/context-management.md" "$REPO_ROOT/shared/context-management.md"
@@ -81,18 +83,29 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/skills/inspecting" "$REPO_ROOT/skills/inspecting"
   assert_symlink_target "$fake_home/.codex/skills/investigating" "$REPO_ROOT/skills/investigating"
   assert_symlink_target "$fake_home/.codex/skills/leveraging-tasks" "$REPO_ROOT/skills/leveraging-tasks"
-  for provider in claude codex; do
-    assert_symlink_target "$fake_home/.$provider/skills/managing-model-preferences" "$REPO_ROOT/skills/managing-model-preferences"
-    cmp "$fake_home/.$provider/skills/managing-model-preferences/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
+  for skill_path in \
+    "$fake_home/.claude/skills/managing-model-preferences" \
+    "$fake_home/.codex/skills/managing-model-preferences" \
+    "$fake_home/.gemini/config/skills/managing-model-preferences"; do
+    assert_symlink_target "$skill_path" "$REPO_ROOT/skills/managing-model-preferences"
+    cmp "$skill_path/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
     for strategy in claude-only claude-drive-codex codex-first claude-coding-codex-doc; do
-      cmp "$fake_home/.$provider/skills/managing-model-preferences/strategies/$strategy.md" "$REPO_ROOT/skills/managing-model-preferences/strategies/$strategy.md"
+      cmp "$skill_path/strategies/$strategy.md" "$REPO_ROOT/skills/managing-model-preferences/strategies/$strategy.md"
     done
   done
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
   [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "did not expect retired tdd skill in Codex root"
+  [[ ! -e "$fake_home/.gemini/config/skills/tdd" && ! -L "$fake_home/.gemini/config/skills/tdd" ]] || fail "did not expect retired tdd skill in Gemini config"
+  [[ ! -e "$fake_home/.gemini/config/skills/refining-from-complaints" && ! -L "$fake_home/.gemini/config/skills/refining-from-complaints" ]] || fail "did not expect retired complaint skill in Gemini config"
   assert_symlink_target "$fake_home/.claude/skills/human-feedback" "$REPO_ROOT/skills/human-feedback"
   assert_symlink_target "$fake_home/.codex/skills/human-feedback" "$REPO_ROOT/skills/human-feedback"
+  assert_symlink_target "$fake_home/.gemini/config/skills/human-feedback" "$REPO_ROOT/skills/human-feedback"
+  assert_symlink_target "$fake_home/.gemini/config/skills/leveraging-tasks" "$REPO_ROOT/skills/leveraging-tasks"
+  assert_symlink_target "$fake_home/.gemini/config/skills/assuring-quality" "$REPO_ROOT/skills/assuring-quality"
+  assert_symlink_target "$fake_home/.gemini/config/skills/inspecting" "$REPO_ROOT/skills/inspecting"
+  assert_symlink_target "$fake_home/.gemini/config/skills/investigating" "$REPO_ROOT/skills/investigating"
   assert_symlink_target "$fake_home/.codex/skills/codebase-design" "$REPO_ROOT/skills/codebase-design"
+  assert_symlink_target "$fake_home/.gemini/config/skills/codebase-design" "$REPO_ROOT/skills/codebase-design"
   assert_symlink_target "$fake_home/.codex/skills/domain-modeling" "$REPO_ROOT/skills/domain-modeling"
   assert_symlink_target "$fake_home/.codex/skills/prototype" "$REPO_ROOT/skills/prototype"
   assert_symlink_target "$fake_home/.codex/skills/providing-knowledge" "$REPO_ROOT/skills/providing-knowledge"
@@ -104,6 +117,17 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/hooks/log-session-start.sh" "$REPO_ROOT/codex/hooks/log-session-start.sh"
   assert_symlink_target "$fake_home/.codex/hooks/log-stop.sh" "$REPO_ROOT/codex/hooks/log-stop.sh"
   assert_symlink_target "$fake_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
+  assert_symlink_target "$fake_home/.gemini/config/rules/clean-architecture.md" "$REPO_ROOT/rules/clean-architecture.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/go.md" "$REPO_ROOT/rules/go.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/typescript.md" "$REPO_ROOT/rules/typescript.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/python.md" "$REPO_ROOT/rules/python.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/shell.md" "$REPO_ROOT/rules/shell.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/markdown.md" "$REPO_ROOT/rules/markdown.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/deployment.md" "$REPO_ROOT/rules/deployment.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/chinese-writing.md" "$REPO_ROOT/rules/chinese-writing.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/dependencies.md" "$REPO_ROOT/rules/dependencies.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/git-safety.md" "$REPO_ROOT/rules/git-safety.md"
+  assert_symlink_target "$fake_home/.gemini/config/rules/skill-writing.md" "$REPO_ROOT/rules/skill-writing.md"
 
   python3 - <<PY
 from pathlib import Path
@@ -135,6 +159,7 @@ assert "advisorModel" not in settings, settings
 PY
 
   [[ ! -e "$fake_home/.codex/config.toml" ]] || fail "did not expect installer to rewrite ~/.codex/config.toml in the light layout"
+  [[ ! -e "$fake_home/.gemini/config/config.json" ]] || fail "did not expect installer to write ~/.gemini/config/config.json in the light layout"
 
   rm -rf "$temp_dir"
 }
@@ -434,14 +459,16 @@ install_removes_only_repository_managed_retired_tdd_skills() {
   temp_dir="$(mktemp -d)"
 
   local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills"
   ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.claude/skills/tdd"
   ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.codex/skills/tdd"
+  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.gemini/config/skills/tdd"
 
   run_install "$fake_home"
 
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "expected retired Claude tdd skill to be removed"
   [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "expected retired Codex tdd skill to be removed"
+  [[ ! -e "$fake_home/.gemini/config/skills/tdd" && ! -L "$fake_home/.gemini/config/skills/tdd" ]] || fail "expected retired Gemini tdd skill to be removed"
 
   rm -rf "$temp_dir"
 }
@@ -451,14 +478,16 @@ install_removes_only_repository_managed_retired_complaint_skills() {
   temp_dir="$(mktemp -d)"
 
   local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills"
   ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.claude/skills/refining-from-complaints"
   ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.codex/skills/refining-from-complaints"
+  ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.gemini/config/skills/refining-from-complaints"
 
   run_install "$fake_home"
 
   [[ ! -e "$fake_home/.claude/skills/refining-from-complaints" && ! -L "$fake_home/.claude/skills/refining-from-complaints" ]] || fail "expected retired Claude complaint skill to be removed"
   [[ ! -e "$fake_home/.codex/skills/refining-from-complaints" && ! -L "$fake_home/.codex/skills/refining-from-complaints" ]] || fail "expected retired Codex complaint skill to be removed"
+  [[ ! -e "$fake_home/.gemini/config/skills/refining-from-complaints" && ! -L "$fake_home/.gemini/config/skills/refining-from-complaints" ]] || fail "expected retired Gemini complaint skill to be removed"
 
   rm -rf "$temp_dir"
 }
@@ -469,14 +498,16 @@ install_preserves_user_owned_tdd_skills() {
 
   local fake_home="$temp_dir/home"
   local user_skill="$temp_dir/user-tdd"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$user_skill"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills" "$user_skill"
   ln -s "$user_skill" "$fake_home/.claude/skills/tdd"
   ln -s "$user_skill" "$fake_home/.codex/skills/tdd"
+  ln -s "$user_skill" "$fake_home/.gemini/config/skills/tdd"
 
   run_install "$fake_home"
 
   assert_symlink_target "$fake_home/.claude/skills/tdd" "$user_skill"
   assert_symlink_target "$fake_home/.codex/skills/tdd" "$user_skill"
+  assert_symlink_target "$fake_home/.gemini/config/skills/tdd" "$user_skill"
 
   rm -rf "$temp_dir"
 }

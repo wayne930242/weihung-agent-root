@@ -47,6 +47,8 @@ fresh_bootstrap_clones_and_installs() {
 
   assert_symlink_target "$fake_home/.claude/CLAUDE.md" "$target_repo/CLAUDE.md"
   assert_symlink_target "$fake_home/.codex/AGENTS.md" "$target_repo/AGENTS.md"
+  assert_symlink_target "$fake_home/.gemini/config/AGENTS.md" "$target_repo/AGENTS.md"
+  assert_symlink_target "$fake_home/.gemini/config/GEMINI.md" "$target_repo/AGENTS.md"
 
   rm -rf "$temp_dir"
 }

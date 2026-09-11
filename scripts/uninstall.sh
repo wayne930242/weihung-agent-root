@@ -14,6 +14,7 @@ CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
 CODEX_HOOKS_DIR="$REPO_ROOT/codex/hooks"
 SHARED_DIR="$REPO_ROOT/shared"
 SKILLS_DIR="$REPO_ROOT/skills"
+RULES_DIR="$REPO_ROOT/rules"
 
 TARGET_HOME="${HOME}"
 BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
@@ -28,7 +29,7 @@ Uninstall flow:
   - remove repo-managed Claude hook entries from ~/.claude/settings.json
   - drop current managed Claude settings when they still hold the installed value
 
-This script does not modify ~/.codex/config.toml.
+This script does not modify ~/.codex/config.toml or ~/.gemini/config/config.json.
 EOF
 }
 
@@ -100,6 +101,10 @@ cleanup_empty_dirs() {
     "$TARGET_HOME/.codex/rules"
     "$TARGET_HOME/.codex/hooks"
     "$TARGET_HOME/.codex/skills"
+    "$TARGET_HOME/.gemini/config/skills"
+    "$TARGET_HOME/.gemini/config/rules"
+    "$TARGET_HOME/.gemini/config"
+    "$TARGET_HOME/.gemini"
   )
 
   for dir in "${dirs[@]}"; do
@@ -249,10 +254,16 @@ remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
 remove_retired_repo_link \
+  "$TARGET_HOME/.gemini/config/skills/tdd" \
+  "$REPO_ROOT/skills/tdd"
+remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/refining-from-complaints" \
+  "$REPO_ROOT/skills/refining-from-complaints"
+remove_retired_repo_link \
+  "$TARGET_HOME/.gemini/config/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
 
 # Clean first: a hook entry in settings.json must never outlive a removed script,
@@ -264,6 +275,8 @@ restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"
 restore_or_remove "$TARGET_HOME/.claude/statusline.sh"
 restore_or_remove "$TARGET_HOME/.codex/AGENTS.md"
 restore_or_remove "$TARGET_HOME/.codex/hooks.json"
+restore_or_remove "$TARGET_HOME/.gemini/config/AGENTS.md"
+restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
 
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"
@@ -284,6 +297,7 @@ done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 while IFS= read -r skill_dir; do
   restore_or_remove "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
   restore_or_remove "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
+  restore_or_remove "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
 while IFS= read -r file; do
@@ -293,6 +307,10 @@ done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.codex/rules/$(basename "$file")"
 done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
+
+while IFS= read -r file; do
+  restore_or_remove "$TARGET_HOME/.gemini/config/rules/$(basename "$file")"
+done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.codex/hooks/$(basename "$file")"

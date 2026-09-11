@@ -61,9 +61,10 @@ restore_from_backup_and_clean_hooks() {
   temp_dir="$(mktemp -d)"
 
   local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude" "$fake_home/.codex/rules"
+  mkdir -p "$fake_home/.claude" "$fake_home/.codex/rules" "$fake_home/.gemini/config"
   printf 'old claude\n' > "$fake_home/.claude/CLAUDE.md"
   printf 'old codex agents\n' > "$fake_home/.codex/AGENTS.md"
+  printf 'old gemini agents\n' > "$fake_home/.gemini/config/AGENTS.md"
   printf 'old rule\n' > "$fake_home/.codex/rules/default.rules"
   cat > "$fake_home/.claude/settings.json" <<'EOF'
 {
@@ -77,13 +78,18 @@ EOF
 
   [[ "$(cat "$fake_home/.claude/CLAUDE.md")" == "old claude" ]] || fail "expected CLAUDE.md to be restored from backup"
   [[ "$(cat "$fake_home/.codex/AGENTS.md")" == "old codex agents" ]] || fail "expected AGENTS.md to be restored from backup"
+  [[ "$(cat "$fake_home/.gemini/config/AGENTS.md")" == "old gemini agents" ]] || fail "expected gemini AGENTS.md to be restored from backup"
   [[ "$(cat "$fake_home/.codex/rules/default.rules")" == "old rule" ]] || fail "expected default.rules to be restored from backup"
+  [[ ! -e "$fake_home/.gemini/config/GEMINI.md" && ! -L "$fake_home/.gemini/config/GEMINI.md" ]] || fail "expected managed GEMINI.md to be removed"
   [[ ! -e "$fake_home/.claude/shared/communication.md" ]] || fail "expected managed shared file to be removed"
   [[ ! -e "$fake_home/.claude/commands/model-profile.md" && ! -L "$fake_home/.claude/commands/model-profile.md" ]] || fail "expected managed Claude command to be removed"
   [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected managed codex skill to be removed"
+  [[ ! -e "$fake_home/.gemini/config/skills/leveraging-tasks" ]] || fail "expected managed gemini skill to be removed"
+  [[ ! -e "$fake_home/.gemini/config/rules/clean-architecture.md" ]] || fail "expected managed gemini rule to be removed"
   for provider in claude codex; do
     [[ ! -e "$fake_home/.$provider/skills/managing-model-preferences" && ! -L "$fake_home/.$provider/skills/managing-model-preferences" ]] || fail "expected model preference skill and profile to be removed"
   done
+  [[ ! -e "$fake_home/.gemini/config/skills/managing-model-preferences" && ! -L "$fake_home/.gemini/config/skills/managing-model-preferences" ]] || fail "expected gemini model preference skill and profile to be removed"
   [[ ! -e "$fake_home/.codex/agents/docs-researcher.toml" ]] || fail "expected managed codex agent to be removed"
   [[ ! -e "$fake_home/.codex/agents/article-writer.toml" ]] || fail "expected managed article writer to be removed"
   [[ ! -e "$fake_home/.codex/hooks.json" ]] || fail "expected managed codex hooks.json to be removed"
@@ -141,14 +147,16 @@ uninstall_removes_only_repository_managed_retired_tdd_skills() {
   temp_dir="$(mktemp -d)"
 
   local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills"
   ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.claude/skills/tdd"
   ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.codex/skills/tdd"
+  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.gemini/config/skills/tdd"
 
   run_uninstall "$fake_home"
 
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "expected retired Claude tdd skill to be removed"
   [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "expected retired Codex tdd skill to be removed"
+  [[ ! -e "$fake_home/.gemini/config/skills/tdd" && ! -L "$fake_home/.gemini/config/skills/tdd" ]] || fail "expected retired Gemini tdd skill to be removed"
 
   rm -rf "$temp_dir"
 }
@@ -159,14 +167,16 @@ uninstall_preserves_user_owned_tdd_skills() {
 
   local fake_home="$temp_dir/home"
   local user_skill="$temp_dir/user-tdd"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$user_skill"
+  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills" "$user_skill"
   ln -s "$user_skill" "$fake_home/.claude/skills/tdd"
   ln -s "$user_skill" "$fake_home/.codex/skills/tdd"
+  ln -s "$user_skill" "$fake_home/.gemini/config/skills/tdd"
 
   run_uninstall "$fake_home"
 
   [[ "$(readlink "$fake_home/.claude/skills/tdd")" == "$user_skill" ]] || fail "expected user-owned Claude tdd skill to survive"
   [[ "$(readlink "$fake_home/.codex/skills/tdd")" == "$user_skill" ]] || fail "expected user-owned Codex tdd skill to survive"
+  [[ "$(readlink "$fake_home/.gemini/config/skills/tdd")" == "$user_skill" ]] || fail "expected user-owned Gemini tdd skill to survive"
 
   rm -rf "$temp_dir"
 }
@@ -183,8 +193,12 @@ fresh_install_uninstall_removes_managed_files() {
 
   [[ ! -e "$fake_home/.claude/CLAUDE.md" ]] || fail "expected CLAUDE.md to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/AGENTS.md" ]] || fail "expected AGENTS.md to be removed when no backup exists"
+  [[ ! -e "$fake_home/.gemini/config/AGENTS.md" ]] || fail "expected gemini AGENTS.md to be removed when no backup exists"
+  [[ ! -e "$fake_home/.gemini/config/GEMINI.md" ]] || fail "expected gemini GEMINI.md to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected codex skill to be removed when no backup exists"
   [[ ! -e "$fake_home/.claude/skills/leveraging-tasks" ]] || fail "expected claude skill to be removed when no backup exists"
+  [[ ! -e "$fake_home/.gemini/config/skills/leveraging-tasks" ]] || fail "expected gemini skill to be removed when no backup exists"
+  [[ ! -e "$fake_home/.gemini/config/rules/clean-architecture.md" ]] || fail "expected gemini rule to be removed when no backup exists"
   [[ ! -e "$fake_home/.codex/rules/default.rules" ]] || fail "expected default.rules to be removed when no backup exists"
 
   python3 - <<PY

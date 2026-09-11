@@ -1,12 +1,13 @@
 # weihung-user-claude
 
-Personal user-root light agent system for Claude Code and Codex.
+Personal user-root light agent system for Claude Code, Codex, and Antigravity.
 
 The repo keeps global behavior in version control, but deliberately separates:
 
 - shared working agreements
 - Claude-specific prompt, agents, and hooks
 - Codex-specific prompt, subagents, rules, and hooks
+- Antigravity-specific rules and global customizations
 
 The goal is to keep the user-root layer thin and stable, while leaving personal machine config such as credentials, MCP servers, and trusted project state under direct user control.
 
@@ -216,12 +217,23 @@ The installer manages only these user-root surfaces.
 - `~/.codex/hooks/*.sh`
 - `~/.codex/hooks.json`
 
+### Antigravity
+
+- `~/.gemini/config/AGENTS.md`
+- `~/.gemini/config/GEMINI.md`
+- `~/.gemini/config/skills/*/`
+- `~/.gemini/config/rules/*.md`
+
 ## Intentionally Not Managed
 
 These remain user-controlled on purpose:
 
 - `~/.claude/settings.local.json`
 - `~/.codex/config.toml`
+- `~/.gemini/config/config.json`
+- `~/.gemini/config/mcp_config.json`
+- `~/.gemini/settings.json`
+- `~/.gemini/antigravity-cli/settings.json`
 - credentials and auth
 - MCP server definitions
 - plugin enablement
@@ -266,7 +278,7 @@ setting before installing the Opus 1M main model.
   registration cannot outlive the script it names.
 - The managed `model` is removed only while it still holds the installed value;
   user-edited model and advisor values survive.
-- `~/.codex/config.toml` is still left untouched, because it is not installer-managed.
+- `~/.codex/config.toml` and `~/.gemini/config/config.json` are still left untouched, because they are not installer-managed.
 
 ## Claude Notes
 

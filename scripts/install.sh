@@ -14,6 +14,7 @@ CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
 CODEX_HOOKS_DIR="$REPO_ROOT/codex/hooks"
 SHARED_DIR="$REPO_ROOT/shared"
 SKILLS_DIR="$REPO_ROOT/skills"
+RULES_DIR="$REPO_ROOT/rules"
 
 TARGET_HOME="${HOME}"
 FORCE=0
@@ -37,6 +38,10 @@ Installs this repository as the source of truth for:
   - ~/.codex/rules/*.rules
   - ~/.codex/hooks.json
   - ~/.codex/hooks/*.sh
+  - ~/.gemini/config/AGENTS.md
+  - ~/.gemini/config/GEMINI.md
+  - ~/.gemini/config/skills/*/
+  - ~/.gemini/config/rules/*.md
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
@@ -346,6 +351,7 @@ mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
 mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills"
 mkdir -p "$TARGET_HOME/.claude/commands"
 mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.codex/skills"
+mkdir -p "$TARGET_HOME/.gemini/config/skills" "$TARGET_HOME/.gemini/config/rules"
 
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
@@ -358,16 +364,24 @@ remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
 remove_retired_repo_link \
+  "$TARGET_HOME/.gemini/config/skills/tdd" \
+  "$REPO_ROOT/skills/tdd"
+remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/refining-from-complaints" \
+  "$REPO_ROOT/skills/refining-from-complaints"
+remove_retired_repo_link \
+  "$TARGET_HOME/.gemini/config/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
 install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
 install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
 install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
+install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/AGENTS.md"
+install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/GEMINI.md"
 
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.claude/agents/$(basename "$agent_file")"
@@ -393,6 +407,10 @@ while IFS= read -r skill_dir; do
   install_link "$skill_dir" "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
+while IFS= read -r skill_dir; do
+  install_link "$skill_dir" "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"
+done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+
 while IFS= read -r agent_file; do
   install_link "$agent_file" "$TARGET_HOME/.codex/agents/$(basename "$agent_file")"
 done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
@@ -400,6 +418,10 @@ done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
 while IFS= read -r rule_file; do
   install_link "$rule_file" "$TARGET_HOME/.codex/rules/$(basename "$rule_file")"
 done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
+
+while IFS= read -r rule_file; do
+  install_link "$rule_file" "$TARGET_HOME/.gemini/config/rules/$(basename "$rule_file")"
+done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r hook_file; do
   install_link "$hook_file" "$TARGET_HOME/.codex/hooks/$(basename "$hook_file")"
