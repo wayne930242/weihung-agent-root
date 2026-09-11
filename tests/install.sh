@@ -92,18 +92,18 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/skills/codebase-design" "$loop_boot_dir/skills/codebase-design"
   assert_symlink_target "$fake_home/.codex/skills/domain-modeling" "$loop_boot_dir/skills/domain-modeling"
   assert_symlink_target "$fake_home/.codex/skills/prototype" "$loop_boot_dir/skills/prototype"
-  assert_symlink_target "$fake_home/.codex/skills/providing-knowledge" "$loop_boot_dir/skills/providing-knowledge"
-  assert_symlink_target "$fake_home/.codex/skills/reflecting-to-root" "$loop_boot_dir/skills/reflecting-to-root"
   assert_symlink_target "$fake_home/.codex/skills/human-feedback" "$loop_boot_dir/skills/human-feedback"
-  for skill_path in \
-    "$fake_home/.claude/skills/managing-model-preferences" \
-    "$fake_home/.codex/skills/managing-model-preferences" \
-    "$fake_home/.gemini/config/skills/managing-model-preferences"; do
-    assert_symlink_target "$skill_path" "$REPO_ROOT/skills/managing-model-preferences"
-    cmp "$skill_path/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
-    for strategy in claude-only claude-drive-codex codex-first claude-coding-codex-doc; do
-      cmp "$skill_path/strategies/$strategy.md" "$REPO_ROOT/skills/managing-model-preferences/strategies/$strategy.md"
+  for skill_name in managing-model-preferences providing-knowledge reflecting-to-root writing-great-skills; do
+    for skill_path in \
+      "$fake_home/.claude/skills/$skill_name" \
+      "$fake_home/.codex/skills/$skill_name" \
+      "$fake_home/.gemini/config/skills/$skill_name"; do
+      assert_symlink_target "$skill_path" "$REPO_ROOT/skills/$skill_name"
     done
+  done
+  cmp "$fake_home/.claude/skills/managing-model-preferences/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
+  for strategy in claude-only claude-drive-codex codex-first claude-coding-codex-doc; do
+    cmp "$fake_home/.claude/skills/managing-model-preferences/strategies/$strategy.md" "$REPO_ROOT/skills/managing-model-preferences/strategies/$strategy.md"
   done
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
   [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "did not expect retired tdd skill in Codex root"
