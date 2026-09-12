@@ -1,21 +1,21 @@
-# 模型偏好 Profile
+# Model Preference Profile
 
-目前最佳且啟用的策略：[claude-only](strategies/claude-only.md)。
-啟用日期：2026-09-10。
-選擇依據：Token 用完。
+Active strategy: [codex-first](strategies/codex-first.md).
+Activated: 2026-09-12.
+Rationale: The user requested Codex first with lower Astra spending: documentation uses Luna high, investigation uses Sol high, simple implementation uses Astra low, and complex work uses Astra high. The same execution policy applies to claude-drive-codex.
 
-進入 `boss-say` 或選擇委派模型時，先讀本檔，再完整讀取目前啟用的策略，依該策略選擇派工參數。使用者本次的明確指定優先。新派工使用當前策略，既有 dispatch instruction 維持原設定。
+Before running `boss-say` or selecting a delegated model, read this entrypoint and the complete active strategy. Follow its model and effort selection rules. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatch instructions retain their settings.
 
-## 策略目錄
+## Strategies
 
-| 策略 | 用途 |
+| Strategy | Purpose |
 |---|---|
-| [claude-only](strategies/claude-only.md) | 例行派工全部留在 Claude：Opus xhigh 協調，Sonnet low 輕量工作，Sonnet high 一般實作，Fable 5.1 medium 複雜功能與研究 |
-| [claude-drive-codex](strategies/claude-drive-codex.md) | Opus xhigh 協調，Sonnet low 輕量工作，Astra low 一般實作，medium 複雜功能與研究 |
-| [codex-drive-claude](strategies/codex-drive-claude.md) | Codex 協調，Sonnet 承接輕量與一般工作，Opus 承接複雜工作，純文件使用 Codex low |
-| [codex-first](strategies/codex-first.md) | 本期各類工作優先使用 Codex，按需求調整 effort |
-| [claude-coding-codex-doc](strategies/claude-coding-codex-doc.md) | 原有策略：Claude 負責程式、調查與查詢，Codex 負責文件 |
+| [claude-only](strategies/claude-only.md) | Claude execution: Opus xhigh coordination, Sonnet low small tasks, Sonnet high standard implementation, Fable 5.1 medium complex work |
+| [claude-drive-codex](strategies/claude-drive-codex.md) | Opus xhigh coordination with the shared codex-first execution policy |
+| [codex-drive-claude](strategies/codex-drive-claude.md) | Codex coordination, Sonnet small and standard tasks, Opus complex tasks, Codex low documentation |
+| [codex-first](strategies/codex-first.md) | Luna high documentation, Sol high investigation, Astra low implementation, Astra high complex work |
+| [claude-coding-codex-doc](strategies/claude-coding-codex-doc.md) | Claude coding, investigation, and lookup; Codex documentation |
 
-## 版控
+## Version control
 
-每套策略保存在 `strategies/<策略名稱>.md`，內容修訂以 Git commit 追蹤。切換策略時更新本檔的啟用連結、日期與依據；新增策略時新增檔案並登錄目錄。管理操作使用 `managing-model-preferences` skill。
+Store each strategy in `strategies/<name>.md` and track revisions in Git. Switching strategies updates this entrypoint's active link, date, and rationale. Register new strategies in the table. Manage changes through the `managing-model-preferences` skill.
