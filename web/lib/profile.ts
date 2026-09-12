@@ -2,9 +2,9 @@ export const PROFILE_PATH =
   "skills/managing-model-preferences/model-preference-profile.md";
 export const STRATEGY_DIR = "skills/managing-model-preferences/strategies";
 
-const ACTIVE_RE = /目前最佳且啟用的策略：\[([^\]]+)\]\(strategies\/([^)]+)\)。/;
-const DATE_RE = /啟用日期：([^\n]*?)。/;
-const RATIONALE_RE = /選擇依據：([^\n]*)/;
+const ACTIVE_RE = /^(?:Active strategy: |目前最佳且啟用的策略：)\[([^\]]+)\]\(strategies\/([^)]+)\)[.。]$/m;
+const DATE_RE = /^(?:Activated: |啟用日期：)([^\n]*?)[.。]$/m;
+const RATIONALE_RE = /^(?:Rationale: |選擇依據：)([^\n]*)/m;
 const CATALOG_ROW_RE = /^\|\s*\[([^\]]+)\]\([^)]*\)\s*\|\s*(.+?)\s*\|\s*$/gm;
 
 export type Profile = {
@@ -51,18 +51,21 @@ export function applySwitch(
     throw new Error("profile 格式不符預期，未做任何修改");
   }
 
+  const english = ACTIVE_RE.exec(text)![0].startsWith("Active strategy:");
   const trimmed = rationale.trim();
-  const tail = /[。．.!?！？]$/.test(trimmed) ? "" : "。";
+  const tail = /[。．.!?！？]$/.test(trimmed) ? "" : english ? "." : "。";
 
   // Function replacements, because a `$` in the rationale is a substitution
   // pattern in a string replacement and would be silently eaten.
   return text
     .replace(
       ACTIVE_RE,
-      () => `目前最佳且啟用的策略：[${strategy}](strategies/${strategy}.md)。`,
+      () => english
+        ? `Active strategy: [${strategy}](strategies/${strategy}.md).`
+        : `目前最佳且啟用的策略：[${strategy}](strategies/${strategy}.md)。`,
     )
-    .replace(DATE_RE, () => `啟用日期：${activatedOn}。`)
-    .replace(RATIONALE_RE, () => `選擇依據：${trimmed}${tail}`);
+    .replace(DATE_RE, () => english ? `Activated: ${activatedOn}.` : `啟用日期：${activatedOn}。`)
+    .replace(RATIONALE_RE, () => `${english ? "Rationale: " : "選擇依據："}${trimmed}${tail}`);
 }
 
 export function taipeiToday(): string {
