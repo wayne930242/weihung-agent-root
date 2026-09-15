@@ -89,8 +89,8 @@ fresh_install_creates_expected_symlinks() {
     done
   done
   cmp "$fake_home/.claude/skills/managing-model-preferences/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
-  for strategy in claude-only claude-drive-codex codex-first claude-coding-codex-doc; do
-    cmp "$fake_home/.claude/skills/managing-model-preferences/strategies/$strategy.md" "$REPO_ROOT/skills/managing-model-preferences/strategies/$strategy.md"
+  for strategy_path in "$REPO_ROOT"/skills/managing-model-preferences/strategies/*.md; do
+    cmp "$fake_home/.claude/skills/managing-model-preferences/strategies/$(basename "$strategy_path")" "$strategy_path"
   done
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
   [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "did not expect retired tdd skill in Codex root"

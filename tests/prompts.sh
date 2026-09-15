@@ -45,7 +45,7 @@ assert_block_lacks() {
   [[ "$block" != *"$needle"* ]] || fail "routing block still contains: $needle"
 }
 
-codex_refinement_triggers_only_on_new_design() {
+design_refinement_triggers_only_on_new_design() {
   local block
   block="$(extract_routing_block)"
 
@@ -54,7 +54,7 @@ codex_refinement_triggers_only_on_new_design() {
   assert_block_contains "$block" "sets a new design direction"
 }
 
-codex_refinement_skips_spec_driven_frontend_work() {
+design_refinement_skips_spec_driven_frontend_work() {
   local block
   block="$(extract_routing_block)"
 
@@ -63,7 +63,7 @@ codex_refinement_skips_spec_driven_frontend_work() {
   assert_block_contains "$block" "General frontend work is not a trigger by itself"
 }
 
-codex_refinement_is_no_longer_mandatory_for_user_facing_work() {
+design_refinement_is_no_longer_mandatory_for_user_facing_work() {
   local block
   block="$(extract_routing_block)"
 
@@ -71,11 +71,13 @@ codex_refinement_is_no_longer_mandatory_for_user_facing_work() {
   assert_block_lacks "$block" "After completing and verifying"
 }
 
-codex_refinement_keeps_its_scope_limits() {
+design_refinement_keeps_its_scope_limits() {
   local block
   block="$(extract_routing_block)"
 
   assert_block_contains "$block" "依 model-preference-profile.md 明確指定模型與 effort"
+  assert_block_lacks "$block" "\`codex\`"
+  assert_block_lacks "$block" "Codex must"
   assert_block_contains "$block" "repeat the real-interface check until no actionable finding remains"
   assert_block_contains "$block" "does not expand product scope"
 }
@@ -199,10 +201,10 @@ active_instructions_carry_no_openspec_route() {
 }
 
 run_all_tests() {
-  codex_refinement_triggers_only_on_new_design
-  codex_refinement_skips_spec_driven_frontend_work
-  codex_refinement_is_no_longer_mandatory_for_user_facing_work
-  codex_refinement_keeps_its_scope_limits
+  design_refinement_triggers_only_on_new_design
+  design_refinement_skips_spec_driven_frontend_work
+  design_refinement_is_no_longer_mandatory_for_user_facing_work
+  design_refinement_keeps_its_scope_limits
   root_prompts_carry_the_exact_positive_writing_principle
   root_prompts_require_prompts_in_english
   retired_complaint_skill_stays_removed
