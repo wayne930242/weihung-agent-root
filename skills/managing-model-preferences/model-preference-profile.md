@@ -2,7 +2,7 @@
 
 Active strategy: [drive-all](strategies/drive-all.md).
 Activated: 2026-09-14.
-Rationale: The user requested a drive-all profile spanning all harnesses: documentation, investigation, and source data cleaning/processing use agy-medium, simple implementation uses Claude sonnet low, standard implementation uses Claude sonnet high, UI/UX and general review use Codex sol-low, and complex implementation uses Codex astra-high.
+Rationale: The user requested a drive-all profile spanning all harnesses: documentation, investigation, and source data cleaning/processing use agy-medium, simple implementation uses Claude sonnet low, standard implementation uses Claude sonnet high, UI/UX and general review use Codex sol-low, complex work in an unpredictable environment uses Codex astra-low, and only complex work with unclear instructions uses Codex astra-high.
 
 Before running `boss-say` or selecting a delegated model, read this entrypoint and the complete active strategy. Follow its model and effort selection rules. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatch instructions retain their settings.
 
@@ -10,7 +10,7 @@ Before running `boss-say` or selecting a delegated model, read this entrypoint a
 
 | Strategy | Purpose |
 |---|---|
-| [drive-all](strategies/drive-all.md) | Multi-harness dispatch: agy-medium docs, investigation, and source data cleaning/processing, Sonnet simple (low) and standard (high) implementation, Sol low UI/UX and routine review, Astra high complex work |
+| [drive-all](strategies/drive-all.md) | Multi-harness dispatch: agy-medium docs, investigation, and source data cleaning/processing, Sonnet simple (low) and standard (high) implementation, Sol low UI/UX and routine review, Astra low complex work, Astra high complex work with unclear instructions |
 | [claude-only](strategies/claude-only.md) | Claude execution: Opus xhigh coordination, Sonnet low small tasks, Sonnet high standard implementation, Fable 5.1 medium complex work |
 | [claude-drive-codex](strategies/claude-drive-codex.md) | Opus xhigh coordination with the shared codex-first execution policy |
 | [codex-drive-claude](strategies/codex-drive-claude.md) | Codex coordination, Sonnet small and standard tasks, Opus complex tasks, Codex low documentation |
