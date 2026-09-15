@@ -98,7 +98,7 @@ prune_managed_links() {
     local link_target
     link_target="$(readlink "$link" || true)"
 
-    if [[ "$link_target" == "$REPO_ROOT"/* || ( -n "${LOOP_BOOT_DIR:-}" && "$link_target" == "$LOOP_BOOT_DIR"/* ) ]]; then
+    if [[ "$link_target" == "$REPO_ROOT"/* ]]; then
       restore_or_remove "$link"
     fi
   done < <(find "$target_dir" -maxdepth 1 -mindepth 1 -type l | sort)
@@ -259,19 +259,6 @@ if [[ -n "$LATEST_BACKUP_DIR" ]]; then
   log "Using latest backup directory: $LATEST_BACKUP_DIR"
 fi
 
-LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-}"
-if [[ -z "$LOOP_BOOT_DIR" ]]; then
-  for candidate in "$REPO_ROOT/../../../aaaav-loop-boot" "$TARGET_HOME/aaaav-loop-boot" "$HOME/aaaav-loop-boot" "/home/weihung/aaaav-loop-boot"; do
-    if [[ -d "$candidate" ]]; then
-      LOOP_BOOT_DIR="$candidate"
-      break
-    fi
-  done
-fi
-if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
-  LOOP_BOOT_DIR="$(cd "$LOOP_BOOT_DIR" && pwd -P)"
-fi
-
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
   "$REPO_ROOT/codex/agents/safety-reviewer.toml"
@@ -307,11 +294,6 @@ restore_or_remove "$TARGET_HOME/.codex/hooks.json"
 restore_or_remove "$TARGET_HOME/.gemini/config/AGENTS.md"
 restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
 restore_or_remove "$TARGET_HOME/.gemini/config/skills.json"
-
-if [[ -n "$LOOP_BOOT_DIR" ]]; then
-  restore_or_remove "$TARGET_HOME/.gemini/config/plugins/aaaav-loop-boot"
-  restore_or_remove "$TARGET_HOME/.claude/plugins/aaaav-loop-boot"
-fi
 
 while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"

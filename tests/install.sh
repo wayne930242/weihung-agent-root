@@ -80,19 +80,6 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.claude/commands/model-profile.md" "$REPO_ROOT/claude/commands/model-profile.md"
   assert_symlink_target "$fake_home/.claude/agents/security-reviewer.md" "$REPO_ROOT/claude/agents/security-reviewer.md"
   assert_symlink_target "$fake_home/.claude/agents/silent-failure-hunter.md" "$REPO_ROOT/claude/agents/silent-failure-hunter.md"
-  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../aaaav-loop-boot}"
-  [[ -d "$loop_boot_dir" ]] && loop_boot_dir="$(cd "$loop_boot_dir" && pwd -P)"
-  assert_symlink_target "$fake_home/.claude/plugins/aaaav-loop-boot" "$loop_boot_dir"
-  assert_symlink_target "$fake_home/.gemini/config/plugins/aaaav-loop-boot" "$loop_boot_dir"
-  assert_symlink_target "$fake_home/.codex/skills/aaaav-do" "$loop_boot_dir/skills/aaaav-do"
-  assert_symlink_target "$fake_home/.codex/skills/solid-loop" "$loop_boot_dir/skills/solid-loop"
-  assert_symlink_target "$fake_home/.codex/skills/assuring-quality" "$loop_boot_dir/skills/assuring-quality"
-  assert_symlink_target "$fake_home/.codex/skills/inspecting" "$loop_boot_dir/skills/inspecting"
-  assert_symlink_target "$fake_home/.codex/skills/investigating" "$loop_boot_dir/skills/investigating"
-  assert_symlink_target "$fake_home/.codex/skills/codebase-design" "$loop_boot_dir/skills/codebase-design"
-  assert_symlink_target "$fake_home/.codex/skills/domain-modeling" "$loop_boot_dir/skills/domain-modeling"
-  assert_symlink_target "$fake_home/.codex/skills/prototype" "$loop_boot_dir/skills/prototype"
-  assert_symlink_target "$fake_home/.codex/skills/human-feedback" "$loop_boot_dir/skills/human-feedback"
   for skill_name in managing-model-preferences providing-knowledge reflecting-to-root writing-great-skills; do
     for skill_path in \
       "$fake_home/.claude/skills/$skill_name" \
@@ -517,8 +504,6 @@ install_prunes_obsolete_and_broken_managed_skills() {
 
   local fake_home="$temp_dir/home"
   local user_skill="$temp_dir/my-custom-skill"
-  local loop_boot_dir="${WEIHUNG_LOOP_BOOT_DIR:-$REPO_ROOT/../../../aaaav-loop-boot}"
-  [[ -d "$loop_boot_dir" ]] && loop_boot_dir="$(cd "$loop_boot_dir" && pwd -P)"
   mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills" "$user_skill"
 
   # Obsolete broken link in Claude and Gemini
@@ -529,11 +514,11 @@ install_prunes_obsolete_and_broken_managed_skills() {
   ln -s "$user_skill" "$fake_home/.claude/skills/my-custom-skill"
 
   # Obsolete broken link in Codex
-  ln -s "$loop_boot_dir/skills/leveraging-tasks" "$fake_home/.codex/skills/leveraging-tasks"
-  ln -s "$loop_boot_dir/skills/streamlining-skills" "$fake_home/.codex/skills/streamlining-skills"
+  ln -s "$REPO_ROOT/skills/leveraging-tasks" "$fake_home/.codex/skills/leveraging-tasks"
+  ln -s "$REPO_ROOT/skills/streamlining-skills" "$fake_home/.codex/skills/streamlining-skills"
 
-  # Misdirected link that will be updated to point to user-root
-  ln -s "$loop_boot_dir/skills/reflecting-to-root" "$fake_home/.codex/skills/reflecting-to-root"
+  # Broken managed link that will be updated to point to user-root
+  ln -s "$REPO_ROOT/retired/reflecting-to-root" "$fake_home/.codex/skills/reflecting-to-root"
 
   run_install "$fake_home"
 

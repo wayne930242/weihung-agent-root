@@ -143,7 +143,7 @@ prune_managed_entries() {
     local link_target
     link_target="$(readlink "$link" || true)"
 
-    if [[ "$link_target" == "$REPO_ROOT"/* || ( -n "${LOOP_BOOT_DIR:-}" && "$link_target" == "$LOOP_BOOT_DIR"/* ) ]]; then
+    if [[ "$link_target" == "$REPO_ROOT"/* ]]; then
       if ! is_in_list "$link_name" "${allowed[@]}" || [[ ! -e "$link" ]]; then
         rm "$link"
         log "Pruned retired managed link $link"
@@ -421,30 +421,10 @@ remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/leveraging-tasks" \
   "$REPO_ROOT/skills/leveraging-tasks"
 
-LOOP_BOOT_DIR="${WEIHUNG_LOOP_BOOT_DIR:-}"
-if [[ -z "$LOOP_BOOT_DIR" ]]; then
-  for candidate in "$REPO_ROOT/../../../aaaav-loop-boot" "$TARGET_HOME/aaaav-loop-boot" "$HOME/aaaav-loop-boot" "/home/weihung/aaaav-loop-boot"; do
-    if [[ -d "$candidate" ]]; then
-      LOOP_BOOT_DIR="$candidate"
-      break
-    fi
-  done
-fi
-if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
-  LOOP_BOOT_DIR="$(cd "$LOOP_BOOT_DIR" && pwd -P)"
-fi
-
 root_skills=()
 while IFS= read -r skill_dir; do
   root_skills+=("$(basename "$skill_dir")")
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
-
-codex_skills=("${root_skills[@]}")
-if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR/skills" ]]; then
-  while IFS= read -r plugin_skill; do
-    codex_skills+=("$(basename "$plugin_skill")")
-  done < <(find "$LOOP_BOOT_DIR/skills" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
-fi
 
 claude_agents=()
 while IFS= read -r agent_file; do
@@ -488,7 +468,7 @@ done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 prune_managed_entries "$TARGET_HOME/.claude/skills" "${root_skills[@]}"
 prune_managed_entries "$TARGET_HOME/.gemini/config/skills" "${root_skills[@]}"
-prune_managed_entries "$TARGET_HOME/.codex/skills" "${codex_skills[@]}"
+prune_managed_entries "$TARGET_HOME/.codex/skills" "${root_skills[@]}"
 prune_managed_entries "$TARGET_HOME/.claude/agents" "${claude_agents[@]}"
 prune_managed_entries "$TARGET_HOME/.claude/commands" "${claude_commands[@]}"
 prune_managed_entries "$TARGET_HOME/.claude/hooks" "${claude_hooks[@]}"
@@ -527,17 +507,6 @@ for skill_name in "${root_skills[@]}"; do
   install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.codex/skills/$skill_name"
   install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.gemini/config/skills/$skill_name"
 done
-
-if [[ -n "$LOOP_BOOT_DIR" && -d "$LOOP_BOOT_DIR" ]]; then
-  log "Installing aaaav-loop-boot plugin across agy, claude, and codex..."
-  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.gemini/config/plugins/aaaav-loop-boot"
-  install_link "$LOOP_BOOT_DIR" "$TARGET_HOME/.claude/plugins/aaaav-loop-boot"
-  if [[ -d "$LOOP_BOOT_DIR/skills" ]]; then
-    while IFS= read -r plugin_skill; do
-      install_link "$plugin_skill" "$TARGET_HOME/.codex/skills/$(basename "$plugin_skill")"
-    done < <(find "$LOOP_BOOT_DIR/skills" -maxdepth 1 -mindepth 1 \( -type d -o -type l \) | sort)
-  fi
-fi
 
 for agent_name in "${codex_agents[@]}"; do
   install_link "$CODEX_AGENTS_DIR/$agent_name" "$TARGET_HOME/.codex/agents/$agent_name"
