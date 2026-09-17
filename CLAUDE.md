@@ -53,7 +53,7 @@ When Straw Boss itself causes friction, repair it in
 
 # Orchestrator 權限移交
 
-需要移交主代理權限時，依 Straw Boss 的 `handoff-orchestrator` 與 `docs/roles.md` 辦理；接手模型依當期 profile 與使用者的明確指定選擇。
+需要移交主代理權限時，依 Straw Boss 的 `handoff-orchestrator` 與 `i-am-orchestrator` 辦理；接手模型依當期 profile 與使用者的明確指定選擇。
 
 # Complex Delegation
 

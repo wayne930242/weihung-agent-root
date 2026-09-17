@@ -21,6 +21,6 @@ Measure total consumption across coordination, execution, handoffs, verification
 
 Handle directly requested simple work in the current session. Delegate independently completable work with its objective, necessary context, evidence locations, and reality anchor. Add workers when independent work provides a clear parallel benefit.
 
-The main agent retains requirements, decisions, dependencies, and result summaries. Workers own investigation, implementation, and verification within their scope and return outcomes, evidence locations, and unresolved questions. Coordinate through events and examine evidence when a contradiction or gap needs resolution. Lifecycle and authority follow Straw Boss `docs/roles.md`.
+The main agent retains requirements, decisions, dependencies, and result summaries. Workers own investigation, implementation, and verification within their scope and return outcomes, evidence locations, and unresolved questions. Coordinate through events and examine evidence when a contradiction or gap needs resolution. Lifecycle and authority follow Straw Boss `i-am-orchestrator`.
 
 Native subagents and consultation tools use the same model and effort mapping. New dispatches use the active strategy; existing dispatch instructions retain their settings.

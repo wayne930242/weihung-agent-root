@@ -23,7 +23,7 @@
 | 新 UI/UX 設計的審查與修訂 | 明確指定 Codex 模型，至少 `gpt-5.6-sol`；effort 沿用設定 |
 | 其他 Codex 文件工作 | 沿用 Codex 設定的模型與 effort |
 
-原有策略在 Opus 主代理遇到極端複雜工作時，建議移交至 `claude-fable-5-1`。實際權限移交流程依 Straw Boss 的 `handoff-orchestrator` 與 `docs/roles.md` 辦理。
+原有策略在 Opus 主代理遇到極端複雜工作時，建議移交至 `claude-fable-5-1`。實際權限移交流程依 Straw Boss 的 `handoff-orchestrator` 與 `i-am-orchestrator` 辦理。
 
 ## 套用
 

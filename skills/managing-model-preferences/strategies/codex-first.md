@@ -27,6 +27,6 @@ Rationale: The user requested lower Astra spending, Luna high for documentation,
 
 Pass the selected row explicitly as `--agent-kind`, `--agent-model`, and `--agent-effort` in the dispatch instruction. The current harness model list verifies `gpt-5.6-luna` with `high`, `gpt-5.6-sol` with `high`, and `gpt-6-astra` with `low` or `high`. Names such as Astra high are preference labels; model and effort remain separate arguments.
 
-For native subagents or consultation tools, map the same model and effort to their corresponding fields and choose a role that accepts the combination. This profile selects delegated execution models; the main session's model is determined by its launch settings. Directly handled simple work continues in the current session. Execution and authority handoff follow Straw Boss skills and `docs/roles.md`.
+For native subagents or consultation tools, map the same model and effort to their corresponding fields and choose a role that accepts the combination. This profile selects delegated execution models; the main session's model is determined by its launch settings. Directly handled simple work continues in the current session. Execution and authority handoff follow Straw Boss skills and `i-am-orchestrator`.
 
 New dispatches use the active strategy. Existing dispatch instructions retain their settings.

@@ -37,6 +37,6 @@ Pass the selected row explicitly as `--agent-kind`, `--agent-model`, and `--agen
 - `claude`: uses `--model sonnet` with `--effort low` or `high`.
 - `codex`: uses `--model gpt-5.6-sol` with `-c model_reasoning_effort=low`, or `--model gpt-6-astra` with `-c model_reasoning_effort=low` or `high`.
 
-Main coordination covers requirements, routing, dispatch, tracking, and result integration, and is determined by the active session's launch settings (defaulting to Claude Opus xhigh when launched from Claude Code, or Antigravity / Codex defaults respectively). Directly handled simple work continues in the current session. Execution and authority handoff follow Straw Boss skills and `docs/roles.md`.
+Main coordination covers requirements, routing, dispatch, tracking, and result integration, and is determined by the active session's launch settings (defaulting to Claude Opus xhigh when launched from Claude Code, or Antigravity / Codex defaults respectively). Directly handled simple work continues in the current session. Execution and authority handoff follow Straw Boss skills and `i-am-orchestrator`.
 
 For native subagents or consultation tools, map the same model and effort to their corresponding fields. New dispatches use the active strategy. Existing dispatch instructions retain their settings.

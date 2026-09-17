@@ -28,6 +28,6 @@
 
 派工時明確傳入 `--agent-kind`、`--agent-model` 與 `--agent-effort`，將選定組合帶入 dispatch instruction。Claude CLI 支援 `sonnet`、`opus` 模型別名及 `low`、`medium`、`high` effort；Codex `gpt-6-astra` 與 `low` 依目前 harness 模型清單套用。
 
-Codex 主代理負責分流、協調與結果整合。直接指示的簡單工作沿用主代理直接完成的流程；需要委派的執行工作依本策略選模。執行方式與權限移交依 Straw Boss 技能及 `docs/roles.md`。
+Codex 主代理負責分流、協調與結果整合。直接指示的簡單工作沿用主代理直接完成的流程；需要委派的執行工作依本策略選模。執行方式與權限移交依 Straw Boss 技能及 `i-am-orchestrator`。
 
 使用原生 subagent 或直接諮詢時，將同一組合映射到工具的模型與 effort 欄位，選用支援該 provider 與組合的工具。新派工套用本策略，既有 dispatch instruction 維持原設定。切換 profile 更新後續選模規則；主會話模型由啟動設定決定。

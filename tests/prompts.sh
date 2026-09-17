@@ -154,7 +154,7 @@ orchestrator_authority_handoff_is_user_gated() {
 
   assert_file_contains "$prompt" "# Orchestrator 權限移交"
   assert_file_contains "$prompt" 'handoff-orchestrator'
-  assert_file_contains "$prompt" 'docs/roles.md'
+  assert_file_contains "$prompt" 'i-am-orchestrator'
   assert_file_contains "$prompt" '使用者的明確指定'
 }
 
