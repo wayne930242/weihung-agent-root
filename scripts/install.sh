@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
 SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
+CODEX_CONFIG="$REPO_ROOT/config/codex-managed.toml"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
 CLAUDE_COMMANDS_DIR="$REPO_ROOT/claude/commands"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
@@ -47,7 +48,10 @@ Installs this repository as the source of truth for:
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
-  - config/claude-settings.json Opus 1M main and cross-session settings
+  - config/claude-settings.json Opus 1M main, 300k auto-compact, and cross-session settings
+
+It sets only the top-level keys of config/codex-managed.toml (300k auto-compact)
+in ~/.codex/config.toml and keeps the rest of that file as written.
 
 Codex agents use their role-specific GPT-5.6 model selections.
 
@@ -228,6 +232,34 @@ settings_path.parent.mkdir(parents=True, exist_ok=True)
 settings_path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
   log "Merged $(basename "$fragment_path") into $settings_path"
+}
+
+# config.toml stays user-owned: only the fragment's top-level keys are replaced,
+# and every other line, table, and comment is kept as written.
+merge_codex_config() {
+  local config_path="$1"
+  local fragment_path="$2"
+
+  python3 - "$config_path" "$fragment_path" <<'PY'
+import json
+import re
+import sys
+import tomllib
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+fragment = tomllib.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+lines = config_path.read_text(encoding="utf-8").splitlines() if config_path.exists() else []
+
+first_table = next((i for i, line in enumerate(lines) if line.lstrip().startswith("[")), len(lines))
+managed_key = re.compile(r"^\s*(" + "|".join(map(re.escape, fragment)) + r")\s*=")
+top_level = [line for line in lines[:first_table] if not managed_key.match(line)]
+merged = "\n".join([f"{key} = {json.dumps(value)}" for key, value in fragment.items()] + top_level + lines[first_table:]) + "\n"
+tomllib.loads(merged)
+config_path.parent.mkdir(parents=True, exist_ok=True)
+config_path.write_text(merged, encoding="utf-8")
+PY
+  log "Merged $(basename "$fragment_path") into $config_path"
 }
 
 migrate_legacy_model_settings() {
@@ -530,6 +562,7 @@ done
 migrate_legacy_model_settings "$TARGET_HOME/.claude/settings.json"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
 merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
+merge_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"
 
 # The merge is additive, so a hook this repo used to manage stays registered after
 # it leaves config/claude-hooks.json. Drop any ~/.claude/hooks entry whose script is

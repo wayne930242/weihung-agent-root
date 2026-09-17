@@ -144,7 +144,7 @@ assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 PY
 
-  [[ ! -e "$fake_home/.codex/config.toml" ]] || fail "did not expect installer to rewrite ~/.codex/config.toml in the light layout"
+  [[ "$(cat "$fake_home/.codex/config.toml")" == "model_auto_compact_token_limit = 300000" ]] || fail "expected ~/.codex/config.toml to hold only the managed auto-compact key"
   [[ ! -e "$fake_home/.gemini/config/config.json" ]] || fail "did not expect installer to write ~/.gemini/config/config.json in the light layout"
 
   rm -rf "$temp_dir"
@@ -231,6 +231,7 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["model"] == "opus[1m]", settings
+assert settings["autoCompactWindow"] == 300000, settings
 assert "advisorModel" not in settings, settings
 assert "env" not in settings, settings
 assert settings["crossSessionInbound"] == "accept", settings
@@ -631,7 +632,45 @@ PY
   rm -rf "$temp_dir"
 }
 
+install_sets_only_managed_codex_keys() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.codex"
+  cat > "$fake_home/.codex/config.toml" <<'EOF'
+model = "gpt-5.6"
+model_auto_compact_token_limit = 500000
+# user comment
+
+[profiles.deep]
+model_auto_compact_token_limit = 900000
+
+[mcp_servers.docs]
+command = "docs-mcp"
+EOF
+
+  run_install "$fake_home"
+  run_install "$fake_home"
+
+  python3 - <<PY
+import tomllib
+from pathlib import Path
+text = Path("$fake_home/.codex/config.toml").read_text()
+config = tomllib.loads(text)
+assert config["model_auto_compact_token_limit"] == 300000, text
+assert config["model"] == "gpt-5.6", text
+assert config["profiles"]["deep"]["model_auto_compact_token_limit"] == 900000, text
+assert config["mcp_servers"]["docs"]["command"] == "docs-mcp", text
+assert "# user comment" in text, text
+assert text.count("model_auto_compact_token_limit = 300000") == 1, text
+PY
+
+  rm -rf "$temp_dir"
+}
+
 run_all_tests() {
+  install_sets_only_managed_codex_keys
   fresh_install_creates_expected_symlinks
   aborted_install_never_registers_missing_hooks
   install_drops_registration_left_by_an_older_fragment

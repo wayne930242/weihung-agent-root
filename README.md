@@ -84,10 +84,12 @@ scripts/
   uninstall.sh
   bootstrap.sh
   bridge-claude-projects.sh
+  token-sinks.py                   # where Claude Code token spend goes
 config/
   claude-hooks.json
-  claude-settings.json             # Opus 1M main + cross-session settings
+  claude-settings.json             # Opus 1M main, 300k auto-compact, cross-session settings
   codex-config.toml                # optional snippet, not auto-merged
+  codex-managed.toml               # 300k auto-compact, the one key merged into ~/.codex/config.toml
   gemini-skills.json               # registers .claude/skills for Antigravity
 ```
 
@@ -212,6 +214,7 @@ The installer manages only these user-root surfaces.
 ### Codex
 
 - `~/.codex/AGENTS.md`
+- the top-level keys of `config/codex-managed.toml` inside `~/.codex/config.toml`; every other line stays as written
 - `~/.codex/skills/*/`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/*.rules`
@@ -240,7 +243,7 @@ To use Antigravity with your existing Claude Code projects without manual migrat
 These remain user-controlled on purpose:
 
 - `~/.claude/settings.local.json`
-- `~/.codex/config.toml`
+- `~/.codex/config.toml`, apart from the keys in `config/codex-managed.toml`
 - `~/.gemini/config/config.json`
 - `~/.gemini/config/mcp_config.json`
 - `~/.gemini/settings.json`
@@ -277,7 +280,7 @@ setting before installing the Opus 1M main model.
 - Default behavior is fail-fast. If a managed target already exists, installation stops.
 - `--force` moves conflicting files into `~/.local/state/weihung-user-claude/backups/<timestamp>/` before replacing them.
 - Claude `settings.json` is merged, not symlinked, so existing non-hook settings remain intact.
-- Codex `config.toml` is left untouched in the light layout.
+- Codex `config.toml` keeps every line except the top-level keys in `config/codex-managed.toml`.
 
 ## Uninstall Behavior
 
@@ -289,7 +292,8 @@ setting before installing the Opus 1M main model.
   registration cannot outlive the script it names.
 - The managed `model` is removed only while it still holds the installed value;
   user-edited model and advisor values survive.
-- `~/.codex/config.toml` and `~/.gemini/config/config.json` are still left untouched, because they are not installer-managed.
+- Managed keys in `~/.codex/config.toml` are removed only while they still hold the installed value.
+- `~/.gemini/config/config.json` is left untouched, because it is not installer-managed.
 
 ## Claude Notes
 
@@ -354,6 +358,7 @@ The repo currently verifies:
 - bootstrap clone/update behavior with `tests/bootstrap.sh`
 - uninstall restore/remove behavior with `tests/uninstall.sh`
 - prompt routing rules and Mini Spec deletion guards with `tests/prompts.sh`
+- token spend accounting with `tests/token_sinks.sh`
 
 `tests/` proves the rules are still written down. Whether an agent obeys them is
 a separate question, answered by `evals/mini-spec-3r.sh`: it installs this repo
@@ -365,6 +370,16 @@ demand rather than with the test suite.
 
 ```bash
 bash evals/mini-spec-3r.sh
+```
+
+Whether the agent system spends tokens well is a third question.
+`scripts/token-sinks.py` reads local Claude Code transcripts and reports cost composition, cost by context size, single-tool round-trips, subagent share, fixed prefix size, and the most expensive projects and sessions.
+Run the same length of window before and after a change to the agent system and compare the two reports.
+Claude Code deletes transcripts after 30 days by default, so save the before report outside this public repository.
+
+```bash
+python3 scripts/token-sinks.py --since 2026-09-03 --until 2026-09-18 \
+  > ~/.claude/state/weihung-user-claude/token-sinks/baseline-2026-09-03_2026-09-18.txt
 ```
 
 ## Not Tracked

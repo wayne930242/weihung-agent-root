@@ -1,5 +1,6 @@
 {
   "model": "opus[1m]",
+  "autoCompactWindow": 300000,
   "crossSessionInbound": "accept",
   "enabledPlugins": {
     "aaaav@aaaav": true

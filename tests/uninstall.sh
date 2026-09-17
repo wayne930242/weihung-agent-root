@@ -380,7 +380,35 @@ PY
   rm -rf "$temp_dir"
 }
 
+uninstall_drops_only_installed_codex_keys() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fresh_home="$temp_dir/fresh"
+  mkdir -p "$fresh_home"
+  run_install "$fresh_home"
+  run_uninstall "$fresh_home"
+  [[ ! -e "$fresh_home/.codex/config.toml" ]] || fail "expected uninstall to remove a config.toml that only held managed keys"
+
+  local user_home="$temp_dir/user"
+  mkdir -p "$user_home/.codex"
+  printf 'model = "gpt-5.6"\n' > "$user_home/.codex/config.toml"
+  run_install "$user_home"
+  run_uninstall "$user_home"
+  [[ "$(cat "$user_home/.codex/config.toml")" == 'model = "gpt-5.6"' ]] || fail "expected uninstall to keep user Codex settings"
+
+  local edited_home="$temp_dir/edited"
+  mkdir -p "$edited_home"
+  run_install "$edited_home"
+  printf 'model_auto_compact_token_limit = 400000\n' > "$edited_home/.codex/config.toml"
+  run_uninstall "$edited_home"
+  [[ "$(cat "$edited_home/.codex/config.toml")" == "model_auto_compact_token_limit = 400000" ]] || fail "expected uninstall to keep a user-edited auto-compact limit"
+
+  rm -rf "$temp_dir"
+}
+
 run_all_tests() {
+  uninstall_drops_only_installed_codex_keys
   restore_from_backup_and_clean_hooks
   aborted_uninstall_never_leaves_missing_hooks_registered
   uninstall_drops_registration_left_by_an_older_fragment

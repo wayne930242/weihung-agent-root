@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
 SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
+CODEX_CONFIG="$REPO_ROOT/config/codex-managed.toml"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
 CLAUDE_COMMANDS_DIR="$REPO_ROOT/claude/commands"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
@@ -28,8 +29,9 @@ Uninstall flow:
   - otherwise remove repo-managed symlinks
   - remove repo-managed Claude hook entries from ~/.claude/settings.json
   - drop current managed Claude settings when they still hold the installed value
+  - drop managed top-level keys from ~/.codex/config.toml when they still hold the installed value
 
-This script does not modify ~/.codex/config.toml or ~/.gemini/config/config.json.
+This script does not modify ~/.gemini/config/config.json.
 EOF
 }
 
@@ -236,6 +238,44 @@ PY
   log "Cleaned managed Claude settings from $settings_path"
 }
 
+clean_codex_config() {
+  local config_path="$1"
+  local fragment_path="$2"
+
+  if [[ ! -f "$config_path" || ! -f "$fragment_path" ]]; then
+    return
+  fi
+
+  python3 - "$config_path" "$fragment_path" <<'PY'
+import sys
+import tomllib
+from pathlib import Path
+
+config_path = Path(sys.argv[1])
+fragment = tomllib.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+lines = config_path.read_text(encoding="utf-8").splitlines()
+
+first_table = next((i for i, line in enumerate(lines) if line.lstrip().startswith("[")), len(lines))
+
+
+def holds_installed_value(line):
+    try:
+        parsed = tomllib.loads(line)
+    except tomllib.TOMLDecodeError:
+        return False
+    return len(parsed) == 1 and any(parsed.get(key) == value for key, value in fragment.items())
+
+
+kept = [line for line in lines[:first_table] if not holds_installed_value(line)] + lines[first_table:]
+if any(line.strip() for line in kept):
+    config_path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+else:
+    config_path.unlink()
+PY
+
+  log "Cleaned managed Codex settings from $config_path"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home)
@@ -285,6 +325,7 @@ remove_retired_repo_link \
 # Clean first: a hook entry in settings.json must never outlive a removed script,
 # or every matching event fails with exit 127.
 clean_managed_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
+clean_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"
 clean_claude_settings "$TARGET_HOME/.claude/settings.json"
 
 restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"
