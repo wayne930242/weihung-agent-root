@@ -58,13 +58,11 @@ if cd "$CUR_DIR" 2>/dev/null && git rev-parse --git-dir > /dev/null 2>&1; then
   MODIFIED=$(git diff --numstat 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-# Context progress icon (single glyph, five stages)
-if   [[ "$PCT" -lt 20 ]]; then ICON="○"
-elif [[ "$PCT" -lt 40 ]]; then ICON="◔"
-elif [[ "$PCT" -lt 60 ]]; then ICON="◑"
-elif [[ "$PCT" -lt 80 ]]; then ICON="◕"
-else                            ICON="●"
-fi
+# Context progress icon: an empty circle, then one slice per 12.5% used
+CTX_ICONS=(󰝦 󰪞 󰪟 󰪠 󰪡 󰪢 󰪣 󰪤 󰪥)
+CTX_STEP=$(( (PCT * 8 + 99) / 100 ))
+(( CTX_STEP > 8 )) && CTX_STEP=8
+ICON=${CTX_ICONS[CTX_STEP]}
 
 # Compact-recommendation threshold (1M models compact earlier in absolute tokens)
 case "$MODEL" in
@@ -105,64 +103,64 @@ if [[ "$MODEL" =~ ^([A-Za-z])[A-Za-z]*\ ([0-9][0-9.]*) ]]; then
   [[ "$MODEL" == *1[Mm]* ]] && MODEL_SHORT="${MODEL_SHORT}[1m]"
 fi
 
-# Pills: powerline-style BG blocks (cyberpunk palette)
-L_MODEL=$(printf '\033[48;5;198m\033[38;5;255m\033[1m  %s %s'   "$MODEL_SHORT" "$R")
-L_DIR=$(printf   '\033[48;5;23m\033[38;5;255m  %s %s'           "$DIR_NAME" "$R")
+# Segments: a Nerd Font icon and text in the segment's foreground color
+L_MODEL=$(printf '\033[1;38;5;198m %s%s' "$MODEL_SHORT" "$R")
+L_DIR=$(printf   '\033[38;5;37m󰉋 %s%s'     "$DIR_NAME"    "$R")
 
 GIT_COUNTS=""
 [[ "$STAGED"   -gt 0 ]] && GIT_COUNTS="$GIT_COUNTS +$STAGED"
 [[ "$MODIFIED" -gt 0 ]] && GIT_COUNTS="$GIT_COUNTS ~$MODIFIED"
-branch_pill() {
+branch_seg() {
   L_BRANCH=""
-  [[ -n "$1" ]] && printf -v L_BRANCH '\033[48;5;54m\033[38;5;255m  %s%s %s' "$1" "$GIT_COUNTS" "$R"
+  [[ -n "$1" ]] && printf -v L_BRANCH '\033[38;5;141m %s%s%s' "$1" "$GIT_COUNTS" "$R"
 }
-branch_pill "$BRANCH"
+branch_seg "$BRANCH"
 
-sess_pill() {
+sess_seg() {
   L_SESS=""
-  [[ -n "$1" ]] && printf -v L_SESS '\033[48;5;238m\033[38;5;255m  %s %s' "$1" "$R"
+  [[ -n "$1" ]] && printf -v L_SESS '\033[38;5;252m󰚩 %s%s' "$1" "$R"
 }
-sess_pill "$SESS_NAME"
+sess_seg "$SESS_NAME"
 
 L_WT=""
-[[ -n "$GIT_WT" ]] && L_WT=$(printf '\033[48;5;25m\033[38;5;255m  %s %s' "$GIT_WT" "$R")
+[[ -n "$GIT_WT" ]] && L_WT=$(printf '\033[38;5;75m󰙅 %s%s' "$GIT_WT" "$R")
 
 L_AG=""
-[[ -n "$AGENT" ]] && L_AG=$(printf '\033[48;5;130m\033[38;5;255m  %s %s' "$AGENT" "$R")
+[[ -n "$AGENT" ]] && L_AG=$(printf '\033[38;5;173m󱍰 %s%s' "$AGENT" "$R")
 
 L_OS=""
 [[ "$OUT_STYLE" != "default" && -n "$OUT_STYLE" ]] \
-  && L_OS=$(printf ' %s %s%s' "$DIM" "$OUT_STYLE" "$R")
+  && L_OS=$(printf '%s󰸌 %s%s' "$DIM" "$OUT_STYLE" "$R")
 
-# Plain text with icon + threshold colors
+# Context and rate limits color their numbers by threshold
 CTX_C=$(ctx_fg "$PCT")
 WARN=""
-[[ "$PCT" -ge "$WARN_PCT" ]] && WARN=" ⚠"
+[[ "$PCT" -ge "$WARN_PCT" ]] && WARN=" 󰀦"
 R_CTX=$(printf '%s%s %s%%%s%s' "$CTX_C" "$ICON" "$PCT" "$WARN" "$R")
 
 R_RL=""
 if [[ "$RL_5H" -ge 0 && "$RL_7D" -ge 0 ]]; then
   RL5_C=$(pct_fg "$RL_5H")
   RL7_C=$(pct_fg "$RL_7D")
-  R_RL=$(printf '   %s⏳ %s%s%%%s/%s%s%%%s' "$GRAY" "$RL5_C" "$RL_5H" "$R" "$RL7_C" "$RL_7D" "$R")
+  R_RL=$(printf '%s󰔟 %s%s%%%s/%s%s%%%s' "$GRAY" "$RL5_C" "$RL_5H" "$R" "$RL7_C" "$RL_7D" "$R")
 elif [[ "$RL_5H" -ge 0 ]]; then
   RL5_C=$(pct_fg "$RL_5H")
-  R_RL=$(printf '   %s⏳ %s%s%%%s' "$GRAY" "$RL5_C" "$RL_5H" "$R")
+  R_RL=$(printf '%s󰔟 %s%s%%%s' "$GRAY" "$RL5_C" "$RL_5H" "$R")
 elif [[ "$RL_7D" -ge 0 ]]; then
   RL7_C=$(pct_fg "$RL_7D")
-  R_RL=$(printf '   %s⏳ %s%s%%%s' "$GRAY" "$RL7_C" "$RL_7D" "$R")
+  R_RL=$(printf '%s󰔟 %s%s%%%s' "$GRAY" "$RL7_C" "$RL_7D" "$R")
 fi
 
 R_DIFF=""
 if [[ "$LINES_ADDED" -gt 0 || "$LINES_REMOVED" -gt 0 ]]; then
-  R_DIFF=$(printf ' \033[38;5;82m+%s%s \033[38;5;196m-%s%s ' "$LINES_ADDED" "$R" "$LINES_REMOVED" "$R")
+  R_DIFF=$(printf '\033[38;5;82m+%s%s \033[38;5;196m-%s%s' "$LINES_ADDED" "$R" "$LINES_REMOVED" "$R")
 fi
 
 # Column width of one character: wide East Asian and emoji take two.
 char_width() {
   local cp
   printf -v cp '%d' "'$1"
-  if (( (cp >= 0x1100 && cp <= 0x115F) || cp == 0x23F3
+  if (( (cp >= 0x1100 && cp <= 0x115F)
      || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3)
      || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFE30 && cp <= 0xFE4F)
      || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6)
@@ -212,44 +210,51 @@ fits() {
   (( VW <= MAX ))
 }
 
-# Shorten a row's name pill to the columns the row has left; MIN_NAME is the
-# shortest cut worth keeping.
+# Shorten a row's name segment to the columns the row has left; MIN_NAME is
+# the shortest cut worth keeping.
 MIN_NAME=6
-fit_name() {  # <name> <pill-setter> <row-fn> <row-var>
-  local name=$1 set_pill=$2 row_fn=$3 row_var=$4 room
-  "$set_pill" "x"
+fit_name() {  # <name> <segment-setter> <row-fn> <row-var>
+  local name=$1 set_seg=$2 row_fn=$3 row_var=$4 room
+  "$set_seg" "x"
   "$row_fn"
   vis_width "${!row_var}"
   room=$((MAX - VW + 1))
   if (( room >= MIN_NAME )); then
     truncate_cols "$name" "$room"
-    "$set_pill" "$TRUNC"
+    "$set_seg" "$TRUNC"
   else
-    "$set_pill" ""
+    "$set_seg" ""
   fi
   "$row_fn"
 }
 
+# Join a row's non-empty segments with a two-column gap.
+join_row() {  # <row-var> <segment>...
+  local var=$1 out="" seg
+  shift
+  for seg in "$@"; do
+    [[ -n "$seg" ]] && out+="${out:+  }$seg"
+  done
+  printf -v "$var" '%s' "$out"
+}
+
 # Each row drops its optional segments, lowest priority first, until it fits.
-row1() { printf -v ROW1 '%s%s%s' "$L_MODEL" "$L_DIR" "$R_RL"; }
+row1() { join_row ROW1 "$L_MODEL" "$L_DIR" "$R_RL"; }
 row1
 fits "$ROW1" || { R_RL="";  row1; }
 fits "$ROW1" || { L_DIR=""; row1; }
 
-row2() { printf -v ROW2 '%s%s%s' "$L_BRANCH" "$R_DIFF" "$L_WT"; }
+row2() { join_row ROW2 "$L_BRANCH" "$R_DIFF" "$L_WT"; }
 row2
 fits "$ROW2" || { R_DIFF=""; row2; }
 fits "$ROW2" || { L_WT="";   row2; }
-fits "$ROW2" || fit_name "$BRANCH" branch_pill row2 ROW2
+fits "$ROW2" || fit_name "$BRANCH" branch_seg row2 ROW2
 
-row3() {
-  local pills="${L_SESS}${L_AG}"
-  printf -v ROW3 '%s%s%s%s' "$pills" "${pills:+   }" "$R_CTX" "$L_OS"
-}
+row3() { join_row ROW3 "$L_SESS" "$L_AG" "$R_CTX" "$L_OS"; }
 row3
 fits "$ROW3" || { L_OS=""; row3; }
 fits "$ROW3" || { L_AG=""; row3; }
-fits "$ROW3" || fit_name "$SESS_NAME" sess_pill row3 ROW3
+fits "$ROW3" || fit_name "$SESS_NAME" sess_seg row3 ROW3
 
 printf '%s\n' "$ROW1"
 if [[ -n "$ROW2" ]]; then
