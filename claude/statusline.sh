@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code Status Line - Powerline blocks (left) + text (right)
+# Claude Code Status Line - model/dir/usage, git, and agent/context rows, fitted to COLUMNS
 # Intentionally omits `set -euo pipefail`: this runs on every render, and
 # partial jq/git failures must not blank the statusline.
 input=$(cat)
@@ -95,8 +95,15 @@ R=$'\033[0m'
 GRAY=$'\033[38;5;244m'
 DIM=$'\033[2m'
 
-# LEFT: powerline-style BG blocks (cyberpunk palette)
-L_MODEL=$(printf '\033[48;5;198m\033[38;5;255m\033[1m  %s %s'   "$MODEL"    "$R")
+# Shortest model label: "Opus 5 (1M context)" -> "O5[1m]", "Haiku 4.5" -> "H4.5"
+MODEL_SHORT="$MODEL"
+if [[ "$MODEL" =~ ^([A-Za-z])[A-Za-z]*\ ([0-9][0-9.]*) ]]; then
+  MODEL_SHORT="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+  [[ "$MODEL" == *1[Mm]* ]] && MODEL_SHORT="${MODEL_SHORT}[1m]"
+fi
+
+# Pills: powerline-style BG blocks (cyberpunk palette)
+L_MODEL=$(printf '\033[48;5;198m\033[38;5;255m\033[1m  %s %s'   "$MODEL_SHORT" "$R")
 L_DIR=$(printf   '\033[48;5;23m\033[38;5;255m  %s %s'           "$DIR_NAME" "$R")
 
 L_BRANCH=""
@@ -117,9 +124,7 @@ L_OS=""
 [[ "$OUT_STYLE" != "default" && -n "$OUT_STYLE" ]] \
   && L_OS=$(printf ' %s %s%s' "$DIM" "$OUT_STYLE" "$R")
 
-LEFT="${L_MODEL}${L_DIR}${L_BRANCH}${L_WT}${L_AG}${L_OS}"
-
-# RIGHT: plain text with icon + threshold colors
+# Plain text with icon + threshold colors
 CTX_C=$(ctx_fg "$PCT")
 WARN=""
 [[ "$PCT" -ge "$WARN_PCT" ]] && WARN=" ⚠"
@@ -140,11 +145,43 @@ fi
 
 R_DIFF=""
 if [[ "$LINES_ADDED" -gt 0 || "$LINES_REMOVED" -gt 0 ]]; then
-  R_DIFF=$(printf '   \033[38;5;82m+%s%s \033[38;5;196m-%s%s' "$LINES_ADDED" "$R" "$LINES_REMOVED" "$R")
+  R_DIFF=$(printf ' \033[38;5;82m+%s%s \033[38;5;196m-%s%s ' "$LINES_ADDED" "$R" "$LINES_REMOVED" "$R")
 fi
 
-RIGHT="${R_CTX}${R_RL}${R_DIFF}"
+# Visible width: strip SGR escapes and count characters; ⏳ renders two
+# columns wide.
+shopt -s extglob
+vis_width() {
+  local s=${1//$'\033['*([0-9;])m/}
+  local w=${#s}
+  [[ "$s" == *⏳* ]] && w=$((w + 1))
+  echo "$w"
+}
 
-# Fixed gap, not width-computed alignment: the row's true render width
-# isn't reliably measurable from here.
-printf '%s   %s\n' "$LEFT" "$RIGHT"
+# Claude Code sets COLUMNS to the pane width before each render; the
+# reserve covers its built-in row spacing.
+MAX=""
+[[ -n "$COLUMNS" ]] && MAX=$((COLUMNS - 4))
+fits() { [[ -z "$MAX" || $(vis_width "$1") -le "$MAX" ]]; }
+
+# Each row drops its optional segments, lowest priority first, until it fits.
+row1() { printf '%s%s%s' "$L_MODEL" "$L_DIR" "$R_RL"; }
+ROW1=$(row1)
+fits "$ROW1" || { R_RL="";  ROW1=$(row1); }
+fits "$ROW1" || { L_DIR=""; ROW1=$(row1); }
+
+row2() { printf '%s%s%s' "$L_BRANCH" "$R_DIFF" "$L_WT"; }
+ROW2=$(row2)
+fits "$ROW2" || { R_DIFF=""; ROW2=$(row2); }
+fits "$ROW2" || { L_WT="";   ROW2=$(row2); }
+
+row3() { printf '%s%s%s%s' "$L_AG" "${L_AG:+   }" "$R_CTX" "$L_OS"; }
+ROW3=$(row3)
+fits "$ROW3" || { L_OS=""; ROW3=$(row3); }
+fits "$ROW3" || { L_AG=""; ROW3=$(row3); }
+
+printf '%s\n' "$ROW1"
+if [[ -n "$ROW2" ]]; then
+  printf '%s\n' "$ROW2"
+fi
+printf '%s\n' "$ROW3"
