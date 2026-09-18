@@ -1,8 +1,8 @@
 # Model Preference Profile
 
-Active strategy: [claude-with-agy](strategies/claude-with-agy.md).
-Activated: 2026-09-16.
-Rationale: The user's agy quota is available again, so routine dispatch returns to the two-harness split with no Codex usage: agy-medium for documentation, investigation, source data cleaning and processing, UI/UX design review and routine inspection, Sonnet low for simple and mechanical tasks, Sonnet high for standard implementation and large code work, Opus 1M low for complex work with clear instructions, and Fable 5.1 high for complex work with unclear instructions.
+Active strategy: [claude-only](strategies/claude-only.md).
+Activated: 2026-09-18.
+Rationale: The user's agy quota is exhausted (individual quota reached, resets in about 114 hours) and the user directed that agy not be used, so routine dispatch uses Claude only with no Codex or Antigravity usage: Sonnet low for small tasks and lookups, Sonnet high for standard implementation, documentation and routine review, Opus 1M low for UI/UX review and complex work with clear instructions, and Fable 5.1 high for complex work with unclear instructions.
 
 Before running `boss-say` or selecting a delegated model, read this entrypoint and the complete active strategy. Follow its model and effort selection rules. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatch instructions retain their settings.
 
