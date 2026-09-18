@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code Status Line - model/dir/usage, git, and agent/context rows, fitted to COLUMNS
+# Claude Code Status Line - model/dir/usage, git, and session/context rows, fitted to COLUMNS
 # Intentionally omits `set -euo pipefail`: this runs on every render, and
 # partial jq/git failures must not blank the statusline.
 input=$(cat)
@@ -17,6 +17,7 @@ if command -v jq > /dev/null 2>&1; then
     IFS= read -r LINES_REMOVED
     IFS= read -r GIT_WT
     IFS= read -r AGENT
+    IFS= read -r SESS_NAME
     IFS= read -r OUT_STYLE
   } < <(echo "$input" | jq -r '
     .model.display_name // "?",
@@ -28,6 +29,7 @@ if command -v jq > /dev/null 2>&1; then
     (.cost.total_lines_removed // 0),
     (.workspace.git_worktree // ""),
     (.agent.name // ""),
+    (.session_name // "" | gsub("\n"; " ")),
     (.output_style.name // "default")
   ')
 else
@@ -40,6 +42,7 @@ else
   LINES_REMOVED=0
   GIT_WT=""
   AGENT=""
+  SESS_NAME=""
   OUT_STYLE="default"
 fi
 
@@ -106,13 +109,20 @@ fi
 L_MODEL=$(printf '\033[48;5;198m\033[38;5;255m\033[1m  %s %s'   "$MODEL_SHORT" "$R")
 L_DIR=$(printf   '\033[48;5;23m\033[38;5;255m  %s %s'           "$DIR_NAME" "$R")
 
-L_BRANCH=""
-if [[ -n "$BRANCH" ]]; then
-  GIT_BODY="$BRANCH"
-  [[ "$STAGED"   -gt 0 ]] && GIT_BODY="$GIT_BODY +$STAGED"
-  [[ "$MODIFIED" -gt 0 ]] && GIT_BODY="$GIT_BODY ~$MODIFIED"
-  L_BRANCH=$(printf '\033[48;5;54m\033[38;5;255m  %s %s' "$GIT_BODY" "$R")
-fi
+GIT_COUNTS=""
+[[ "$STAGED"   -gt 0 ]] && GIT_COUNTS="$GIT_COUNTS +$STAGED"
+[[ "$MODIFIED" -gt 0 ]] && GIT_COUNTS="$GIT_COUNTS ~$MODIFIED"
+branch_pill() {
+  L_BRANCH=""
+  [[ -n "$1" ]] && printf -v L_BRANCH '\033[48;5;54m\033[38;5;255m  %s%s %s' "$1" "$GIT_COUNTS" "$R"
+}
+branch_pill "$BRANCH"
+
+sess_pill() {
+  L_SESS=""
+  [[ -n "$1" ]] && printf -v L_SESS '\033[48;5;238m\033[38;5;255m  %s %s' "$1" "$R"
+}
+sess_pill "$SESS_NAME"
 
 L_WT=""
 [[ -n "$GIT_WT" ]] && L_WT=$(printf '\033[48;5;25m\033[38;5;255m  %s %s' "$GIT_WT" "$R")
@@ -148,37 +158,98 @@ if [[ "$LINES_ADDED" -gt 0 || "$LINES_REMOVED" -gt 0 ]]; then
   R_DIFF=$(printf ' \033[38;5;82m+%s%s \033[38;5;196m-%s%s ' "$LINES_ADDED" "$R" "$LINES_REMOVED" "$R")
 fi
 
-# Visible width: strip SGR escapes and count characters; ⏳ renders two
-# columns wide.
+# Column width of one character: wide East Asian and emoji take two.
+char_width() {
+  local cp
+  printf -v cp '%d' "'$1"
+  if (( (cp >= 0x1100 && cp <= 0x115F) || cp == 0x23F3
+     || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3)
+     || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFE30 && cp <= 0xFE4F)
+     || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6)
+     || (cp >= 0x1F300 && cp <= 0x1FAFF) || (cp >= 0x20000 && cp <= 0x3FFFD) )); then
+    CW=2
+  else
+    CW=1
+  fi
+}
+
+# Visible width into VW: strip SGR escapes, count characters, then add the
+# extra column of each wide one (only non-ASCII characters can be wide).
 shopt -s extglob
 vis_width() {
-  local s=${1//$'\033['*([0-9;])m/}
-  local w=${#s}
-  [[ "$s" == *⏳* ]] && w=$((w + 1))
-  echo "$w"
+  local s=${1//$'\033['*([0-9;])m/} wide i
+  VW=${#s}
+  wide=${s//[ -~]/}
+  for ((i = 0; i < ${#wide}; i++)); do
+    char_width "${wide:i:1}"
+    VW=$((VW + CW - 1))
+  done
+}
+
+# Cut a plain string into TRUNC to fit a column budget, marking the cut with …
+truncate_cols() {
+  local s=$1 budget=$2 i w=0
+  TRUNC=$s
+  vis_width "$s"
+  (( VW <= budget )) && return
+  TRUNC=""
+  for ((i = 0; i < ${#s}; i++)); do
+    char_width "${s:i:1}"
+    (( w + CW > budget - 1 )) && break
+    TRUNC+=${s:i:1}
+    w=$((w + CW))
+  done
+  TRUNC+="…"
 }
 
 # Claude Code sets COLUMNS to the pane width before each render; the
 # reserve covers its built-in row spacing.
 MAX=""
 [[ -n "$COLUMNS" ]] && MAX=$((COLUMNS - 4))
-fits() { [[ -z "$MAX" || $(vis_width "$1") -le "$MAX" ]]; }
+fits() {
+  [[ -z "$MAX" ]] && return 0
+  vis_width "$1"
+  (( VW <= MAX ))
+}
+
+# Shorten a row's name pill to the columns the row has left; MIN_NAME is the
+# shortest cut worth keeping.
+MIN_NAME=6
+fit_name() {  # <name> <pill-setter> <row-fn> <row-var>
+  local name=$1 set_pill=$2 row_fn=$3 row_var=$4 room
+  "$set_pill" "x"
+  "$row_fn"
+  vis_width "${!row_var}"
+  room=$((MAX - VW + 1))
+  if (( room >= MIN_NAME )); then
+    truncate_cols "$name" "$room"
+    "$set_pill" "$TRUNC"
+  else
+    "$set_pill" ""
+  fi
+  "$row_fn"
+}
 
 # Each row drops its optional segments, lowest priority first, until it fits.
-row1() { printf '%s%s%s' "$L_MODEL" "$L_DIR" "$R_RL"; }
-ROW1=$(row1)
-fits "$ROW1" || { R_RL="";  ROW1=$(row1); }
-fits "$ROW1" || { L_DIR=""; ROW1=$(row1); }
+row1() { printf -v ROW1 '%s%s%s' "$L_MODEL" "$L_DIR" "$R_RL"; }
+row1
+fits "$ROW1" || { R_RL="";  row1; }
+fits "$ROW1" || { L_DIR=""; row1; }
 
-row2() { printf '%s%s%s' "$L_BRANCH" "$R_DIFF" "$L_WT"; }
-ROW2=$(row2)
-fits "$ROW2" || { R_DIFF=""; ROW2=$(row2); }
-fits "$ROW2" || { L_WT="";   ROW2=$(row2); }
+row2() { printf -v ROW2 '%s%s%s' "$L_BRANCH" "$R_DIFF" "$L_WT"; }
+row2
+fits "$ROW2" || { R_DIFF=""; row2; }
+fits "$ROW2" || { L_WT="";   row2; }
+fits "$ROW2" || fit_name "$BRANCH" branch_pill row2 ROW2
 
-row3() { printf '%s%s%s%s' "$L_AG" "${L_AG:+   }" "$R_CTX" "$L_OS"; }
-ROW3=$(row3)
-fits "$ROW3" || { L_OS=""; ROW3=$(row3); }
-fits "$ROW3" || { L_AG=""; ROW3=$(row3); }
+row3() {
+  local pills="${L_SESS}${L_AG}"
+  printf -v ROW3 '%s%s%s%s' "$pills" "${pills:+   }" "$R_CTX" "$L_OS"
+}
+row3
+fits "$ROW3" || { L_OS=""; row3; }
+fits "$ROW3" || { L_AG=""; row3; }
+fits "$ROW3" || fit_name "$SESS_NAME" sess_pill row3 ROW3
 
 printf '%s\n' "$ROW1"
 if [[ -n "$ROW2" ]]; then
