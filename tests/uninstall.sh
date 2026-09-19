@@ -397,6 +397,13 @@ uninstall_drops_only_installed_codex_keys() {
   run_uninstall "$user_home"
   [[ "$(cat "$user_home/.codex/config.toml")" == 'model = "gpt-5.6"' ]] || fail "expected uninstall to keep user Codex settings"
 
+  local tui_home="$temp_dir/tui"
+  mkdir -p "$tui_home/.codex"
+  printf '[tui]\ntheme = "user-theme"\n' > "$tui_home/.codex/config.toml"
+  run_install "$tui_home"
+  run_uninstall "$tui_home"
+  [[ "$(cat "$tui_home/.codex/config.toml")" == $'[tui]\ntheme = "user-theme"' ]] || fail "expected uninstall to keep user tui settings"
+
   local edited_home="$temp_dir/edited"
   mkdir -p "$edited_home"
   run_install "$edited_home"

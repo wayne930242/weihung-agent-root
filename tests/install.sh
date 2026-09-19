@@ -144,7 +144,14 @@ assert settings["model"] == "opus[1m]", settings
 assert "advisorModel" not in settings, settings
 PY
 
-  [[ "$(cat "$fake_home/.codex/config.toml")" == "model_auto_compact_token_limit = 300000" ]] || fail "expected ~/.codex/config.toml to hold only the managed auto-compact key"
+  python3 - <<PY || fail "expected ~/.codex/config.toml to hold only the managed Codex keys"
+import tomllib
+from pathlib import Path
+config = tomllib.loads(Path("$fake_home/.codex/config.toml").read_text())
+managed = tomllib.loads(Path("$REPO_ROOT/config/codex-managed.toml").read_text())
+assert config == managed, config
+assert "status_line" in config["tui"], config
+PY
   [[ ! -e "$fake_home/.gemini/config/config.json" ]] || fail "did not expect installer to write ~/.gemini/config/config.json in the light layout"
 
   rm -rf "$temp_dir"
@@ -648,6 +655,13 @@ model_auto_compact_token_limit = 900000
 
 [mcp_servers.docs]
 command = "docs-mcp"
+
+[tui]
+status_line = ["model"]
+theme = "user-theme"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 2
 EOF
 
   run_install "$fake_home"
@@ -664,6 +678,11 @@ assert config["profiles"]["deep"]["model_auto_compact_token_limit"] == 900000, t
 assert config["mcp_servers"]["docs"]["command"] == "docs-mcp", text
 assert "# user comment" in text, text
 assert text.count("model_auto_compact_token_limit = 300000") == 1, text
+managed = tomllib.loads(Path("$REPO_ROOT/config/codex-managed.toml").read_text())
+assert config["tui"]["status_line"] == managed["tui"]["status_line"], text
+assert config["tui"]["theme"] == "user-theme", text
+assert config["tui"]["model_availability_nux"]["gpt-5.5"] == 2, text
+assert text.count("status_line =") == 1, text
 PY
 
   rm -rf "$temp_dir"

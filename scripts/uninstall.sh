@@ -247,6 +247,7 @@ clean_codex_config() {
   fi
 
   python3 - "$config_path" "$fragment_path" <<'PY'
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -255,18 +256,40 @@ config_path = Path(sys.argv[1])
 fragment = tomllib.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 lines = config_path.read_text(encoding="utf-8").splitlines()
 
-first_table = next((i for i, line in enumerate(lines) if line.lstrip().startswith("[")), len(lines))
 
-
-def holds_installed_value(line):
+def holds_installed_value(line, values):
     try:
         parsed = tomllib.loads(line)
     except tomllib.TOMLDecodeError:
         return False
-    return len(parsed) == 1 and any(parsed.get(key) == value for key, value in fragment.items())
+    return len(parsed) == 1 and any(parsed.get(key) == value for key, value in values.items())
 
 
-kept = [line for line in lines[:first_table] if not holds_installed_value(line)] + lines[first_table:]
+def header_table(line):
+    match = re.match(r"^\s*\[\s*([^\[\]]+?)\s*\]\s*(#.*)?$", line)
+    return match.group(1) if match else None
+
+
+# Split into sections: the top-level lines, then each header with its body.
+sections = [[None, []]]
+for line in lines:
+    if line.lstrip().startswith("["):
+        sections.append([line, []])
+    else:
+        sections[-1][1].append(line)
+
+kept = []
+for header, body in sections:
+    table = None if header is None else header_table(header)
+    values = fragment if header is None else fragment.get(table)
+    if isinstance(values, dict):
+        body = [line for line in body if not holds_installed_value(line, values)]
+        # Drop a managed table that the cleanup left empty.
+        if header is not None and not any(line.strip() for line in body):
+            continue
+    kept += ([header] if header is not None else []) + body
+while kept and not kept[-1].strip():
+    kept.pop()
 if any(line.strip() for line in kept):
     config_path.write_text("\n".join(kept) + "\n", encoding="utf-8")
 else:

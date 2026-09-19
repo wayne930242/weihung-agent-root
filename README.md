@@ -89,7 +89,7 @@ config/
   claude-hooks.json
   claude-settings.json             # Opus 1M main, 300k auto-compact, cross-session settings
   codex-config.toml                # optional snippet, not auto-merged
-  codex-managed.toml               # 300k auto-compact, the one key merged into ~/.codex/config.toml
+  codex-managed.toml               # 300k auto-compact and [tui] status line, merged into ~/.codex/config.toml
   gemini-skills.json               # registers .claude/skills for Antigravity
 ```
 
@@ -214,7 +214,7 @@ The installer manages only these user-root surfaces.
 ### Codex
 
 - `~/.codex/AGENTS.md`
-- the top-level keys of `config/codex-managed.toml` inside `~/.codex/config.toml`; every other line stays as written
+- the keys of `config/codex-managed.toml` (top-level and `[tui]` status line) inside `~/.codex/config.toml`; every other line stays as written
 - `~/.codex/skills/*/`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/*.rules`
@@ -280,7 +280,7 @@ setting before installing the Opus 1M main model.
 - Default behavior is fail-fast. If a managed target already exists, installation stops.
 - `--force` moves conflicting files into `~/.local/state/weihung-user-claude/backups/<timestamp>/` before replacing them.
 - Claude `settings.json` is merged, not symlinked, so existing non-hook settings remain intact.
-- Codex `config.toml` keeps every line except the top-level keys in `config/codex-managed.toml`.
+- Codex `config.toml` keeps every line except the keys in `config/codex-managed.toml`.
 
 ## Uninstall Behavior
 

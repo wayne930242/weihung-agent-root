@@ -50,8 +50,8 @@ It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
   - config/claude-settings.json Opus 1M main, 300k auto-compact, and cross-session settings
 
-It sets only the top-level keys of config/codex-managed.toml (300k auto-compact)
-in ~/.codex/config.toml and keeps the rest of that file as written.
+It sets only the keys of config/codex-managed.toml (300k auto-compact and the
+[tui] status line) in ~/.codex/config.toml and keeps the rest of that file as written.
 
 Codex agents use their role-specific GPT-5.6 model selections.
 
@@ -234,7 +234,8 @@ PY
   log "Merged $(basename "$fragment_path") into $settings_path"
 }
 
-# config.toml stays user-owned: only the fragment's top-level keys are replaced,
+# config.toml stays user-owned: only the fragment's keys are replaced, top-level
+# ones at the top and table ones inside their [table] (appended when missing),
 # and every other line, table, and comment is kept as written.
 merge_codex_config() {
   local config_path="$1"
@@ -251,10 +252,36 @@ config_path = Path(sys.argv[1])
 fragment = tomllib.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 lines = config_path.read_text(encoding="utf-8").splitlines() if config_path.exists() else []
 
-first_table = next((i for i, line in enumerate(lines) if line.lstrip().startswith("[")), len(lines))
-managed_key = re.compile(r"^\s*(" + "|".join(map(re.escape, fragment)) + r")\s*=")
-top_level = [line for line in lines[:first_table] if not managed_key.match(line)]
-merged = "\n".join([f"{key} = {json.dumps(value)}" for key, value in fragment.items()] + top_level + lines[first_table:]) + "\n"
+
+def section_body(table):
+    # The line range after a table's header, up to the next header; None when absent.
+    if table is None:
+        start = 0
+    else:
+        header = re.compile(r"^\s*\[\s*" + re.escape(table) + r"\s*\]\s*(#.*)?$")
+        start = next((i + 1 for i, line in enumerate(lines) if header.match(line)), None)
+        if start is None:
+            return None
+    end = next((i for i in range(start, len(lines)) if lines[i].lstrip().startswith("[")), len(lines))
+    return start, end
+
+
+def set_keys(table, values):
+    assigned = [f"{key} = {json.dumps(value)}" for key, value in values.items()]
+    body = section_body(table)
+    if body is None:
+        return lines + ([""] if lines else []) + [f"[{table}]"] + assigned
+    start, end = body
+    managed_key = re.compile(r"^\s*(" + "|".join(map(re.escape, values)) + r")\s*=")
+    kept = [line for line in lines[start:end] if not managed_key.match(line)]
+    return lines[:start] + assigned + kept + lines[end:]
+
+
+lines = set_keys(None, {key: value for key, value in fragment.items() if not isinstance(value, dict)})
+for table, values in fragment.items():
+    if isinstance(values, dict):
+        lines = set_keys(table, values)
+merged = "\n".join(lines) + "\n"
 tomllib.loads(merged)
 config_path.parent.mkdir(parents=True, exist_ok=True)
 config_path.write_text(merged, encoding="utf-8")

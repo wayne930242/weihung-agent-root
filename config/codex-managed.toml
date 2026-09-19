@@ -1,1 +1,5 @@
 model_auto_compact_token_limit = 300000
+
+[tui]
+status_line = ["model-with-reasoning", "project-name", "git-branch", "branch-changes", "thread-name", "context-used", "five-hour-limit", "weekly-limit"]
+status_line_use_colors = true
