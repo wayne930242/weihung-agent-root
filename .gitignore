@@ -41,6 +41,7 @@ backups/
 
 # Local tooling scratch
 .superpowers/
+scratch/
 
 # OS
 .DS_Store

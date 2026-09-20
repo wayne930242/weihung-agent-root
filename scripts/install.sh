@@ -229,6 +229,10 @@ fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
 merged = deep_merge(current, fragment)
 if isinstance(fragment.get("hooks"), dict):
     merged["hooks"] = merge_hooks(current.get("hooks"), fragment["hooks"])
+if "env" in current and not isinstance(current["env"], dict):
+    # A non-object env is the user's own value; managed keys merge into an
+    # object or not at all, so it is never replaced wholesale.
+    merged["env"] = current["env"]
 settings_path.parent.mkdir(parents=True, exist_ok=True)
 settings_path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY

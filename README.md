@@ -208,6 +208,7 @@ The installer manages only these user-root surfaces.
 - `~/.claude/hooks/*.sh`
 - `~/.claude/statusline.sh`
 - merge into `~/.claude/settings.json` using `config/claude-hooks.json` (hooks + `statusLine` block)
+- merge into `~/.claude/settings.json` using `config/claude-settings.json` (model, auto-compact window, `env`, cross-session settings)
 - drop any `~/.claude/hooks/*` registration whose script no longer exists, so a hook this repo
   used to manage cannot survive its own removal and fail every event with exit 127
 
@@ -335,6 +336,53 @@ Codex hooks are still better treated as optional infrastructure, not mandatory b
 If you want to opt in manually, copy the relevant snippet from:
 
 - `config/codex-config.toml`
+
+## Experimental Jev Context Pruning
+
+Compaction for both harnesses is configured here: `config/claude-settings.json` sets
+`autoCompactWindow` to 300000, and that compaction event is what Jev pruning hooks.
+The pruning runtime itself is vendored in the [straw-boss](https://github.com/weihung/straw-boss)
+plugin; this repo owns the wiring that decides whether it can run at all.
+
+Jev prunes tool records VERBATIM instead of summarizing: each tool call and its result
+is scored, then kept, truncated, or dropped, while user and assistant text is always
+kept word for word. Governing sources -- dispatch contracts, `AGENTS.md`, `CLAUDE.md`,
+`GEMINI.md` and `SKILL.md` reads -- are kept by rule, never by score. Dropped content is
+stored so a wrong deletion stays recoverable.
+
+`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` is installed through `config/claude-settings.json`,
+which only allows plugin function hooks to load. It does not turn pruning on.
+
+### Turning it on and off
+
+Pruning is off unless a session explicitly asks for it, and it needs `TYPESAFE_API_KEY`
+in the environment. Enable it for one newly launched Claude session:
+
+```sh
+STRAW_BOSS_JEV=1 claude
+```
+
+Start a session with the experiment explicitly off:
+
+```sh
+STRAW_BOSS_JEV=0 claude
+```
+
+An unset or empty `TYPESAFE_API_KEY` skips the path silently: no error, no benchmark
+record, and ordinary compaction behavior.
+
+### Codex
+
+Codex 0.155.1 exposes no replacement-history interface through its public `PreCompact`
+or `thread/compact/start`, so live pruning cannot run there. Codex shares the criteria,
+policy, gate and benchmark contract, and its pruning runs as an opt-in copy adapter
+rather than in a live session. Runtime parity with Claude is not currently achievable.
+
+### While the renewal acceptance window is open
+
+Keep pruning off for ordinary sessions through 2026-09-25. The context renewal
+seven-day acceptance measures token sinks against a baseline, and pruning every daily
+compaction makes that comparison unreadable.
 
 ## Why This Is Light
 
