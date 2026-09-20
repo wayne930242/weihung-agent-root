@@ -214,7 +214,7 @@ The installer manages only these user-root surfaces.
 ### Codex
 
 - `~/.codex/AGENTS.md`
-- the keys of `config/codex-managed.toml` (top-level and `[tui]` status line) inside `~/.codex/config.toml`; every other line stays as written
+- the keys of `config/codex-managed.toml` (top-level, `[tui]` status line, and explicitly disabled plugins) inside `~/.codex/config.toml`; every other line stays as written
 - `~/.codex/skills/*/`
 - `~/.codex/agents/*.toml`
 - `~/.codex/rules/*.rules`
@@ -250,10 +250,10 @@ These remain user-controlled on purpose:
 - `~/.gemini/antigravity-cli/settings.json`
 - credentials and auth
 - MCP server definitions
-- plugin enablement
+- plugin enablement, except the plugins explicitly disabled by `config/codex-managed.toml`
 - trust and approval state
 
-Plugin enablement stays yours, but the installer prints the Codex plugin install commands when `enabledPlugins` does not already carry `codex@openai-codex`, because the cross-model routing in `CLAUDE.md` has nothing to route to without it.
+Plugin enablement stays yours apart from the explicit disabled list in `config/codex-managed.toml`. The installer also prints the Codex plugin install commands when `enabledPlugins` does not already carry `codex@openai-codex`, because the cross-model routing in `CLAUDE.md` has nothing to route to without it.
 
 This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
 

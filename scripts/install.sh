@@ -50,8 +50,9 @@ It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
   - config/claude-settings.json Opus 1M main, 300k auto-compact, and cross-session settings
 
-It sets only the keys of config/codex-managed.toml (300k auto-compact and the
-[tui] status line) in ~/.codex/config.toml and keeps the rest of that file as written.
+It sets only the keys of config/codex-managed.toml (300k auto-compact, the
+[tui] status line, and the explicitly disabled plugins) in ~/.codex/config.toml
+and keeps the rest of that file as written.
 
 Codex agents use their role-specific GPT-5.6 model selections.
 
@@ -253,6 +254,14 @@ fragment = tomllib.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 lines = config_path.read_text(encoding="utf-8").splitlines() if config_path.exists() else []
 
 
+def toml_key(key):
+    return key if re.fullmatch(r"[A-Za-z0-9_-]+", key) else json.dumps(key)
+
+
+def table_name(path):
+    return ".".join(toml_key(part) for part in path)
+
+
 def section_body(table):
     # The line range after a table's header, up to the next header; None when absent.
     if table is None:
@@ -266,21 +275,29 @@ def section_body(table):
     return start, end
 
 
-def set_keys(table, values):
-    assigned = [f"{key} = {json.dumps(value)}" for key, value in values.items()]
+def set_keys(path, values):
+    table = table_name(path) if path else None
+    assigned = [f"{toml_key(key)} = {json.dumps(value)}" for key, value in values.items()]
     body = section_body(table)
     if body is None:
         return lines + ([""] if lines else []) + [f"[{table}]"] + assigned
     start, end = body
-    managed_key = re.compile(r"^\s*(" + "|".join(map(re.escape, values)) + r")\s*=")
+    managed_key = re.compile(r"^\s*(" + "|".join(re.escape(toml_key(key)) for key in values) + r")\s*=")
     kept = [line for line in lines[start:end] if not managed_key.match(line)]
     return lines[:start] + assigned + kept + lines[end:]
 
 
-lines = set_keys(None, {key: value for key, value in fragment.items() if not isinstance(value, dict)})
-for table, values in fragment.items():
-    if isinstance(values, dict):
-        lines = set_keys(table, values)
+def managed_tables(values, path=()):
+    scalars = {key: value for key, value in values.items() if not isinstance(value, dict)}
+    if scalars:
+        yield path, scalars
+    for key, value in values.items():
+        if isinstance(value, dict):
+            yield from managed_tables(value, path + (key,))
+
+
+for path, values in managed_tables(fragment):
+    lines = set_keys(path, values)
 merged = "\n".join(lines) + "\n"
 tomllib.loads(merged)
 config_path.parent.mkdir(parents=True, exist_ok=True)

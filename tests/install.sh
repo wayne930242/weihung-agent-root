@@ -656,6 +656,9 @@ model_auto_compact_token_limit = 900000
 [mcp_servers.docs]
 command = "docs-mcp"
 
+[plugins."custom@example"]
+enabled = true
+
 [tui]
 status_line = ["model"]
 theme = "user-theme"
@@ -672,13 +675,17 @@ import tomllib
 from pathlib import Path
 text = Path("$fake_home/.codex/config.toml").read_text()
 config = tomllib.loads(text)
+managed = tomllib.loads(Path("$REPO_ROOT/config/codex-managed.toml").read_text())
 assert config["model_auto_compact_token_limit"] == 300000, text
 assert config["model"] == "gpt-5.6", text
 assert config["profiles"]["deep"]["model_auto_compact_token_limit"] == 900000, text
 assert config["mcp_servers"]["docs"]["command"] == "docs-mcp", text
+assert config["plugins"]["custom@example"]["enabled"] is True, text
+for plugin, values in managed["plugins"].items():
+    assert values["enabled"] is False, (plugin, text)
+    assert config["plugins"][plugin]["enabled"] is False, (plugin, text)
 assert "# user comment" in text, text
 assert text.count("model_auto_compact_token_limit = 300000") == 1, text
-managed = tomllib.loads(Path("$REPO_ROOT/config/codex-managed.toml").read_text())
 assert config["tui"]["status_line"] == managed["tui"]["status_line"], text
 assert config["tui"]["theme"] == "user-theme", text
 assert config["tui"]["model_availability_nux"]["gpt-5.5"] == 2, text
