@@ -249,6 +249,7 @@ These remain user-controlled on purpose:
 - `~/.gemini/config/mcp_config.json`
 - `~/.gemini/settings.json`
 - `~/.gemini/antigravity-cli/settings.json`
+- shell startup files such as `~/.zshenv`
 - credentials and auth
 - MCP server definitions
 - plugin enablement, except the plugins explicitly disabled by `config/codex-managed.toml`
@@ -353,6 +354,24 @@ stored so a wrong deletion stays recoverable.
 `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` is installed through `config/claude-settings.json`,
 which only allows plugin function hooks to load. It does not turn pruning on.
 
+### Shell environment
+
+Two exports belong in `~/.zshenv`. The installer never writes shell startup files, so
+add them by hand:
+
+```sh
+export TYPESAFE_API_KEY="<your TypeSafe key>"
+export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1
+```
+
+`TYPESAFE_API_KEY` is what Jev authenticates with. `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`
+is also installed into `~/.claude/settings.json` from `config/claude-settings.json`; the
+export carries the same flag to tooling launched from a shell rather than from that file.
+
+`STRAW_BOSS_JEV` stays out of `~/.zshenv` and out of global settings on purpose. Putting
+it there turns pruning on for every session at once, which is exactly what the renewal
+acceptance window below rules out.
+
 ### Turning it on and off
 
 Pruning is off unless a session explicitly asks for it, and it needs `TYPESAFE_API_KEY`
@@ -383,6 +402,10 @@ rather than in a live session. Runtime parity with Claude is not currently achie
 Keep pruning off for ordinary sessions through 2026-09-25. The context renewal
 seven-day acceptance measures token sinks against a baseline, and pruning every daily
 compaction makes that comparison unreadable.
+
+This is why `STRAW_BOSS_JEV` is set per session rather than exported from `~/.zshenv`.
+After 2026-09-25 the switch can move into the shell environment if the benchmark records
+justify it.
 
 ## Why This Is Light
 
