@@ -265,9 +265,41 @@ def holds_installed_value(line, values):
     return len(parsed) == 1 and any(parsed.get(key) == value for key, value in values.items())
 
 
-def header_table(line):
+def header_path(line):
+    """A table header's key path, e.g. `[plugins."a@b"]` -> ["plugins", "a@b"].
+
+    tomllib nests a dotted header, so the fragment has to be walked segment by
+    segment; matching the raw header text against the fragment's top-level keys
+    leaves every `[plugins."<id>"]` table the installer wrote behind.
+    """
     match = re.match(r"^\s*\[\s*([^\[\]]+?)\s*\]\s*(#.*)?$", line)
-    return match.group(1) if match else None
+    if not match:
+        return None
+    path, segment, quote = [], "", None
+    for char in match.group(1):
+        if quote is not None:
+            if char == quote:
+                quote = None
+            else:
+                segment += char
+        elif char in "\"'":
+            quote = char
+        elif char == ".":
+            path.append(segment.strip())
+            segment = ""
+        else:
+            segment += char
+    path.append(segment.strip())
+    return path
+
+
+def fragment_table(path):
+    values = fragment
+    for segment in path:
+        if not isinstance(values, dict):
+            return None
+        values = values.get(segment)
+    return values
 
 
 # Split into sections: the top-level lines, then each header with its body.
@@ -280,8 +312,8 @@ for line in lines:
 
 kept = []
 for header, body in sections:
-    table = None if header is None else header_table(header)
-    values = fragment if header is None else fragment.get(table)
+    path = None if header is None else header_path(header)
+    values = fragment if header is None else (fragment_table(path) if path else None)
     if isinstance(values, dict):
         body = [line for line in body if not holds_installed_value(line, values)]
         # Drop a managed table that the cleanup left empty.

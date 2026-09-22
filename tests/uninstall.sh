@@ -404,6 +404,13 @@ uninstall_drops_only_installed_codex_keys() {
   run_uninstall "$tui_home"
   [[ "$(cat "$tui_home/.codex/config.toml")" == $'[tui]\ntheme = "user-theme"' ]] || fail "expected uninstall to keep user tui settings"
 
+  local plugin_home="$temp_dir/plugin"
+  mkdir -p "$plugin_home"
+  run_install "$plugin_home"
+  printf '[plugins."vercel@claude-plugins-official"]\nenabled = true\n' > "$plugin_home/.codex/config.toml"
+  run_uninstall "$plugin_home"
+  [[ "$(cat "$plugin_home/.codex/config.toml")" == $'[plugins."vercel@claude-plugins-official"]\nenabled = true' ]] || fail "expected uninstall to keep a user-enabled plugin"
+
   local edited_home="$temp_dir/edited"
   mkdir -p "$edited_home"
   run_install "$edited_home"
