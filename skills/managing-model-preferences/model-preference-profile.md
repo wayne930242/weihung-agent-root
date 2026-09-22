@@ -1,10 +1,10 @@
 # Model Preference Profile
 
-Active strategy: [claude-drive-codex](strategies/claude-drive-codex.md).
-Activated: 2026-09-19.
-Rationale: The user directed a switch to claude-drive-codex, so dispatch returns to Codex tiers while agy stays unused:
-- Opus xhigh coordinates.
-- Codex Luna medium handles documentation, investigation and data processing.
+Active strategy: [drive-all](strategies/drive-all.md).
+Activated: 2026-09-22.
+Rationale: The user directed a switch to drive-all after the Antigravity CLI was reinstalled (agy 1.2.8), so the documentation and investigation tier returns to agy:
+- Coordination follows the active session's launch settings.
+- agy Gemini 3.8 Flash medium handles documentation, investigation and source data processing.
 - Sonnet low and high handle simple and standard implementation.
 - Codex Sol low handles UI/UX and routine review.
 - Codex Astra low and high handle complex work with clear and with unclear instructions.
