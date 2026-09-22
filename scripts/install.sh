@@ -17,14 +17,16 @@ SHARED_DIR="$REPO_ROOT/shared"
 SKILLS_DIR="$REPO_ROOT/skills"
 RULES_DIR="$REPO_ROOT/rules"
 GEMINI_SKILLS_CONFIG="$REPO_ROOT/config/gemini-skills.json"
+CODEBASE_MEMORY_INSTALL_URL="https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh"
 
 TARGET_HOME="${HOME}"
 FORCE=0
+SKIP_EXTERNAL=0
 BACKUP_ROOT=""
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/install.sh [--home PATH] [--force]
+Usage: bash scripts/install.sh [--home PATH] [--force] [--skip-external]
 
 Installs this repository as the source of truth for:
   - ~/.claude/CLAUDE.md
@@ -55,6 +57,10 @@ It sets only the keys of config/codex-managed.toml (300k auto-compact, the
 and keeps the rest of that file as written.
 
 Codex agents use their role-specific GPT-5.6 model selections.
+
+It installs codebase-memory-mcp into ~/.local/bin when that binary is missing,
+which the code-discovery protocol in CLAUDE.md and AGENTS.md depends on. Pass
+--skip-external to install configuration only.
 
 Defaults to failing on conflicts. Pass --force to back up conflicting targets
 before replacing them with symlinks.
@@ -417,6 +423,46 @@ if dropped:
 PY
 }
 
+install_codebase_memory_mcp() {
+  local binary="$TARGET_HOME/.local/bin/codebase-memory-mcp"
+
+  if [[ -x "$binary" ]]; then
+    log "OK: $binary"
+    return
+  fi
+
+  # The upstream installer downloads a 300 MB binary and registers it with
+  # every coding agent it finds, so a sandboxed run says so rather than
+  # inferring it: a test drives this script with HOME set to its own fixture,
+  # which makes the target home indistinguishable from the real one.
+  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then
+    log "Skipping codebase-memory-mcp: --skip-external installs configuration only."
+    return
+  fi
+
+  log "Installing codebase-memory-mcp from $CODEBASE_MEMORY_INSTALL_URL"
+  local status=0
+  curl -fsSL "$CODEBASE_MEMORY_INSTALL_URL" | bash || status=$?
+
+  # The installed binary is the outcome that matters. Its own activation step
+  # registers the MCP server with every coding agent it finds and exits
+  # non-zero when any one of those writes fails, which leaves a working
+  # install behind.
+  if [[ ! -x "$binary" ]]; then
+    log "Warning: codebase-memory-mcp install failed (exit $status). Run it again with:"
+    log "  curl -fsSL $CODEBASE_MEMORY_INSTALL_URL | bash"
+    return
+  fi
+
+  if [[ "$status" -ne 0 ]]; then
+    log "Note: codebase-memory-mcp installed; its agent-configuration step exited $status."
+  fi
+
+  # That step writes through ~/.codex/AGENTS.md and ~/.codex/hooks.json, which
+  # are symlinks into this repository, so it edits tracked files.
+  log "Review 'git -C $REPO_ROOT status' before committing: the installer rewrites AGENTS.md and codex/hooks.json."
+}
+
 report_optional_plugins() {
   local settings_path="$TARGET_HOME/.claude/settings.json"
 
@@ -451,6 +497,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --force)
       FORCE=1
+      shift
+      ;;
+    --skip-external)
+      SKIP_EXTERNAL=1
       shift
       ;;
     -h|--help)
@@ -616,6 +666,8 @@ merge_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"
 # it leaves config/claude-hooks.json. Drop any ~/.claude/hooks entry whose script is
 # gone; otherwise every matching event fails with exit 127.
 prune_orphan_hooks "$TARGET_HOME/.claude/settings.json" "$TARGET_HOME"
+
+install_codebase_memory_mcp
 
 log "Install complete."
 report_optional_plugins

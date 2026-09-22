@@ -24,7 +24,7 @@ run_install() {
   local fake_home="$1"
   shift
 
-  HOME="$fake_home" bash "$INSTALL_SCRIPT" --home "$fake_home" "$@"
+  HOME="$fake_home" bash "$INSTALL_SCRIPT" --home "$fake_home" --skip-external "$@"
 }
 
 assert_registered_hooks_runnable() {

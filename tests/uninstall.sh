@@ -15,7 +15,7 @@ run_install() {
   local fake_home="$1"
   shift
 
-  HOME="$fake_home" bash "$INSTALL_SCRIPT" --home "$fake_home" "$@"
+  HOME="$fake_home" bash "$INSTALL_SCRIPT" --home "$fake_home" --skip-external "$@"
 }
 
 run_uninstall() {

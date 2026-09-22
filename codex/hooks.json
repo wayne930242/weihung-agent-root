@@ -29,6 +29,17 @@
             "type": "command"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "bash -c '\"$HOME/.local/bin/codebase-memory-mcp\" hook-augment'",
+            "statusMessage": "Loading codebase graph context",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "startup|resume|clear|compact"
       }
     ],
     "Stop": [
@@ -40,6 +51,19 @@
             "type": "command"
           }
         ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash -c '\"$HOME/.local/bin/codebase-memory-mcp\" hook-augment'",
+            "statusMessage": "Loading codebase graph context",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
       }
     ]
   }
