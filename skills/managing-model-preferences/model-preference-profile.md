@@ -1,13 +1,13 @@
 # Model Preference Profile
 
-Active strategy: [claude-drive-codex](strategies/claude-drive-codex.md).
+Active strategy: [claude-only](strategies/claude-only.md).
 Activated: 2026-09-23.
-Rationale: The user's agy quota is exhausted, so the documentation, investigation and source data processing tier moves off agy to Codex Luna:
+Rationale: The user's agy quota is exhausted and Codex is nearly out too, so every tier moves onto the Claude subscription:
 - Opus xhigh handles main coordination.
-- Codex Luna medium handles documentation, investigation and source data processing.
-- Sonnet low and high handle simple and standard implementation.
-- Codex Sol low handles UI/UX and routine review.
-- Codex Astra low and high handle complex work with clear and with unclear instructions.
+- Sonnet low handles small, well-specified edits, directed lookup and data organization.
+- Sonnet high handles standard implementation, refactoring, full documents and routine analysis or review.
+- Opus 1M low handles UI/UX review and complex work with clear instructions.
+- Fable 5.1 high handles complex work with unclear instructions.
 
 Before running `boss-say` or selecting a delegated model, read this entrypoint and the complete active strategy. Follow its model and effort selection rules. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatch instructions retain their settings.
 
