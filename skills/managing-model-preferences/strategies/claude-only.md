@@ -1,16 +1,16 @@
 # claude-only
 
-例行派工全部留在 Claude。Opus 5.5 xhigh 主協調，Sonnet low 承接明確的小修改及查找整理，Sonnet high 承接一般實作與文件，Opus 5.5 1M low 承接 UI/UX 審查及指示清楚的複雜工作，Opus 5.5 1M xhigh 承接指示不清的複雜工作。目標是在不動用 Codex 與 Antigravity 額度的前提下，維持與 drive-all 相同的分層品質。
+例行派工全部留在 Claude。Opus 5.5 high 主協調，Sonnet low 承接明確的小修改及查找整理，Sonnet high 承接一般實作與文件，Opus 5.5 1M low 承接 UI/UX 審查及指示清楚的複雜工作，Opus 5.5 1M xhigh 承接指示不清的複雜工作。目標是在不動用 Codex 與 Antigravity 額度的前提下，維持與 drive-all 相同的分層品質。
 
 建立日期：2026-09-07。
 更新日期：2026-09-23。
-偏好依據：使用者回報 Codex 額度即將用盡，要求依 `claude-drive-codex` 的分層改寫為 claude-only，並選擇原 Astra low 的一般實作改由 Sonnet high 承接。2026-09-16 使用者要求補齊到與 drive-all 同等級：複雜層依 `claude-with-agy` 的對映拆成 Opus 1M low（指示清楚）與 Fable 5.1 high（指示不清），複雜度改用環境不可預測性判定，UI/UX 獨立成列並取消動用 Codex 額度的詢問分支。2026-09-23 使用者要求 Fable 5.1 high 改為 Opus 5.5 1M xhigh，Opus 別名固定為 Opus 5.5。
+偏好依據：使用者回報 Codex 額度即將用盡，要求依 `claude-drive-codex` 的分層改寫為 claude-only，並選擇原 Astra low 的一般實作改由 Sonnet high 承接。2026-09-16 使用者要求補齊到與 drive-all 同等級：複雜層依 `claude-with-agy` 的對映拆成 Opus 1M low（指示清楚）與 Fable 5.1 high（指示不清），複雜度改用環境不可預測性判定，UI/UX 獨立成列並取消動用 Codex 額度的詢問分支。2026-09-23 使用者要求 Fable 5.1 high 改為 Opus 5.5 1M xhigh，Opus 別名固定為 Opus 5.5，主協調改為 high。
 
 ## 模型與 effort
 
 | 角色或工作 | agent-kind | agent-model | agent-effort |
 |---|---|---|---|
-| 主協調：需求討論、分流、派工、追蹤及結果整合 | claude | claude-opus-5-5 | xhigh |
+| 主協調：需求討論、分流、派工、追蹤及結果整合 | claude | claude-opus-5-5 | high |
 | 規格清楚、局部且容易驗證的小修改與機械工作 | claude | sonnet | low |
 | 有明確目標的查找、資料整理、狀態檢查 | claude | sonnet | low |
 | 一般實作、重構、多檔修改、文件撰寫、常規分析及審查，以及可預測環境中的大量程式碼工作 | claude | sonnet | high |
@@ -21,7 +21,7 @@
 ## 選擇順序
 
 1. 使用者本次明確指定的模型與 effort 優先；未指定欄位依對應角色或工作補齊。
-2. 主協調者使用 Opus 5.5 xhigh。
+2. 主協調者使用 Opus 5.5 high。
 3. 複雜度以環境不可預測性判定：外部系統、執行期狀態或資料的行為超出工作可預先掌握的範圍，必須邊探測邊調整才能推進時才算複雜。程式碼量、檔案數、跨元件修改與驗證嚴格度本身不構成複雜。
 4. 複雜工作中，指示不清且情境模糊者使用 Opus 5.5 1M xhigh，其餘使用 Opus 5.5 1M low，並依該工作的 reality anchor 核對選擇。
 5. 其餘工作依類別選擇：
@@ -44,6 +44,6 @@
 
 派工明確傳入表中的 `--agent-kind`、`--agent-model` 與 `--agent-effort`，全部使用 `claude` kind。Claude CLI 的 `--model` 接受 `sonnet` 別名與完整模型 ID，Opus 5.5 使用 `claude-opus-5-5`，1M 上下文使用 `'claude-opus-5-5[1m]'`；`--effort` 接受 `low`、`medium`、`high`、`xhigh`、`max`，使用者所稱 x-high 對應實際參數 `xhigh`。
 
-主協調會話啟動時使用 `claude --model claude-opus-5-5 --effort xhigh`；需要沿用既有 1M 上下文設定時使用 `--model 'claude-opus-5-5[1m]'`。此 profile 定義選模規則，主會話模型及 effort 由啟動參數決定；既有會話的權限移交依 `handoff-orchestrator` 辦理，接手模型依本表的複雜工作組合或使用者當次指定。
+主協調會話啟動時使用 `claude --model claude-opus-5-5 --effort high`；需要沿用既有 1M 上下文設定時使用 `--model 'claude-opus-5-5[1m]'`。此 profile 定義選模規則，主會話模型及 effort 由啟動參數決定；既有會話的權限移交依 `handoff-orchestrator` 辦理，接手模型依本表的複雜工作組合或使用者當次指定。
 
 原生 subagent 或諮詢工具依同一組合映射模型與 effort。新派工使用當前策略，既有 dispatch instruction 維持原設定。
