@@ -11,7 +11,7 @@ Rationale: The user configured a multi-harness profile (drive-all): documentatio
 | Work | agent-kind | agent-model | agent-effort |
 |---|---|---|---|
 | Documentation, writing, formatting, document conversion, investigation, research, lookup, information organization, and source data cleaning and processing | agy | gemini-3.8-flash | medium |
-| UI/UX design review, visual audit, and routine inspection | codex | gpt-5.6-sol | low |
+| UI/UX design review, visual audit, and routine inspection | codex | gpt-6-sol | low |
 | Simple localized implementation, small edits, mechanical tasks, and quick fixes | claude | sonnet | low |
 | Standard feature implementation, refactoring, multi-file changes, and large code work in a predictable environment | claude | sonnet | high |
 | Complex work with clear instructions: the environment is unpredictable | codex | gpt-6-astra | low |
@@ -35,7 +35,7 @@ Rationale: The user configured a multi-harness profile (drive-all): documentatio
 Pass the selected row explicitly as `--agent-kind`, `--agent-model`, and `--agent-effort` in the dispatch instruction:
 - `agy`: uses `--model gemini-3.8-flash --effort medium`.
 - `claude`: uses `--model sonnet` with `--effort low` or `high`.
-- `codex`: uses `--model gpt-5.6-sol` with `-c model_reasoning_effort=low`, or `--model gpt-6-astra` with `-c model_reasoning_effort=low` or `high`.
+- `codex`: uses `--model gpt-6-sol` with `-c model_reasoning_effort=low`, or `--model gpt-6-astra` with `-c model_reasoning_effort=low` or `high`.
 
 Main coordination covers requirements, routing, dispatch, tracking, and result integration, and is determined by the active session's launch settings (defaulting to Claude Opus 5.5 1M high when launched from Claude Code, or Antigravity / Codex defaults respectively). Directly handled simple work continues in the current session. Execution and authority handoff follow Straw Boss skills and `i-am-orchestrator`.
 
