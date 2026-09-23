@@ -53,11 +53,6 @@ finding travels, the work does not restart.
 - If the current workspace contains a `CLAUDE.md` and no project-level `AGENTS.md` or `GEMINI.md`, treat `CLAUDE.md` as the authoritative project guide and inspect it before taking project-specific actions.
 - If the current workspace contains `.claude/skills/`, check for relevant project-specific skills in that directory when addressing project workflows.
 
-# Browser Automation
-
-- If the current harness has a browser tool and the task does not require login, use the faster non-auth path first.
-- If the task requires authentication, OAuth, or CAPTCHA, stop and use an authenticated browser path only when the harness supports it and the user expects it.
-
 <!-- codebase-memory-mcp:start -->
 # Codebase Knowledge Graph (codebase-memory-mcp)
 

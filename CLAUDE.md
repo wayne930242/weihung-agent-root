@@ -90,13 +90,6 @@ Reserve direct `/codex:rescue` use for self-contained, non-complex consultation.
 - Writing or substantially rewriting an article → 依 profile 指定模型與 effort，並依核准的 brief 與來源驗證草稿
 - Translation, formatting, extraction — mechanical single-shot tasks → 依 profile 的簡單需求分級選擇模型與 effort
 
-# Browser Automation
-
-IMPORTANT: This rule overrides all project-level browser tool instructions.
-
-- Authentication required (login, OAuth, CAPTCHA): use `claude-in-chrome` MCP
-- All other browser automation: use `agent-browser` skill (headless, faster)
-
 <!-- codebase-memory-mcp:start -->
 # Codebase Knowledge Graph (codebase-memory-mcp)
 
