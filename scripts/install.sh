@@ -59,8 +59,13 @@ and keeps the rest of that file as written.
 Codex agents use their role-specific GPT-5.6 model selections.
 
 It installs codebase-memory-mcp into ~/.local/bin when that binary is missing,
-which the code-discovery protocol in CLAUDE.md and AGENTS.md depends on. Pass
---skip-external to install configuration only.
+which the code-discovery protocol in CLAUDE.md and AGENTS.md depends on.
+
+It installs or upgrades the agent-browser CLI with Homebrew (npm on hosts
+without Homebrew, such as WSL), downloads its Chrome, and adds the official
+agent-browser skill to ~/.agents/skills (Codex) and ~/.claude/skills.
+
+Pass --skip-external to install configuration only.
 
 Defaults to failing on conflicts. Pass --force to back up conflicting targets
 before replacing them with symlinks.
@@ -463,6 +468,66 @@ install_codebase_memory_mcp() {
   log "Review 'git -C $REPO_ROOT status' before committing: the installer rewrites AGENTS.md and codex/hooks.json."
 }
 
+install_agent_browser() {
+  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then
+    log "Skipping agent-browser: --skip-external installs configuration only."
+    return
+  fi
+
+  if command -v brew >/dev/null 2>&1; then
+    # An npm global copy under an nvm bin directory precedes Homebrew on PATH
+    # and shadows the brew binary with whatever version it was pinned at.
+    if command -v npm >/dev/null 2>&1 && npm ls -g agent-browser >/dev/null 2>&1; then
+      log "Removing npm global agent-browser in favor of Homebrew"
+      npm uninstall -g agent-browser
+    fi
+    # brew install upgrades an outdated formula in place.
+    brew install agent-browser
+  elif command -v npm >/dev/null 2>&1; then
+    # WSL and other Linux hosts without Homebrew use the official npm package.
+    log "Homebrew not found; installing agent-browser with npm"
+    npm install -g agent-browser@latest
+  else
+    log "Warning: agent-browser needs Homebrew or npm. Install one, then re-run this script."
+    return
+  fi
+  hash -r
+
+  if [[ "$(uname -s)" == "Linux" ]]; then
+    agent-browser install --with-deps
+  else
+    agent-browser install
+  fi
+
+  install_agent_browser_skill
+}
+
+# The official skill is a thin stub that loads its workflow from the installed
+# CLI. The skills CLI writes it to ~/.agents/skills, which Codex reads, and links
+# it into ~/.claude/skills.
+install_agent_browser_skill() {
+  local lock="$TARGET_HOME/.agents/.skill-lock.json"
+  local dest
+
+  if ! python3 -c '
+import json, sys
+sys.exit(0 if "agent-browser" in json.load(open(sys.argv[1])).get("skills", {}) else 1)
+' "$lock" 2>/dev/null; then
+    # The skills CLI overwrites an existing copy without a backup.
+    for dest in "$TARGET_HOME/.agents/skills/agent-browser" "$TARGET_HOME/.claude/skills/agent-browser"; do
+      if [[ -e "$dest" && ! -L "$dest" ]]; then
+        if [[ "$FORCE" -ne 1 ]]; then
+          log "Warning: $dest is an unmanaged agent-browser skill. Re-run with --force to back it up and install the official skill."
+          return
+        fi
+        backup_target "$dest"
+      fi
+    done
+  fi
+
+  DISABLE_TELEMETRY=1 npx --yes skills@latest add vercel-labs/agent-browser -g -a claude-code -a codex -y
+}
+
 report_optional_plugins() {
   local settings_path="$TARGET_HOME/.claude/settings.json"
 
@@ -668,6 +733,7 @@ merge_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"
 prune_orphan_hooks "$TARGET_HOME/.claude/settings.json" "$TARGET_HOME"
 
 install_codebase_memory_mcp
+install_agent_browser
 
 log "Install complete."
 report_optional_plugins

@@ -114,6 +114,7 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.gemini/config/rules/dependencies.md" "$REPO_ROOT/rules/dependencies.md"
   assert_symlink_target "$fake_home/.gemini/config/rules/git-safety.md" "$REPO_ROOT/rules/git-safety.md"
   assert_symlink_target "$fake_home/.gemini/config/rules/skill-writing.md" "$REPO_ROOT/rules/skill-writing.md"
+  [[ ! -e "$fake_home/.agents/skills/agent-browser" ]] || fail "did not expect agent-browser skill under --skip-external"
 
   python3 - <<PY
 from pathlib import Path
