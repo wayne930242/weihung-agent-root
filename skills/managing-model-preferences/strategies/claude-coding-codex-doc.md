@@ -1,6 +1,7 @@
 # claude-coding-codex-doc
 
 保存日期：2026-09-07。
+更新日期：2026-09-24：使用者停用 Sonnet，程式撰寫、調查與查詢改用 Opus 5.5 medium。
 來源：本次改版前的 CLAUDE.md 模型分工，包含工作區既有的 UI/UX 明確模型選擇修正。
 
 ## 選擇順序
@@ -9,7 +10,7 @@
 
 1. 最複雜的委派工作沿用主代理當前模型。
 2. 文件撰寫委派給 `codex`。
-3. 程式撰寫、調查與查詢使用 Claude `sonnet`。
+3. 程式撰寫、調查與查詢使用 Claude `claude-opus-5-5`，effort `medium`。
 4. 其餘工作沿用主代理當前模型。
 
 直接指示的簡單工作由主代理完成。需要獨立工作環境的任務走 Straw Boss，其餘自足片段可使用 subagent。

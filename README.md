@@ -260,7 +260,7 @@ This is especially important for Codex. `config.toml` often carries machine-loca
 集中管理。Claude 與 Codex 的根提示在 `boss-say` 派工前讀取它，明確傳入模型與 effort。
 每期調整可使用 `managing-model-preferences` skill，例如：「更新本期模型偏好，一般工作改用指定模型」。
 profile、具名策略與 skill 透過現有安裝腳本一起連結到兩個平台。
-目前最佳策略為 `claude-only`：例行派工全部留在 Claude，Opus 5.5 high 協調，Sonnet low 承接明確小修改與查找整理，Sonnet high 一般實作與文件，Opus 5.5 1M low 承接 UI/UX 審查與指示清楚的複雜工作，Opus 5.5 1M xhigh 承接指示不清的複雜工作。
+目前最佳策略為 `claude-only`：例行派工全部留在 Claude，Opus 5.5 high 協調，Opus 5.5 low 承接明確小修改與查找整理，Opus 5.5 medium 一般實作與文件，Opus 5.5 1M low 承接 UI/UX 審查與指示清楚的複雜工作，Opus 5.5 1M xhigh 承接指示不清的複雜工作。
 既有策略保存為 `claude-drive-codex`、`codex-drive-claude`、`codex-first` 與 `claude-coding-codex-doc`。
 每套策略獨立存檔並以 Git 追蹤修訂，切換時更新 profile 的啟用連結。
 查看目前策略、切換策略或新增策略都可使用 `/managing-model-preferences` 指令，例如 `/managing-model-preferences`（查看）或 `/managing-model-preferences claude-drive-codex`（切換）。

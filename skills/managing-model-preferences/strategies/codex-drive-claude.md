@@ -1,33 +1,49 @@
 # codex-drive-claude
 
-由 Codex 主代理協調，Claude 執行輕量、一般與複雜工作；純文件工作使用 Codex low，以降低 token 消耗。
+Codex-coordinated dispatch with the same tiers as claude-drive-codex: a Codex main session for coordination, Codex luna-high for documentation, Codex luna-medium for investigation and source data cleaning and processing, Codex sol-medium for UI/UX, Codex sol-low for routine review, Claude Opus 5.5 for implementation (low for simple, medium for standard and large code work), Codex sol-high for complex work with clear instructions, Codex astra-low for complex work with unclear instructions, and Codex astra-high for academic research and forward-looking hard problems.
 
-建立日期：2026-09-07。
-偏好依據：使用者指定輕量工作給 Claude Sonnet、複雜工作給 Opus 5.5，只有文件使用 low effort 的 Codex，模式名稱為 `codex-drive-claude`。
+Created: 2026-09-07.
+Updated: 2026-09-24.
+Rationale: The user originally assigned light work to Claude Sonnet, complex work to Opus 5.5, and documentation alone to low-effort Codex.
+On 2026-09-24 the user retired Sonnet and aligned this strategy with claude-drive-codex; only main coordination differs, running in a Codex session.
 
-## 選擇順序
+## Models and effort
 
-1. 使用者對本次工作的明確模型與 effort 指定優先；未指定欄位依下表補齊。
-2. 純文件撰寫、改寫、翻譯與排版使用 Codex `gpt-6-astra`，effort `low`，沿用原策略的 Codex 模型。
-3. 其他工作先判斷是否複雜或不容許錯誤，使用 Claude `claude-opus-5-5`、effort `high`；輕量工作使用 Claude `sonnet`、effort `low`；其餘一般工作使用 Claude `sonnet`、effort `medium`。
-4. 同時包含程式變更與文件更新的工作，依程式工作的複雜度選擇 Claude。調查、查詢、審查及設計亦依 Claude 分級處理。
-5. 選定組合不可用時，回報具體限制，由使用者選擇替代組合。
-
-## 分級與派工參數
-
-| 工作條件 | agent-kind | agent-model | agent-effort |
+| Role or work | agent-kind | agent-model | agent-effort |
 |---|---|---|---|
-| 純文件工作 | codex | gpt-6-astra | low |
-| 輕量：目標清楚、局部且容易核對 | claude | sonnet | low |
-| 一般：常規實作、調查、查詢或審查 | claude | sonnet | medium |
-| 複雜或不容許錯誤：跨元件推理、重大設計判斷，或使用者明示不容許錯誤 | claude | claude-opus-5-5 | high |
+| Main coordination: requirements, routing, dispatch, tracking, and result integration | codex | launch settings | launch settings |
+| Documentation, writing, formatting, and document conversion | codex | gpt-6-luna | high |
+| Investigation, research, lookup, information organization, and source data cleaning and processing | codex | gpt-6-luna | medium |
+| UI/UX design review and visual audit | codex | gpt-6-sol | medium |
+| Routine inspection | codex | gpt-6-sol | low |
+| Simple localized implementation, small edits, mechanical tasks, and quick fixes | claude | claude-opus-5-5 | low |
+| Standard feature implementation, refactoring, multi-file changes, and large code work in a predictable environment | claude | claude-opus-5-5 | medium |
+| Complex work with clear instructions: the environment is unpredictable | codex | gpt-6-sol | high |
+| Complex work with unclear instructions: the environment is unpredictable and the instructions or situation are ambiguous | codex | gpt-6-astra | low |
+| Academic research and forward-looking hard problems | codex | gpt-6-astra | high |
 
-純文件工作即使篇幅長或推理較複雜，仍使用 Codex low；使用者明確覆寫時依指定執行。各類工作的驗證依其 reality anchor 完成。
+## Selection order
 
-## 套用
+1. Apply the user's explicit model and effort override first; fill unspecified fields from the matching role or work category.
+2. Main coordination runs in the Codex session with its launch settings.
+3. Treat work as complex when its environment is unpredictable: external systems, runtime state, or data behave in ways the task cannot foresee, so the work must probe and adapt as it proceeds. Code volume, file count, cross-component edits, and verification strictness alone do not establish complexity.
+4. Academic research and forward-looking hard problems use Astra high. For other complex work, choose Astra low when the instructions are unclear and the situation is ambiguous; otherwise choose Sol high. Verify the choice against the task's reality anchor.
+5. Otherwise:
+   - Use `codex` (Luna, high effort) for documentation, technical writing, formatting, and document conversion.
+   - Use `codex` (Luna, medium effort) for investigation, codebase research, information organization, and source data cleaning or processing.
+   - Use `codex` (Sol, medium effort) for UI/UX design reviews and visual inspections.
+   - Use `codex` (Sol, low effort) for routine checks.
+   - Use `claude` (Opus 5.5, low effort) for simple, localized, or mechanical code modifications.
+   - Use `claude` (Opus 5.5, medium effort) for standard feature implementation, refactoring, and large code work in a predictable environment.
+6. For a mixed task, choose the category that owns its main deliverable. Pass evidence and unresolved questions forward when findings establish environmental unpredictability or ambiguity.
+7. If the selected combination is unavailable, report the specific limitation and ask the user to choose an alternative.
 
-派工時明確傳入 `--agent-kind`、`--agent-model` 與 `--agent-effort`，將選定組合帶入 dispatch instruction。Claude CLI 支援 `sonnet` 模型別名與 `claude-opus-5-5` 完整模型 ID及 `low`、`medium`、`high` effort；Codex `gpt-6-astra` 與 `low` 依目前 harness 模型清單套用。
+## Application
 
-Codex 主代理負責分流、協調與結果整合。直接指示的簡單工作沿用主代理直接完成的流程；需要委派的執行工作依本策略選模。執行方式與權限移交依 Straw Boss 技能及 `i-am-orchestrator`。
+Pass the selected row explicitly as `--agent-kind`, `--agent-model`, and `--agent-effort` in the dispatch instruction:
+- `claude`: uses `--model claude-opus-5-5` with `--effort low` or `medium`.
+- `codex`: uses `--model gpt-6-luna` with `-c model_reasoning_effort=high` or `medium`, `--model gpt-6-sol` with `-c model_reasoning_effort=high`, `medium`, or `low`, or `--model gpt-6-astra` with `-c model_reasoning_effort=low` or `high`.
 
-使用原生 subagent 或直接諮詢時，將同一組合映射到工具的模型與 effort 欄位，選用支援該 provider 與組合的工具。新派工套用本策略，既有 dispatch instruction 維持原設定。切換 profile 更新後續選模規則；主會話模型由啟動設定決定。
+The Codex main session handles routing, coordination, and result integration; its model and effort come from its launch settings. Directly handled simple work continues in the current session. Execution and authority handoff follow Straw Boss skills and `i-am-orchestrator`.
+
+For native subagents or consultation tools, map the same model and effort to their corresponding fields and choose a tool that supports the provider and combination. New dispatches use the active strategy. Existing dispatch instructions retain their settings.
