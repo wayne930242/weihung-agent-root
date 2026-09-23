@@ -1,9 +1,16 @@
 ---
 name: managing-model-preferences
-description: Manage model preference strategies for this project. Use when adding or switching strategies, or adjusting model tiers, dispatch priority, and effort levels.
+description: Manage model preference strategies for this project. Use when viewing the active strategy, adding or switching strategies, or adjusting model tiers, dispatch priority, and effort levels.
+argument-hint: "[strategy name | status | preference to add or revise]"
 ---
 
 # Managing Model Preferences
+
+Route the request's argument first:
+
+- None, `status`, or `list`: read [model-preference-profile.md](model-preference-profile.md) and report the active strategy, its activation date, its rationale, and the other strategies in the catalog. This branch is read-only and ends here.
+- A strategy name from the catalog: switch to it through steps 1, 3, and 4, changing only the entrypoint's active link, date, and rationale.
+- A new or adjusted preference: run steps 1 through 4.
 
 1. Read [model-preference-profile.md](model-preference-profile.md) in this directory, then read the currently active strategy and any requested strategy to confirm the selection order and effort tiers. Standard dispatch reads the active strategy from the entrypoint.
    Completion criteria: Explain the difference between currently active rules and requested changes.

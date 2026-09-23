@@ -1,0 +1,17 @@
+# Repository-managed approval policy. Codex writes session approvals to
+# ~/.codex/rules/default.rules, which stays local and untracked.
+
+# Keep high-impact publishing actions explicit.
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "Pushes publish local history to a remote repository."
+)
+prefix_rule(pattern=["uv", "run", "pai", "ansible", "ansible-playbook"], decision="allow")
+prefix_rule(pattern=["uv", "run", "sed"], decision="allow")
+prefix_rule(pattern=["uv", "run", "rg"], decision="allow")
+prefix_rule(pattern=["uv", "run", "git"], decision="allow")
+prefix_rule(pattern=["codex", "mcp"], decision="allow")
+prefix_rule(pattern=["brew", "install"], decision="allow")
+prefix_rule(pattern=["nvim", "--headless"], decision="allow")
+prefix_rule(pattern=["npm", "view"], decision="allow")

@@ -21,14 +21,16 @@ cmd.exe and converted with wslpath.
 
 Managed Windows targets:
   - ~/.codex/AGENTS.md
-  - ~/.codex/skills/<repository skill>/
+  - ~/.agents/skills/<repository skill>/
   - ~/.codex/agents/*.toml
   - ~/.codex/rules/*.rules
   - ~/.codex/hooks.json
   - ~/.codex/hooks/*.sh
 
 Windows-only .system skills, plugins, config.toml, authentication, history, and
-runtime state are not modified. Conflicts fail before installation begins.
+runtime state are not modified. Repository skill copies under the retired
+~/.codex/skills location move to the backup. Conflicts fail before
+installation begins.
 Pass --force to move conflicts into a timestamped backup before replacement.
 
 Options:
@@ -123,7 +125,7 @@ collect_entries() {
   add_entry "$REPO_ROOT/codex/hooks.json" "$codex_home/hooks.json"
 
   while IFS= read -r src; do
-    add_entry "$src" "$codex_home/skills/$(basename "$src")"
+    add_entry "$src" "$WINDOWS_HOME/.agents/skills/$(basename "$src")"
   done < <(find "$REPO_ROOT/skills" -maxdepth 1 -mindepth 1 -type d | sort)
 
   while IFS= read -r src; do
@@ -137,6 +139,22 @@ collect_entries() {
   while IFS= read -r src; do
     add_entry "$src" "$codex_home/hooks/$(basename "$src")"
   done < <(find "$REPO_ROOT/codex/hooks" -maxdepth 1 -type f -name '*.sh' | sort)
+}
+
+# Codex reads personal skills from ~/.agents/skills; copies this installer left
+# in ~/.codex/skills would load a second, stale version of each skill.
+retire_legacy_skill_copies() {
+  local legacy_dir="$WINDOWS_HOME/.codex/skills"
+  local name
+
+  while IFS= read -r name; do
+    if [[ -e "$legacy_dir/$name" || -L "$legacy_dir/$name" ]]; then
+      backup_target "$legacy_dir/$name"
+    fi
+  done < <(
+    find "$REPO_ROOT/skills" -maxdepth 1 -mindepth 1 -type d -exec basename {} \;
+    printf '%s\n' tdd refining-from-complaints leveraging-tasks
+  )
 }
 
 preflight() {
@@ -208,6 +226,7 @@ fi
 
 collect_entries
 preflight
+retire_legacy_skill_copies
 install_entries
 
 log "Codex Desktop install complete: $WINDOWS_HOME/.codex"

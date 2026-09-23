@@ -8,7 +8,6 @@ HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
 SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
 CODEX_CONFIG="$REPO_ROOT/config/codex-managed.toml"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
-CLAUDE_COMMANDS_DIR="$REPO_ROOT/claude/commands"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
 CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
 CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
@@ -118,6 +117,8 @@ cleanup_empty_dirs() {
     "$TARGET_HOME/.codex/rules"
     "$TARGET_HOME/.codex/hooks"
     "$TARGET_HOME/.codex/skills"
+    "$TARGET_HOME/.agents/skills"
+    "$TARGET_HOME/.agents"
     "$TARGET_HOME/.gemini/config/skills"
     "$TARGET_HOME/.gemini/config/rules"
     "$TARGET_HOME/.gemini/config/plugins"
@@ -396,10 +397,6 @@ while IFS= read -r file; do
 done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.claude/commands/$(basename "$file")"
-done < <(find "$CLAUDE_COMMANDS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
-while IFS= read -r file; do
   restore_or_remove "$TARGET_HOME/.claude/hooks/$(basename "$file")"
 done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
@@ -409,7 +406,7 @@ done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r skill_dir; do
   restore_or_remove "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
-  restore_or_remove "$TARGET_HOME/.codex/skills/$(basename "$skill_dir")"
+  restore_or_remove "$TARGET_HOME/.agents/skills/$(basename "$skill_dir")"
   restore_or_remove "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
@@ -431,6 +428,7 @@ done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 prune_managed_links "$TARGET_HOME/.claude/skills"
 prune_managed_links "$TARGET_HOME/.gemini/config/skills"
+prune_managed_links "$TARGET_HOME/.agents/skills"
 prune_managed_links "$TARGET_HOME/.codex/skills"
 prune_managed_links "$TARGET_HOME/.claude/agents"
 prune_managed_links "$TARGET_HOME/.claude/commands"

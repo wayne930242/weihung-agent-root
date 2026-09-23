@@ -2,7 +2,6 @@ name = "article_writer"
 description = "Article writer that turns an approved brief and evidence into complete publication-ready prose."
 model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
-sandbox_mode = "workspace-write"
 developer_instructions = """
 Write or substantially revise only the article content requested by the user.
 Preserve the requested language, voice, audience, structure, and factual boundaries.

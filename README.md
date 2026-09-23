@@ -41,18 +41,20 @@ claude/
   agents/
     security-reviewer.md
     silent-failure-hunter.md
-  commands/
-    model-profile.md
   hooks/
     log-notification.sh
     log-stop.sh
+    sync-repo.sh
+    warn-unpushed.sh
   statusline.sh
 codex/
   agents/
     article-writer.toml
     docs-researcher.toml
+    security-reviewer.toml
+    silent-failure-hunter.toml
   rules/
-    default.rules
+    weihung.rules                  # managed policy; default.rules stays Codex-owned
   hooks/
     log-session-start.sh
     log-stop.sh
@@ -66,17 +68,14 @@ rules/
   markdown.md
   deployment.md
   chinese-writing.md
+  dependencies.md
+  git-safety.md
+  skill-writing.md
 skills/
-  leveraging-tasks/
-    MINI-SDD.md
-    DEBUGGING.md
-  codebase-design/
-  domain-modeling/
-  prototype/
+  managing-model-preferences/      # also the /managing-model-preferences command
   providing-knowledge/
-  investigating/
-  inspecting/
   reflecting-to-root/
+  writing-great-skills/
 evals/
   mini-spec-3r.sh                  # real agent-behavior eval, run on demand
 scripts/
@@ -84,11 +83,11 @@ scripts/
   uninstall.sh
   bootstrap.sh
   bridge-claude-projects.sh
+  install-codex-desktop-wsl.sh
   token-sinks.py                   # where Claude Code token spend goes
 config/
   claude-hooks.json
   claude-settings.json             # Opus 1M main, 300k auto-compact, cross-session, empty commit/PR attribution
-  codex-config.toml                # optional snippet, not auto-merged
   codex-managed.toml               # 300k auto-compact and [tui] status line, merged into ~/.codex/config.toml
   gemini-skills.json               # registers .claude/skills for Antigravity
 ```
@@ -129,11 +128,8 @@ Five rules carry it, and nothing else is enforced:
 No hook enforces any of this. The contract is the text the agent reads, and
 [`evals/mini-spec-3r.sh`](evals/mini-spec-3r.sh) proves a real agent follows it.
 
-Phase transitions live in
-[`skills/leveraging-tasks/SKILL.md`](skills/leveraging-tasks/SKILL.md); the
-artifact contract is progressively disclosed through
-[`MINI-SDD.md`](skills/leveraging-tasks/MINI-SDD.md) and the debug loop through
-[`DEBUGGING.md`](skills/leveraging-tasks/DEBUGGING.md).
+Phase transitions, the artifact contract (`MINI-SDD.md`), and the debug loop
+(`DEBUGGING.md`) live in the aaaav plugin's `aaaav-do` skill.
 
 ## Install
 
@@ -204,6 +200,7 @@ The installer manages only these user-root surfaces.
 
 - `~/.claude/CLAUDE.md`
 - `~/.claude/shared/*.md`
+- `~/.claude/skills/*/`
 - `~/.claude/agents/*.md`
 - `~/.claude/hooks/*.sh`
 - `~/.claude/statusline.sh`
@@ -216,9 +213,9 @@ The installer manages only these user-root surfaces.
 
 - `~/.codex/AGENTS.md`
 - the keys of `config/codex-managed.toml` (top-level, `[tui]` status line, and explicitly disabled plugins) inside `~/.codex/config.toml`; every other line stays as written
-- `~/.codex/skills/*/`
+- `~/.agents/skills/*/` (Codex's personal skill location)
 - `~/.codex/agents/*.toml`
-- `~/.codex/rules/*.rules`
+- `~/.codex/rules/weihung.rules`; Codex keeps writing session approvals to its own `~/.codex/rules/default.rules`
 - `~/.codex/hooks/*.sh`
 - `~/.codex/hooks.json`
 
@@ -266,7 +263,7 @@ profile、具名策略與 skill 透過現有安裝腳本一起連結到兩個平
 目前最佳策略為 `claude-only`：例行派工全部留在 Claude，Opus 5.5 high 協調，Sonnet low 承接明確小修改與查找整理，Sonnet high 一般實作與文件，Opus 5.5 1M low 承接 UI/UX 審查與指示清楚的複雜工作，Opus 5.5 1M xhigh 承接指示不清的複雜工作。
 既有策略保存為 `claude-drive-codex`、`codex-drive-claude`、`codex-first` 與 `claude-coding-codex-doc`。
 每套策略獨立存檔並以 Git 追蹤修訂，切換時更新 profile 的啟用連結。
-查看目前策略、切換策略或新增策略都可使用 `/model-profile` 指令，例如 `/model-profile`（查看）或 `/model-profile claude-drive-codex`（切換）。
+查看目前策略、切換策略或新增策略都可使用 `/managing-model-preferences` 指令，例如 `/managing-model-preferences`（查看）或 `/managing-model-preferences claude-drive-codex`（切換）。
 
 簡單工作可沿用直接完成的流程；主代理權限移交由 Straw Boss 的
 `handoff-orchestrator` 處理。主會話的 Opus 1M 設定及原生專用角色 TOML
@@ -328,15 +325,20 @@ Codex now has first-class support for:
 This repo uses that split directly:
 
 - `AGENTS.md` stays focused on general working agreements
-- `codex/rules/default.rules` handles approval policy
+- `codex/rules/weihung.rules` handles approval policy
 - `codex/hooks.json` and `codex/hooks/*.sh` handle automation
 - `codex/agents/*.toml` handle specialized delegation
 
-Codex hooks are still better treated as optional infrastructure, not mandatory base config. The installer places the files, but does **not** auto-enable the experimental hook feature in `~/.codex/config.toml`.
+Hooks and multi-agent tools are stable and on by default, so no feature flag is needed.
+Agent role files apply only `developer_instructions`, model, reasoning, and a few
+related overrides; sandbox and MCP settings always come from the parent session.
 
-If you want to opt in manually, copy the relevant snippet from:
+### Migration
 
-- `config/codex-config.toml`
+Earlier releases linked skills into `~/.codex/skills`, installed Claude commands into
+`~/.claude/commands`, and linked `~/.codex/rules/default.rules` to this repo.
+The installer prunes those repository links, and moves directory copies of repository
+skills found in `~/.agents/skills` to the backup before linking the current versions.
 
 ## Experimental Jev Context Pruning
 

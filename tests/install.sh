@@ -77,13 +77,13 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.claude/shared/context-management.md" "$REPO_ROOT/shared/context-management.md"
   assert_symlink_target "$fake_home/.claude/hooks/log-notification.sh" "$REPO_ROOT/claude/hooks/log-notification.sh"
   assert_symlink_target "$fake_home/.claude/hooks/log-stop.sh" "$REPO_ROOT/claude/hooks/log-stop.sh"
-  assert_symlink_target "$fake_home/.claude/commands/model-profile.md" "$REPO_ROOT/claude/commands/model-profile.md"
+  [[ ! -e "$fake_home/.claude/commands" ]] || fail "did not expect a Claude commands directory"
   assert_symlink_target "$fake_home/.claude/agents/security-reviewer.md" "$REPO_ROOT/claude/agents/security-reviewer.md"
   assert_symlink_target "$fake_home/.claude/agents/silent-failure-hunter.md" "$REPO_ROOT/claude/agents/silent-failure-hunter.md"
   for skill_name in managing-model-preferences providing-knowledge reflecting-to-root writing-great-skills; do
     for skill_path in \
       "$fake_home/.claude/skills/$skill_name" \
-      "$fake_home/.codex/skills/$skill_name" \
+      "$fake_home/.agents/skills/$skill_name" \
       "$fake_home/.gemini/config/skills/$skill_name"; do
       assert_symlink_target "$skill_path" "$REPO_ROOT/skills/$skill_name"
     done
@@ -93,13 +93,16 @@ fresh_install_creates_expected_symlinks() {
     cmp "$fake_home/.claude/skills/managing-model-preferences/strategies/$(basename "$strategy_path")" "$strategy_path"
   done
   [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
-  [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "did not expect retired tdd skill in Codex root"
+  [[ ! -e "$fake_home/.codex/skills" ]] || fail "did not expect the retired Codex skills directory"
   [[ ! -e "$fake_home/.gemini/config/skills/tdd" && ! -L "$fake_home/.gemini/config/skills/tdd" ]] || fail "did not expect retired tdd skill in Gemini config"
   [[ ! -e "$fake_home/.gemini/config/skills/refining-from-complaints" && ! -L "$fake_home/.gemini/config/skills/refining-from-complaints" ]] || fail "did not expect retired complaint skill in Gemini config"
   assert_symlink_target "$fake_home/.codex/agents/docs-researcher.toml" "$REPO_ROOT/codex/agents/docs-researcher.toml"
   assert_symlink_target "$fake_home/.codex/agents/article-writer.toml" "$REPO_ROOT/codex/agents/article-writer.toml"
+  assert_symlink_target "$fake_home/.codex/agents/security-reviewer.toml" "$REPO_ROOT/codex/agents/security-reviewer.toml"
+  assert_symlink_target "$fake_home/.codex/agents/silent-failure-hunter.toml" "$REPO_ROOT/codex/agents/silent-failure-hunter.toml"
   [[ ! -e "$fake_home/.codex/agents/safety-reviewer.toml" && ! -L "$fake_home/.codex/agents/safety-reviewer.toml" ]] || fail "did not expect retired safety reviewer"
-  assert_symlink_target "$fake_home/.codex/rules/default.rules" "$REPO_ROOT/codex/rules/default.rules"
+  assert_symlink_target "$fake_home/.codex/rules/weihung.rules" "$REPO_ROOT/codex/rules/weihung.rules"
+  [[ ! -e "$fake_home/.codex/rules/default.rules" ]] || fail "expected default.rules to stay Codex-owned"
   assert_symlink_target "$fake_home/.codex/hooks/log-session-start.sh" "$REPO_ROOT/codex/hooks/log-session-start.sh"
   assert_symlink_target "$fake_home/.codex/hooks/log-stop.sh" "$REPO_ROOT/codex/hooks/log-stop.sh"
   assert_symlink_target "$fake_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
@@ -540,11 +543,42 @@ install_prunes_obsolete_and_broken_managed_skills() {
   [[ ! -e "$fake_home/.codex/skills/streamlining-skills" && ! -L "$fake_home/.codex/skills/streamlining-skills" ]] || fail "expected obsolete Codex streamlining-skills to be pruned"
 
   assert_symlink_target "$fake_home/.claude/skills/my-custom-skill" "$user_skill"
-  assert_symlink_target "$fake_home/.codex/skills/reflecting-to-root" "$REPO_ROOT/skills/reflecting-to-root"
+  [[ ! -e "$fake_home/.codex/skills/reflecting-to-root" && ! -L "$fake_home/.codex/skills/reflecting-to-root" ]] || fail "expected broken Codex reflecting-to-root to be pruned"
+  assert_symlink_target "$fake_home/.agents/skills/reflecting-to-root" "$REPO_ROOT/skills/reflecting-to-root"
 
   rm -rf "$temp_dir"
 }
 
+install_migrates_retired_codex_and_command_targets() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local fake_home="$temp_dir/home"
+  local user_skill="$temp_dir/user-skill"
+  mkdir -p "$fake_home/.codex/skills" "$fake_home/.codex/rules" "$fake_home/.claude/commands" "$user_skill"
+  mkdir -p "$fake_home/.agents/skills/providing-knowledge" "$fake_home/.agents/skills/leveraging-tasks" "$fake_home/.agents/skills/foreign-skill"
+  printf 'stale\n' > "$fake_home/.agents/skills/providing-knowledge/SKILL.md"
+  ln -s "$REPO_ROOT/skills/providing-knowledge" "$fake_home/.codex/skills/providing-knowledge"
+  ln -s "$user_skill" "$fake_home/.codex/skills/user-skill"
+  ln -s "$REPO_ROOT/claude/commands/model-profile.md" "$fake_home/.claude/commands/model-profile.md"
+  ln -s "$REPO_ROOT/codex/rules/default.rules" "$fake_home/.codex/rules/default.rules"
+
+  run_install "$fake_home"
+
+  [[ ! -L "$fake_home/.codex/skills/providing-knowledge" ]] || fail "expected the retired Codex skill link to be pruned"
+  assert_symlink_target "$fake_home/.codex/skills/user-skill" "$user_skill"
+  [[ ! -e "$fake_home/.claude/commands" ]] || fail "expected the emptied Claude commands directory to be removed"
+  [[ ! -L "$fake_home/.codex/rules/default.rules" ]] || fail "expected the former managed default.rules link to be pruned"
+  assert_symlink_target "$fake_home/.agents/skills/providing-knowledge" "$REPO_ROOT/skills/providing-knowledge"
+  [[ ! -e "$fake_home/.agents/skills/leveraging-tasks" ]] || fail "expected the retired leveraging-tasks copy to move to the backup"
+  [[ -d "$fake_home/.agents/skills/foreign-skill" ]] || fail "expected an unrelated skill copy to remain"
+  local backup_dir
+  backup_dir="$(find "$fake_home/.local/state/weihung-user-claude/backups" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+  [[ "$(cat "$backup_dir/.agents/skills/providing-knowledge/SKILL.md")" == "stale" ]] || fail "expected the stale skill copy in the backup"
+  [[ -d "$backup_dir/.agents/skills/leveraging-tasks" ]] || fail "expected the retired skill copy in the backup"
+
+  rm -rf "$temp_dir"
+}
 
 aborted_install_never_registers_missing_hooks() {
   local temp_dir
@@ -721,6 +755,7 @@ run_all_tests() {
   install_removes_only_repository_managed_retired_complaint_skills
   install_preserves_user_owned_tdd_skills
   install_prunes_obsolete_and_broken_managed_skills
+  install_migrates_retired_codex_and_command_targets
 }
 
 if [[ "${1:-}" == "" ]]; then

@@ -79,15 +79,15 @@ EOF
   [[ "$(cat "$fake_home/.claude/CLAUDE.md")" == "old claude" ]] || fail "expected CLAUDE.md to be restored from backup"
   [[ "$(cat "$fake_home/.codex/AGENTS.md")" == "old codex agents" ]] || fail "expected AGENTS.md to be restored from backup"
   [[ "$(cat "$fake_home/.gemini/config/AGENTS.md")" == "old gemini agents" ]] || fail "expected gemini AGENTS.md to be restored from backup"
-  [[ "$(cat "$fake_home/.codex/rules/default.rules")" == "old rule" ]] || fail "expected default.rules to be restored from backup"
+  [[ "$(cat "$fake_home/.codex/rules/default.rules")" == "old rule" ]] || fail "expected Codex-owned default.rules to stay untouched"
   [[ ! -e "$fake_home/.gemini/config/GEMINI.md" && ! -L "$fake_home/.gemini/config/GEMINI.md" ]] || fail "expected managed GEMINI.md to be removed"
   [[ ! -e "$fake_home/.gemini/config/skills.json" && ! -L "$fake_home/.gemini/config/skills.json" ]] || fail "expected managed skills.json to be removed"
   [[ ! -e "$fake_home/.claude/shared/communication.md" ]] || fail "expected managed shared file to be removed"
   [[ ! -e "$fake_home/.claude/commands/model-profile.md" && ! -L "$fake_home/.claude/commands/model-profile.md" ]] || fail "expected managed Claude command to be removed"
-  [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected managed codex skill to be removed"
+  [[ ! -e "$fake_home/.agents/skills/providing-knowledge" && ! -L "$fake_home/.agents/skills/providing-knowledge" ]] || fail "expected managed codex skill to be removed"
   [[ ! -e "$fake_home/.gemini/config/skills/leveraging-tasks" ]] || fail "expected managed gemini skill to be removed"
   [[ ! -e "$fake_home/.gemini/config/rules/clean-architecture.md" ]] || fail "expected managed gemini rule to be removed"
-  for provider in claude codex; do
+  for provider in claude agents; do
     [[ ! -e "$fake_home/.$provider/skills/managing-model-preferences" && ! -L "$fake_home/.$provider/skills/managing-model-preferences" ]] || fail "expected model preference skill and profile to be removed"
   done
   [[ ! -e "$fake_home/.gemini/config/skills/managing-model-preferences" && ! -L "$fake_home/.gemini/config/skills/managing-model-preferences" ]] || fail "expected gemini model preference skill and profile to be removed"
@@ -197,11 +197,11 @@ fresh_install_uninstall_removes_managed_files() {
   [[ ! -e "$fake_home/.gemini/config/AGENTS.md" ]] || fail "expected gemini AGENTS.md to be removed when no backup exists"
   [[ ! -e "$fake_home/.gemini/config/GEMINI.md" ]] || fail "expected gemini GEMINI.md to be removed when no backup exists"
   [[ ! -e "$fake_home/.gemini/config/skills.json" ]] || fail "expected gemini skills.json to be removed when no backup exists"
-  [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected codex skill to be removed when no backup exists"
+  [[ ! -e "$fake_home/.agents/skills/providing-knowledge" && ! -L "$fake_home/.agents/skills/providing-knowledge" ]] || fail "expected codex skill to be removed when no backup exists"
   [[ ! -e "$fake_home/.claude/skills/leveraging-tasks" ]] || fail "expected claude skill to be removed when no backup exists"
   [[ ! -e "$fake_home/.gemini/config/skills/leveraging-tasks" ]] || fail "expected gemini skill to be removed when no backup exists"
   [[ ! -e "$fake_home/.gemini/config/rules/clean-architecture.md" ]] || fail "expected gemini rule to be removed when no backup exists"
-  [[ ! -e "$fake_home/.codex/rules/default.rules" ]] || fail "expected default.rules to be removed when no backup exists"
+  [[ ! -e "$fake_home/.codex/rules/weihung.rules" ]] || fail "expected weihung.rules to be removed when no backup exists"
 
   python3 - <<PY
 import json

@@ -32,14 +32,20 @@ fresh_install_copies_managed_surface_and_preserves_unrelated_content() {
 
   mkdir -p "$windows_home/.codex/skills/.system"
   printf 'keep\n' > "$windows_home/.codex/skills/.system/keep.txt"
+  mkdir -p "$windows_home/.codex/skills/managing-model-preferences"
+  printf 'stale\n' > "$windows_home/.codex/skills/managing-model-preferences/SKILL.md"
 
   run_install "$windows_home"
 
   assert_same_file "$windows_home/.codex/AGENTS.md" "$REPO_ROOT/AGENTS.md"
   assert_same_file "$windows_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
   assert_same_file "$windows_home/.codex/agents/docs-researcher.toml" "$REPO_ROOT/codex/agents/docs-researcher.toml"
-  assert_same_file "$windows_home/.codex/rules/default.rules" "$REPO_ROOT/codex/rules/default.rules"
-  assert_same_file "$windows_home/.codex/skills/managing-model-preferences/SKILL.md" "$REPO_ROOT/skills/managing-model-preferences/SKILL.md"
+  assert_same_file "$windows_home/.codex/rules/weihung.rules" "$REPO_ROOT/codex/rules/weihung.rules"
+  assert_same_file "$windows_home/.agents/skills/managing-model-preferences/SKILL.md" "$REPO_ROOT/skills/managing-model-preferences/SKILL.md"
+  [[ ! -e "$windows_home/.codex/skills/managing-model-preferences" ]] || fail "expected the legacy Codex skill copy to move to the backup"
+  local legacy_backup
+  legacy_backup="$(find "$windows_home/AppData/Local/weihung-user-claude/backups" -type f -path '*/.codex/skills/managing-model-preferences/SKILL.md' | head -n 1)"
+  [[ "$(cat "$legacy_backup")" == "stale" ]] || fail "expected the legacy skill copy in the backup"
   [[ "$(cat "$windows_home/.codex/skills/.system/keep.txt")" == "keep" ]] || fail "expected unrelated .system skill to remain"
   [[ ! -e "$windows_home/.codex/config.toml" ]] || fail "did not expect config.toml to be installed"
 

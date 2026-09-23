@@ -8,7 +8,6 @@ HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
 SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
 CODEX_CONFIG="$REPO_ROOT/config/codex-managed.toml"
 CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
-CLAUDE_COMMANDS_DIR="$REPO_ROOT/claude/commands"
 CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
 CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
 CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
@@ -33,11 +32,10 @@ Installs this repository as the source of truth for:
   - ~/.claude/shared/*.md
   - ~/.claude/skills/*/
   - ~/.claude/agents/*.md
-  - ~/.claude/commands/*.md
   - ~/.claude/hooks/*.sh
   - ~/.claude/statusline.sh
   - ~/.codex/AGENTS.md
-  - ~/.codex/skills/*/
+  - ~/.agents/skills/*/ (Codex personal skills)
   - ~/.codex/agents/*.toml
   - ~/.codex/rules/*.rules
   - ~/.codex/hooks.json
@@ -160,12 +158,27 @@ prune_managed_entries() {
     link_target="$(readlink "$link" || true)"
 
     if [[ "$link_target" == "$REPO_ROOT"/* ]]; then
-      if ! is_in_list "$link_name" "${allowed[@]}" || [[ ! -e "$link" ]]; then
+      if ! is_in_list "$link_name" ${allowed[@]+"${allowed[@]}"} || [[ ! -e "$link" ]]; then
         rm "$link"
         log "Pruned retired managed link $link"
       fi
     fi
   done < <(find "$target_dir" -maxdepth 1 -mindepth 1 -type l | sort)
+}
+
+# Codex reads personal skills from ~/.agents/skills. Directory copies left there
+# under a repository skill name are stale snapshots, so they move to the backup
+# before the repository links take their place.
+retire_skill_copies() {
+  local skills_dir="$1"
+  shift
+  local name
+
+  for name in "$@"; do
+    if [[ -e "$skills_dir/$name" && ! -L "$skills_dir/$name" ]]; then
+      backup_target "$skills_dir/$name"
+    fi
+  done
 }
 
 merge_claude_settings() {
@@ -580,8 +593,7 @@ done
 
 mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
 mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills"
-mkdir -p "$TARGET_HOME/.claude/commands"
-mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.codex/skills"
+mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.agents/skills"
 mkdir -p "$TARGET_HOME/.gemini/config/skills" "$TARGET_HOME/.gemini/config/rules"
 
 remove_retired_repo_link \
@@ -592,25 +604,16 @@ remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
 remove_retired_repo_link \
-  "$TARGET_HOME/.codex/skills/tdd" \
-  "$REPO_ROOT/skills/tdd"
-remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
 remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
 remove_retired_repo_link \
-  "$TARGET_HOME/.codex/skills/refining-from-complaints" \
-  "$REPO_ROOT/skills/refining-from-complaints"
-remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
 remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/leveraging-tasks" \
-  "$REPO_ROOT/skills/leveraging-tasks"
-remove_retired_repo_link \
-  "$TARGET_HOME/.codex/skills/leveraging-tasks" \
   "$REPO_ROOT/skills/leveraging-tasks"
 remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/leveraging-tasks" \
@@ -625,11 +628,6 @@ claude_agents=()
 while IFS= read -r agent_file; do
   claude_agents+=("$(basename "$agent_file")")
 done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
-claude_commands=()
-while IFS= read -r command_file; do
-  claude_commands+=("$(basename "$command_file")")
-done < <(find "$CLAUDE_COMMANDS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 claude_hooks=()
 while IFS= read -r hook_file; do
@@ -663,9 +661,13 @@ done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 prune_managed_entries "$TARGET_HOME/.claude/skills" "${root_skills[@]}"
 prune_managed_entries "$TARGET_HOME/.gemini/config/skills" "${root_skills[@]}"
-prune_managed_entries "$TARGET_HOME/.codex/skills" "${root_skills[@]}"
+prune_managed_entries "$TARGET_HOME/.agents/skills" "${root_skills[@]}"
+# Retired install targets: every repository link there is pruned.
+prune_managed_entries "$TARGET_HOME/.codex/skills"
+prune_managed_entries "$TARGET_HOME/.claude/commands"
+rmdir "$TARGET_HOME/.claude/commands" 2>/dev/null || true
+retire_skill_copies "$TARGET_HOME/.agents/skills" "${root_skills[@]}" tdd refining-from-complaints leveraging-tasks
 prune_managed_entries "$TARGET_HOME/.claude/agents" "${claude_agents[@]}"
-prune_managed_entries "$TARGET_HOME/.claude/commands" "${claude_commands[@]}"
 prune_managed_entries "$TARGET_HOME/.claude/hooks" "${claude_hooks[@]}"
 prune_managed_entries "$TARGET_HOME/.claude/shared" "${shared_docs[@]}"
 prune_managed_entries "$TARGET_HOME/.codex/agents" "${codex_agents[@]}"
@@ -685,10 +687,6 @@ for agent_name in "${claude_agents[@]}"; do
   install_link "$CLAUDE_AGENTS_DIR/$agent_name" "$TARGET_HOME/.claude/agents/$agent_name"
 done
 
-for command_name in "${claude_commands[@]}"; do
-  install_link "$CLAUDE_COMMANDS_DIR/$command_name" "$TARGET_HOME/.claude/commands/$command_name"
-done
-
 for hook_name in "${claude_hooks[@]}"; do
   install_link "$CLAUDE_HOOKS_DIR/$hook_name" "$TARGET_HOME/.claude/hooks/$hook_name"
 done
@@ -699,7 +697,7 @@ done
 
 for skill_name in "${root_skills[@]}"; do
   install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.claude/skills/$skill_name"
-  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.codex/skills/$skill_name"
+  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.agents/skills/$skill_name"
   install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.gemini/config/skills/$skill_name"
 done
 
