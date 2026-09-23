@@ -50,7 +50,7 @@ Installs this repository as the source of truth for:
 
 It also merges two fragments into ~/.claude/settings.json:
   - config/claude-hooks.json    hooks and statusLine
-  - config/claude-settings.json Opus 5.5 1M high main, 300k auto-compact, and cross-session settings
+  - config/claude-settings.json Opus 5.5 1M high main, 300k auto-compact, cross-session, and empty commit/PR attribution settings
 
 It sets only the keys of config/codex-managed.toml (300k auto-compact, the
 [tui] status line, and the explicitly disabled plugins) in ~/.codex/config.toml

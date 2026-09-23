@@ -243,6 +243,7 @@ assert "advisorModel" not in settings, settings
 assert settings["env"]["CLAUDE_CODE_ENABLE_FUNCTION_HOOKS"] == "1", settings
 assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
 assert settings["crossSessionInbound"] == "accept", settings
+assert settings["attribution"] == {"commit": "", "pr": ""}, settings
 assert "Stop" in settings["hooks"], settings
 assert "statusLine" in settings, settings
 PY

@@ -87,7 +87,7 @@ scripts/
   token-sinks.py                   # where Claude Code token spend goes
 config/
   claude-hooks.json
-  claude-settings.json             # Opus 1M main, 300k auto-compact, cross-session settings
+  claude-settings.json             # Opus 1M main, 300k auto-compact, cross-session, empty commit/PR attribution
   codex-config.toml                # optional snippet, not auto-merged
   codex-managed.toml               # 300k auto-compact and [tui] status line, merged into ~/.codex/config.toml
   gemini-skills.json               # registers .claude/skills for Antigravity
@@ -208,7 +208,7 @@ The installer manages only these user-root surfaces.
 - `~/.claude/hooks/*.sh`
 - `~/.claude/statusline.sh`
 - merge into `~/.claude/settings.json` using `config/claude-hooks.json` (hooks + `statusLine` block)
-- merge into `~/.claude/settings.json` using `config/claude-settings.json` (model, auto-compact window, `env`, cross-session settings)
+- merge into `~/.claude/settings.json` using `config/claude-settings.json` (model, auto-compact window, `env`, cross-session settings, empty commit/PR attribution)
 - drop any `~/.claude/hooks/*` registration whose script no longer exists, so a hook this repo
   used to manage cannot survive its own removal and fail every event with exit 127
 
