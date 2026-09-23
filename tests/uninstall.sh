@@ -100,7 +100,7 @@ import json
 from pathlib import Path
 settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
 assert settings["customSetting"] is True, settings
-assert settings["effortLevel"] == "xhigh", settings
+assert "effortLevel" not in settings, settings
 assert "hooks" not in settings, settings
 assert "model" not in settings, settings
 assert "advisorModel" not in settings, settings
