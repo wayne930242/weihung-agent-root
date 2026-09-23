@@ -141,6 +141,8 @@ claude_model_routing_is_canonical() {
   assert_file_contains "$prompt" "Use a subagent for a self-contained fragment"
   assert_file_contains "$prompt" 'skills/managing-model-preferences/model-preference-profile.md'
   assert_file_contains "$REPO_ROOT/AGENTS.md" 'skills/managing-model-preferences/model-preference-profile.md'
+  assert_file_contains "$REPO_ROOT/AGENTS.md" '~/.agents/skills/managing-model-preferences/model-preference-profile.md'
+  assert_file_lacks "$REPO_ROOT/AGENTS.md" '~/.codex/skills/managing-model-preferences'
   assert_file_lacks "$prompt" 'claude-fable-5-1'
   assert_file_lacks "$prompt" 'gpt-5.6-'
   assert_file_lacks "$prompt" 'select `sonnet`'
