@@ -580,6 +580,35 @@ install_migrates_retired_codex_and_command_targets() {
   rm -rf "$temp_dir"
 }
 
+install_keeps_one_codebase_memory_skill_for_codex() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  local both_home="$temp_dir/both"
+  mkdir -p "$both_home/.codex/skills/codebase-memory" "$both_home/.agents/skills/codebase-memory"
+  printf 'legacy\n' > "$both_home/.codex/skills/codebase-memory/SKILL.md"
+  printf 'current\n' > "$both_home/.agents/skills/codebase-memory/SKILL.md"
+
+  run_install "$both_home"
+
+  [[ ! -e "$both_home/.codex/skills/codebase-memory" ]] || fail "expected the ~/.codex/skills copy to leave"
+  [[ "$(cat "$both_home/.agents/skills/codebase-memory/SKILL.md")" == "current" ]] || fail "expected the ~/.agents/skills copy to stay"
+  local backup_dir
+  backup_dir="$(find "$both_home/.local/state/weihung-user-claude/backups" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+  [[ "$(cat "$backup_dir/.codex/skills/codebase-memory/SKILL.md")" == "legacy" ]] || fail "expected the duplicate in the backup"
+
+  local legacy_home="$temp_dir/legacy-only"
+  mkdir -p "$legacy_home/.codex/skills/codebase-memory"
+  printf 'legacy\n' > "$legacy_home/.codex/skills/codebase-memory/SKILL.md"
+
+  run_install "$legacy_home"
+
+  [[ ! -e "$legacy_home/.codex/skills/codebase-memory" ]] || fail "expected the only copy to leave ~/.codex/skills"
+  [[ "$(cat "$legacy_home/.agents/skills/codebase-memory/SKILL.md")" == "legacy" ]] || fail "expected the only copy to move to ~/.agents/skills"
+
+  rm -rf "$temp_dir"
+}
+
 aborted_install_never_registers_missing_hooks() {
   local temp_dir
   temp_dir="$(mktemp -d)"
@@ -756,6 +785,7 @@ run_all_tests() {
   install_preserves_user_owned_tdd_skills
   install_prunes_obsolete_and_broken_managed_skills
   install_migrates_retired_codex_and_command_targets
+  install_keeps_one_codebase_memory_skill_for_codex
 }
 
 if [[ "${1:-}" == "" ]]; then

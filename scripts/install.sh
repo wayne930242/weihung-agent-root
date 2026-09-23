@@ -181,6 +181,24 @@ retire_skill_copies() {
   done
 }
 
+# codebase-memory-mcp writes its skill to both ~/.codex/skills and
+# ~/.agents/skills, and Codex loads each copy. The ~/.agents/skills copy stays;
+# the ~/.codex/skills one moves there when it is the only copy, or to the backup.
+consolidate_codex_skill() {
+  local name="$1"
+  local legacy="$TARGET_HOME/.codex/skills/$name"
+  local current="$TARGET_HOME/.agents/skills/$name"
+
+  [[ -e "$legacy" && ! -L "$legacy" ]] || return 0
+
+  if [[ -e "$current" ]]; then
+    backup_target "$legacy"
+  else
+    mv "$legacy" "$current"
+    log "Moved $legacy -> $current"
+  fi
+}
+
 merge_claude_settings() {
   local settings_path="$1"
   local fragment_path="$2"
@@ -731,6 +749,7 @@ merge_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"
 prune_orphan_hooks "$TARGET_HOME/.claude/settings.json" "$TARGET_HOME"
 
 install_codebase_memory_mcp
+consolidate_codex_skill codebase-memory
 install_agent_browser
 
 log "Install complete."
