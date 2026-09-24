@@ -610,7 +610,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
-mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills"
+mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills" "$TARGET_HOME/.claude/rules"
 mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.agents/skills"
 mkdir -p "$TARGET_HOME/.gemini/config/skills" "$TARGET_HOME/.gemini/config/rules"
 
@@ -667,9 +667,9 @@ while IFS= read -r rule_file; do
   codex_rules+=("$(basename "$rule_file")")
 done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
 
-gemini_rules=()
+rule_docs=()
 while IFS= read -r rule_file; do
-  gemini_rules+=("$(basename "$rule_file")")
+  rule_docs+=("$(basename "$rule_file")")
 done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 codex_hooks=()
@@ -690,7 +690,8 @@ prune_managed_entries "$TARGET_HOME/.claude/hooks" "${claude_hooks[@]}"
 prune_managed_entries "$TARGET_HOME/.claude/shared" "${shared_docs[@]}"
 prune_managed_entries "$TARGET_HOME/.codex/agents" "${codex_agents[@]}"
 prune_managed_entries "$TARGET_HOME/.codex/rules" "${codex_rules[@]}"
-prune_managed_entries "$TARGET_HOME/.gemini/config/rules" "${gemini_rules[@]}"
+prune_managed_entries "$TARGET_HOME/.claude/rules" "${rule_docs[@]}"
+prune_managed_entries "$TARGET_HOME/.gemini/config/rules" "${rule_docs[@]}"
 prune_managed_entries "$TARGET_HOME/.codex/hooks" "${codex_hooks[@]}"
 
 install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
@@ -727,7 +728,8 @@ for rule_name in "${codex_rules[@]}"; do
   install_link "$CODEX_RULES_DIR/$rule_name" "$TARGET_HOME/.codex/rules/$rule_name"
 done
 
-for rule_name in "${gemini_rules[@]}"; do
+for rule_name in "${rule_docs[@]}"; do
+  install_link "$RULES_DIR/$rule_name" "$TARGET_HOME/.claude/rules/$rule_name"
   install_link "$RULES_DIR/$rule_name" "$TARGET_HOME/.gemini/config/rules/$rule_name"
 done
 

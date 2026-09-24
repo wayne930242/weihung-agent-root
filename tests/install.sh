@@ -106,6 +106,9 @@ fresh_install_creates_expected_symlinks() {
   assert_symlink_target "$fake_home/.codex/hooks/log-session-start.sh" "$REPO_ROOT/codex/hooks/log-session-start.sh"
   assert_symlink_target "$fake_home/.codex/hooks/log-stop.sh" "$REPO_ROOT/codex/hooks/log-stop.sh"
   assert_symlink_target "$fake_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
+  for rule_file in "$REPO_ROOT"/rules/*.md; do
+    assert_symlink_target "$fake_home/.claude/rules/$(basename "$rule_file")" "$rule_file"
+  done
   assert_symlink_target "$fake_home/.gemini/config/rules/clean-architecture.md" "$REPO_ROOT/rules/clean-architecture.md"
   assert_symlink_target "$fake_home/.gemini/config/rules/go.md" "$REPO_ROOT/rules/go.md"
   assert_symlink_target "$fake_home/.gemini/config/rules/typescript.md" "$REPO_ROOT/rules/typescript.md"

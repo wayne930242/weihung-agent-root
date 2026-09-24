@@ -112,6 +112,7 @@ cleanup_empty_dirs() {
     "$TARGET_HOME/.claude/hooks"
     "$TARGET_HOME/.claude/shared"
     "$TARGET_HOME/.claude/skills"
+    "$TARGET_HOME/.claude/rules"
     "$TARGET_HOME/.claude/plugins"
     "$TARGET_HOME/.codex/agents"
     "$TARGET_HOME/.codex/rules"
@@ -419,6 +420,7 @@ while IFS= read -r file; do
 done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
 
 while IFS= read -r file; do
+  restore_or_remove "$TARGET_HOME/.claude/rules/$(basename "$file")"
   restore_or_remove "$TARGET_HOME/.gemini/config/rules/$(basename "$file")"
 done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
@@ -436,6 +438,7 @@ prune_managed_links "$TARGET_HOME/.claude/hooks"
 prune_managed_links "$TARGET_HOME/.claude/shared"
 prune_managed_links "$TARGET_HOME/.codex/agents"
 prune_managed_links "$TARGET_HOME/.codex/rules"
+prune_managed_links "$TARGET_HOME/.claude/rules"
 prune_managed_links "$TARGET_HOME/.gemini/config/rules"
 prune_managed_links "$TARGET_HOME/.codex/hooks"
 

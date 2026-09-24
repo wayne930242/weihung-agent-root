@@ -87,6 +87,7 @@ EOF
   [[ ! -e "$fake_home/.agents/skills/providing-knowledge" && ! -L "$fake_home/.agents/skills/providing-knowledge" ]] || fail "expected managed codex skill to be removed"
   [[ ! -e "$fake_home/.gemini/config/skills/leveraging-tasks" ]] || fail "expected managed gemini skill to be removed"
   [[ ! -e "$fake_home/.gemini/config/rules/clean-architecture.md" ]] || fail "expected managed gemini rule to be removed"
+  [[ ! -e "$fake_home/.claude/rules/clean-architecture.md" && ! -L "$fake_home/.claude/rules/clean-architecture.md" ]] || fail "expected managed Claude rule to be removed"
   for provider in claude agents; do
     [[ ! -e "$fake_home/.$provider/skills/managing-model-preferences" && ! -L "$fake_home/.$provider/skills/managing-model-preferences" ]] || fail "expected model preference skill and profile to be removed"
   done

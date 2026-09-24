@@ -71,6 +71,7 @@ rules/
   dependencies.md
   git-safety.md
   skill-writing.md
+  memory-index-sync.md
   ui-design.md
 skills/
   managing-model-preferences/      # also the /managing-model-preferences command
@@ -203,6 +204,7 @@ The installer manages only these user-root surfaces.
 - `~/.claude/shared/*.md`
 - `~/.claude/skills/*/`
 - `~/.claude/agents/*.md`
+- `~/.claude/rules/*.md`
 - `~/.claude/hooks/*.sh`
 - `~/.claude/statusline.sh`
 - merge into `~/.claude/settings.json` using `config/claude-hooks.json` (hooks + `statusLine` block)

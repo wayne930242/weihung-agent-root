@@ -11,7 +11,7 @@ Act on these immediately when spotted:
 - Circular dependency: A imports B imports A - extract shared interface
 - Wrong abstraction level: UI logic in data layer or vice versa - move
 - Leaky abstraction: internal details exposed in public API - encapsulate
-- Dead code: unreachable functions or unused exports - delete
+- Dead code: unreachable functions or unused exports - report it, don't delete unless asked
 
 ## Structure Rules
 
