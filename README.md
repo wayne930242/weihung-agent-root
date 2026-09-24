@@ -435,6 +435,7 @@ The repo currently verifies:
 - uninstall restore/remove behavior with `tests/uninstall.sh`
 - prompt routing rules and Mini Spec deletion guards with `tests/prompts.sh`
 - token spend accounting with `tests/token_sinks.sh`
+- Codex plugin cache version keeper with `tests/codex_plugin_cache_keeper.sh`
 
 `tests/` proves the rules are still written down. Whether an agent obeys them is
 a separate question, answered by `evals/mini-spec-3r.sh`: it installs this repo

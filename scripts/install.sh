@@ -499,6 +499,41 @@ install_codebase_memory_mcp() {
   log "Review 'git -C $REPO_ROOT status' before committing: the installer rewrites AGENTS.md and codex/hooks.json."
 }
 
+# Codex deletes a plugin's previous cache version on upgrade, while sessions
+# started before it keep resolving hooks under that version. A launch agent
+# re-links each removed version to the plugin's newest one.
+install_codex_plugin_cache_keeper() {
+  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then
+    log "Skipping codex plugin cache keeper: --skip-external installs configuration only."
+    return
+  fi
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    return
+  fi
+
+  local label="com.weihung.codex-plugin-cache-keeper"
+  local plist="$TARGET_HOME/Library/LaunchAgents/$label.plist"
+  local log_dir="$TARGET_HOME/.codex/state/weihung-user-claude"
+  mkdir -p "$(dirname "$plist")" "$log_dir"
+  cat >"$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$label</string>
+  <key>ProgramArguments</key><array><string>/usr/bin/python3</string><string>$REPO_ROOT/scripts/codex-plugin-cache-keeper.py</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>15</integer>
+  <key>StandardOutPath</key><string>$log_dir/plugin-cache-keeper.log</string>
+  <key>StandardErrorPath</key><string>$log_dir/plugin-cache-keeper.log</string>
+</dict>
+</plist>
+EOF
+  launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$plist"
+  log "Loaded launch agent $label"
+}
+
 install_agent_browser() {
   if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then
     log "Skipping agent-browser: --skip-external installs configuration only."
@@ -753,6 +788,7 @@ prune_orphan_hooks "$TARGET_HOME/.claude/settings.json" "$TARGET_HOME"
 install_codebase_memory_mcp
 consolidate_codex_skill codebase-memory
 install_agent_browser
+install_codex_plugin_cache_keeper
 
 log "Install complete."
 report_optional_plugins

@@ -442,6 +442,13 @@ prune_managed_links "$TARGET_HOME/.claude/rules"
 prune_managed_links "$TARGET_HOME/.gemini/config/rules"
 prune_managed_links "$TARGET_HOME/.codex/hooks"
 
+codex_keeper_plist="$TARGET_HOME/Library/LaunchAgents/com.weihung.codex-plugin-cache-keeper.plist"
+if [[ -f "$codex_keeper_plist" ]]; then
+  launchctl bootout "gui/$(id -u)/com.weihung.codex-plugin-cache-keeper" 2>/dev/null || true
+  rm -f "$codex_keeper_plist"
+  log "Removed launch agent com.weihung.codex-plugin-cache-keeper"
+fi
+
 
 cleanup_empty_dirs
 
