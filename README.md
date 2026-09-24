@@ -71,6 +71,7 @@ rules/
   dependencies.md
   git-safety.md
   skill-writing.md
+  ui-design.md
 skills/
   managing-model-preferences/      # also the /managing-model-preferences command
   providing-knowledge/
