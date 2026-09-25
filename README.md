@@ -33,7 +33,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 `scripts/install.sh` links the repository into the home directory, installs `codebase-memory-mcp` into `~/.local/bin` when it is missing, and runs `scripts/pi-target.py install`, which:
 
 - installs or upgrades pi (`npm install -g @earendil-works/pi-coding-agent`) and runs `herdr integration install pi`, which reports each pi session's state to Herdr;
-- installs the pi packages below, aaaav, and this repository as a local pi package;
+- installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in) plus the active model strategy;
 - sets the default model, thinking level, `pi-herdr-agents` task models, UI settings, and MCP host-config discovery;
 - ports resources pi cannot install as packages: codebase-memory, mp-infra, and team-toon-tack.
@@ -69,16 +69,14 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 | `pi-jev-compaction` | Every compaction, including `idle-compaction`'s, first asks TypeSafe Jev which stale tool calls and results to drop or truncate and keeps user and assistant text verbatim; without `TYPESAFE_API_KEY` or on a Jev error it falls back to pi's summary. `/jev-status` shows the key and thresholds. |
 | `cc-safety-net` | Blocks destructive commands (`git reset --hard`, `git push --force`, `rm -rf` on dangerous targets) and reads of secrets such as SSH keys, `.env`, and `~/.aws`, in every project. `npx cc-safety-net explain "<command>"` shows why a command is blocked; `npx cc-safety-net gui` edits the policy. |
 | aaaav | The development workflow skills (`aaaav-do`, `investigating`, `inspecting`, `grilling`, and others) that the instructions route work through. |
+| straw-boss | The Pi dispatch workflow: `boss-say`, `work-on`, `choosing-graph`, `shipping-task`, `reporting-to-user`, and `dispatching-work`, plus the `dispatch_control` tool (list, reattach, and hand off dispatches over `~/.pi/agent/dispatch-ledger/`) and Herdr pane balancing. Installed from `github.com/wayne930242/straw-boss` at the commit pinned in `scripts/pi-target.py`; bump the pin to take a new release. |
 
 ### This repository's pi package
 
-[package.json](package.json) registers these extensions and skills:
+[package.json](package.json) registers these extensions:
 
-- [dispatch-recovery.ts](pi/extensions/dispatch-recovery.ts): records every `subagent` dispatch in `~/.pi/agent/dispatch-ledger/` and adds the `dispatch_control` tool, which lists unfinished dispatches, resumes a stopped worker session in a new pane, and hands the current main scope to a new Herdr pane. The `dispatch-recovery` and `orchestrator-handoff` skills drive it, with [scripts/pi-dispatch.py](scripts/pi-dispatch.py) as the command-line side.
 - [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn.
-- [pane-balance.ts](pi/extensions/pane-balance.ts): after the main session opens or closes a worker pane, evens out the column and row sizes of its Herdr tab, since each `subagent` split otherwise halves the parent pane.
 - [mp-infra-hooks.ts](pi/extensions/mp-infra-hooks.ts): when `~/.pi/agent/mp-infra.json` exists, runs the mp-infra session-start hook, its production-safety check before shell commands, and its vault, playbook, and Nomad checks after edits.
-- `shipping-task` skill: carries an approved task through the target app's branch or worktree, commit, pull request, and merge workflow.
 
 ### Ported resources
 
@@ -156,7 +154,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-user-claude`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、pi-skills，npm 套件皆鎖定版本）、aaaav、本 repo 的擴充（派工紀錄與復原、主代理移交、閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、本 repo 的擴充（閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
 - 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。

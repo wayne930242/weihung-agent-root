@@ -10,10 +10,9 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 
 - `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`; `pi-target.py` appends the active model strategy's tiers.
 - `pi/model-profiles.json`: the executable pi model and thinking tiers for each strategy.
-- `pi/extensions/`, `pi/skills/`: this repository's pi package, registered through `package.json`.
+- `pi/extensions/`: this repository's pi package, registered through `package.json`. Dispatch recovery, handoff, and pane balancing live in straw-boss.
 - `skills/`: user skills linked into `~/.agents/skills/`. `managing-model-preferences` owns the strategy catalog.
 - `rules/`: user-global rules linked to `~/.pi/agent/rules/`. The template indexes every file by the work it covers, so a new rule also needs an entry there.
-- `scripts/pi-dispatch.py`: the dispatch recovery and handoff CLI behind the `dispatch-recovery` and `orchestrator-handoff` skills.
 - `docs/specs/`: durable design records.
 
 ## Working here

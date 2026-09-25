@@ -23,6 +23,10 @@ USAGE_SOURCE = "git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3
 # Fork commit reading Pi's exported VERSION for lazy web-tool activation (upstream nicobailon/pi-web-access#429).
 WEB_ACCESS_SOURCE = "git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
+# Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
+STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@3d0fceb216ecadc3ed6a22d3b2a82dbd3fb3cd3a"
+# Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
+PINNED_GIT = {BRIDGE_SOURCE: BRIDGE_GIT_PREFIXES, STRAW_BOSS_SOURCE: ("git:github.com/wayne930242/straw-boss",)}
 OPUS_1M = "claude-bridge/claude-opus-5-5"
 OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
 HAIKU = "claude-bridge/claude-haiku-4-5"
@@ -34,6 +38,7 @@ THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1",
 PACKAGES = [
     BRIDGE_SOURCE,
     "npm:pi-herdr-agents@2.0.4",
+    STRAW_BOSS_SOURCE,
     "npm:pi-mcp-adapter@2.37.0",
     "npm:pi-intercom@0.14.0",
     "npm:pi-ask-user@0.15.1",
@@ -99,11 +104,10 @@ def unique_packages(values, agent_dir):
     return result
 
 
-def obsolete_bridge(value):
+def obsolete_pin(value):
     source = package_source(value)
-    return source == LEGACY_BRIDGE or (
-        source.startswith(BRIDGE_GIT_PREFIXES)
-        and source != BRIDGE_SOURCE
+    return source == LEGACY_BRIDGE or any(
+        source.startswith(prefixes) and source != current for current, prefixes in PINNED_GIT.items()
     )
 
 
@@ -474,7 +478,7 @@ def install(home, skip_external, force):
     settings = read_json(settings_path)
     previous_packages = state.get("previous_packages", list(settings.get("packages", [])))
     state["previous_packages"] = previous_packages
-    state.setdefault("retired_packages", [package for package in settings.get("packages", []) if obsolete_bridge(package)])
+    state.setdefault("retired_packages", [package for package in settings.get("packages", []) if obsolete_pin(package)])
     state.setdefault("integration_installed", not first_install)
     content = instructions()
     current_hash = hashlib.sha256(instructions_path.read_bytes()).hexdigest() if instructions_path.exists() else None
@@ -523,14 +527,14 @@ def install(home, skip_external, force):
         run(["pi", "install", LOCAL_PACKAGE], home)
     else:
         settings = read_json(settings_path)
-        settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + PACKAGES + [state["aaaav"], LOCAL_PACKAGE], agent_dir) if not obsolete_bridge(package)]
+        settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + PACKAGES + [state["aaaav"], LOCAL_PACKAGE], agent_dir) if not obsolete_pin(package)]
         write_json(settings_path, settings)
     settings = read_json(settings_path)
     current = settings.get("packages", [])
     owned = PACKAGES + [state["aaaav"], LOCAL_PACKAGE]
     owned_ids = {package_id(value, agent_dir) for value in owned}
     unmanaged = [value for value in current
-                 if package_id(value, agent_dir) not in owned_ids | retired_ids and not obsolete_bridge(value)]
+                 if package_id(value, agent_dir) not in owned_ids | retired_ids and not obsolete_pin(value)]
     # Registry and git specs are written as declared; `pi install` records a local path relative to the agent directory.
     managed = [source if package_source(source).startswith(("npm:", "git:")) else
                next((value for value in current if package_id(value, agent_dir) == package_id(source, agent_dir)), source)

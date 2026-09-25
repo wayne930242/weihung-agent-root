@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
+STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss@3d0fceb216ecadc3ed6a22d3b2a82dbd3fb3cd3a"
 
 
 def write(path, content, executable=False):
@@ -69,7 +70,10 @@ if '--prefix' in args:
     assert not (agent / "mp-infra.json").exists()
     assert f"install {AAAAV_GIT}" in calls.read_text().splitlines()
     assert AAAAV_GIT in json.loads((agent / "settings.json").read_text())["packages"]
+    assert f"install {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
+    assert STRAW_BOSS_GIT in json.loads((agent / "settings.json").read_text())["packages"]
 
     run("uninstall.sh", home, env)
     assert f"remove {AAAAV_GIT}" in calls.read_text().splitlines()
+    assert f"remove {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
     print("pi fresh machine: pass")

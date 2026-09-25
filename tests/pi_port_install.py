@@ -93,7 +93,7 @@ if '--prefix' in args:
     assert instructions.count("## Code discovery") == 1
     assert instructions.count("Commit messages contain no AI tool attribution.") == 1
     assert "@shared/" not in instructions
-    assert "boss-say" not in instructions and "/codex:rescue" not in instructions
+    assert "/codex:rescue" not in instructions and "Straw Boss `boss-say`" in instructions
     assert len(list((agent / "skills").iterdir())) == len(SKILLS) + 3
     assert (agent / "skills/pi-skills/brave-search/SKILL.md").is_file()
     assert len(list((agent / "prompts").glob("ttt-*.md"))) == 12

@@ -99,58 +99,6 @@ class PiReviewFixes(unittest.TestCase):
             self.assertFalse((home / ".agents").exists())
             self.assertFalse((home / ".pi/agent/.weihung-user-claude.json").exists())
 
-    def test_handoff_commits_after_receiver_starts(self):
-        spec = importlib.util.spec_from_file_location("pi_dispatch", ROOT / "scripts/pi-dispatch.py")
-        dispatch = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(dispatch)
-        with tempfile.TemporaryDirectory() as directory:
-            agent = Path(directory) / ".pi/agent"
-            dispatch.LEDGER_DIR = agent / "dispatch-ledger"
-            dispatch.HANDOFF_DIR = agent / "handoffs"
-            dispatch.write_json(dispatch.ledger_path("owner"), [{
-                "id": "child-1", "name": "worker", "task": "Task", "cwd": directory,
-                "sessionFile": str(Path(directory) / "child.jsonl"), "status": "running",
-            }])
-            dispatch.new_pane = lambda *_args: "w1:p3"
-            calls = []
-            starts = 0
-
-            def herdr(*args):
-                nonlocal starts
-                calls.append(args)
-                if args[:2] == ("agent", "start"):
-                    self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "running")
-                    starts += 1
-                    if starts == 1:
-                        raise RuntimeError('agent_pane_busy: shell is not ready')
-                    transfer = next(dispatch.HANDOFF_DIR.glob("*.json"))
-                    transfer.with_suffix(".ready").write_text("receiver")
-                return {}
-
-            dispatch.herdr = herdr
-            dispatch.handoff("owner", directory, "Continue")
-            self.assertEqual(starts, 2)
-            self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "transferred")
-
-    def test_uncertain_receiver_start_keeps_original_owner(self):
-        spec = importlib.util.spec_from_file_location("pi_dispatch_uncertain", ROOT / "scripts/pi-dispatch.py")
-        dispatch = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(dispatch)
-        with tempfile.TemporaryDirectory() as directory:
-            agent = Path(directory) / ".pi/agent"
-            dispatch.LEDGER_DIR = agent / "dispatch-ledger"
-            dispatch.HANDOFF_DIR = agent / "handoffs"
-            dispatch.write_json(dispatch.ledger_path("owner"), [{
-                "id": "child-uncertain", "name": "worker", "task": "Task", "cwd": directory,
-                "sessionFile": str(Path(directory) / "child.jsonl"), "status": "running",
-            }])
-            dispatch.new_pane = lambda *_args: "w1:p3"
-            dispatch.herdr = lambda *_args: (_ for _ in ()).throw(RuntimeError("timeout: startup may continue"))
-            with self.assertRaisesRegex(RuntimeError, "timeout: startup may continue"):
-                dispatch.handoff("owner", directory, "Continue")
-            self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "running")
-            self.assertEqual(len(list(dispatch.HANDOFF_DIR.glob("*.json"))), 0)
-
     def test_all_tiers_have_distinct_task_fallbacks(self):
         spec = importlib.util.spec_from_file_location("pi_target", PI_TARGET)
         target = importlib.util.module_from_spec(spec)
@@ -198,6 +146,18 @@ class PiReviewFixes(unittest.TestCase):
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
                              ["git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e"])
+
+    def test_earlier_straw_boss_revisions_are_retired_for_the_pin(self):
+        for earlier in ("git:github.com/wayne930242/straw-boss", "git:github.com/wayne930242/straw-boss@old-commit"):
+            with self.subTest(earlier=earlier), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory)
+                agent = home / ".pi/agent"
+                agent.mkdir(parents=True)
+                (agent / "settings.json").write_text(json.dumps({"packages": [earlier]}))
+                run_script("install.sh", home, "--skip-external")
+                installed = json.loads((agent / "settings.json").read_text())["packages"]
+                self.assertEqual([item for item in installed if "straw-boss" in item],
+                                 ["git:github.com/wayne930242/straw-boss@3d0fceb216ecadc3ed6a22d3b2a82dbd3fb3cd3a"])
 
     def test_upgrade_retires_the_powerline_footer_and_notify(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -24,9 +24,9 @@ Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` 
 
 Use `managing-model-preferences` to change model strategy. Read its profile before selecting a delegated model. Use the active Pi tier's full model list and thinking level; the user's explicit model choice takes precedence.
 
-Carry bounded work in the current session. Use `subagent` from `pi-herdr-agents` when a visible worker in another app or checkout is useful. Give each worker its objective, cwd, ownership, Reality anchor, model, thinking level, and app guide. Workers execute within their assigned scope; worktree workers keep their checkout for the main session to review and integrate.
+Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, model, and thinking level.
 
-In Herdr, use `dispatch-recovery` to list unfinished work and resume a restarted worker pane, `intercom` to find and message related main sessions, and `orchestrator-handoff` to transfer a scope to a new main session. Use `shipping-task` for the target app's branch or worktree, commit, PR, and merge workflow. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Use `ask_user` for consequential user decisions, gathering related pending ones into one round, and report the worker's actual result after it arrives.
+In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and `intercom` to find and message related main sessions. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Use `ask_user` for consequential user decisions, gathering related pending ones into one round, and report the worker's actual result after it arrives.
 
 ## Code discovery
 

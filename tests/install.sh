@@ -85,9 +85,10 @@ with tempfile.TemporaryDirectory() as directory:
     run(home)
     assert snapshot(home) == first
     text = (home / ".pi/agent/AGENTS.md").read_text()
-    assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
+    assert all(word not in text for word in ("@shared/", "/codex:rescue"))
+    assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 16, settings
+    assert len(settings["packages"]) == 17, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]

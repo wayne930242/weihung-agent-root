@@ -5,13 +5,8 @@
   "type": "module",
   "pi": {
     "extensions": [
-      "./pi/extensions/dispatch-recovery.ts",
       "./pi/extensions/idle-compaction.ts",
-      "./pi/extensions/mp-infra-hooks.ts",
-      "./pi/extensions/pane-balance.ts"
-    ],
-    "skills": [
-      "./pi/skills"
+      "./pi/extensions/mp-infra-hooks.ts"
     ]
   }
 }
