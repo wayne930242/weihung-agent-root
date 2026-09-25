@@ -26,31 +26,43 @@ OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
 HAIKU = "claude-bridge/claude-haiku-4-5"
 LUNA = "openai-codex/gpt-6-luna"
 ONE_M_TIERS = {"main", "complex_clear", "complex_unclear", "academic", "architecture"}
+# Versioned specs keep every machine on the same release; `pi update` skips them, so bump them here.
+# The theme collection loads only Vesper, which matches the Herdr theme, and none of its skills.
+THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/vesper.json"], "skills": []}
 PACKAGES = [
     BRIDGE_SOURCE,
-    "npm:pi-herdr-agents",
-    "npm:pi-mcp-adapter",
-    "npm:pi-intercom",
-    "npm:pi-ask-user",
-    "npm:@capdiem/pi-todo",
-    "npm:catppuccin-pi-theme",
-    "npm:pi-open-tui",
-    "npm:pi-web-access",
-    "npm:pi-lens",
+    "npm:pi-herdr-agents@2.0.4",
+    "npm:pi-mcp-adapter@2.37.0",
+    "npm:pi-intercom@0.14.0",
+    "npm:pi-ask-user@0.15.1",
+    "npm:@juicesharp/rpiv-todo@2.11.0",
+    THEME_PACKAGE,
+    "npm:pi-open-tui@0.3.9",
+    "npm:pi-web-access@0.31.0",
+    "npm:pi-lens@4.3.0",
     USAGE_SOURCE,
-    "npm:@moyai/pi-session-hoarder",
-    "npm:pi-jev-compaction",
+    "npm:@moyai/pi-session-hoarder@0.2.0",
+    "npm:pi-jev-compaction@1.0.0",
+    "npm:cc-safety-net@2.4.7",
 ]
 LOCAL_PACKAGE = str(ROOT)
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
-FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel")
-UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True}
+FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels")
+UI_SETTINGS = {"theme": "vesper", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
-# powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, and the
-# pi-usage fork replaces its npm release, which would otherwise register a second /usage.
-RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage"]
+# powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, the
+# pi-usage fork replaces its npm release, which would otherwise register a second /usage,
+# rpiv-todo replaces pi-todo's minified-only bundle, and Vesper replaces the Catppuccin theme.
+RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
+# cbmem.ts registers the codebase-memory tools directly; the same server imported from host
+# configs would add a second copy behind a namespace proxy.
+MCP_DISABLED_SERVER = "codebase-memory-mcp"
+MCP_SETTINGS = {"namespaceProxyTools": False}
+# codebase-memory owns structural discovery; these pi-lens tools duplicate it in every prompt.
+LENS_DISABLED_TOOLS = ("project_report", "symbol_search", "module_report")
+LENS_CONFIG = Path(".pi-lens/config.json")
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
 TTT_PREFIX = Path(".local/share/weihung-user-claude/team-toon-tack")
 # pi-skills ships bare skill directories without a pi manifest; its README installs it as a clone under the skills root.
@@ -58,18 +70,37 @@ PI_SKILLS_GIT = os.environ.get("PI_SKILLS_GIT", "https://github.com/badlogic/pi-
 PI_SKILLS_CLONE = Path(".local/share/weihung-user-claude/pi-skills")
 
 
+def package_source(value):
+    return value["source"] if isinstance(value, dict) else value
+
+
 def package_id(value, agent_dir):
-    if value.startswith("npm:"):
-        return value
-    if value.startswith("git:"):
-        return value
-    return str((agent_dir / value).resolve())
+    source = package_source(value)
+    if source.startswith("npm:"):
+        # Pi identifies npm packages by name, so a pinned spec replaces its unpinned predecessor.
+        spec = source.removeprefix("npm:")
+        return "npm:" + spec[:spec.find("@", 1)] if spec.find("@", 1) > 0 else source
+    if source.startswith("git:"):
+        return source
+    return str((agent_dir / source).resolve())
+
+
+def unique_packages(values, agent_dir):
+    seen = set()
+    result = []
+    for value in values:
+        identity = package_id(value, agent_dir)
+        if identity not in seen:
+            seen.add(identity)
+            result.append(value)
+    return result
 
 
 def obsolete_bridge(value):
-    return value == LEGACY_BRIDGE or (
-        value.startswith(BRIDGE_GIT_PREFIXES)
-        and value != BRIDGE_SOURCE
+    source = package_source(value)
+    return source == LEGACY_BRIDGE or (
+        source.startswith(BRIDGE_GIT_PREFIXES)
+        and source != BRIDGE_SOURCE
     )
 
 
@@ -82,6 +113,19 @@ def write_json(path, value):
     content = json.dumps(value, indent=2, ensure_ascii=False) + "\n"
     if not path.exists() or path.read_text() != content:
         path.write_text(content)
+
+
+def remember_previous(state, name, settings, keys):
+    """Record each managed key's pre-install value once, including keys a later version starts managing."""
+    first = f"previous_{name}" not in state
+    previous = state.setdefault(f"previous_{name}", {})
+    present = state.setdefault(f"previous_{name}_present", []) if first else state.get(f"previous_{name}_present")
+    for key in keys:
+        if key in previous:
+            continue
+        previous[key] = deepcopy(settings.get(key))
+        if present is not None and key in settings:
+            present.append(key)
 
 
 def restore_managed_keys(container, key, installed, previous, managed_keys):
@@ -279,6 +323,15 @@ def default_candidates(default):
     return candidates(default[0], "main")
 
 
+def enabled_models(default, tiers):
+    """Every model a tier can dispatch to, so model cycling stays within the active strategy."""
+    models = default_candidates(default)
+    for name, (model, _) in tiers.items():
+        if name != "main":
+            models += candidates(model, name)
+    return list(dict.fromkeys(models))
+
+
 def instructions():
     body = (ROOT / "pi/AGENTS.md.in").read_text().rstrip()
     strategy, default, profile_tiers, tasks = routing()
@@ -298,13 +351,12 @@ def update_profile(home, state):
     settings = read_json(settings_path)
     config = read_json(config_path)
     strategy, default, tiers, tasks = routing()
-    if "previous_settings" not in state:
-        state["previous_settings"] = {key: settings.get(key) for key in FIELDS}
-        state["previous_settings_present"] = [key for key in FIELDS if key in settings]
+    remember_previous(state, "settings", settings, FIELDS)
     state.setdefault("previous_models", deepcopy(config.get("models")))
     state.setdefault("previous_status", deepcopy(config.get("status")))
     provider, model = default[0].split("/", 1)
-    settings.update(defaultProvider=provider, defaultModel=model, defaultThinkingLevel=default[1])
+    settings.update(defaultProvider=provider, defaultModel=model, defaultThinkingLevel=default[1],
+                    enabledModels=enabled_models(default, tiers))
     models = config.setdefault("models", {})
     models["default"] = ", ".join(default_candidates(default))
     models.setdefault("agents", {})
@@ -336,9 +388,7 @@ def update_ui(home, state):
     config_path = agent_dir / "herdr-agents/config.json"
     settings = read_json(settings_path)
     config = read_json(config_path)
-    if "previous_ui_settings" not in state:
-        state["previous_ui_settings"] = {key: deepcopy(settings.get(key)) for key in UI_SETTINGS}
-        state["previous_ui_settings_present"] = [key for key in UI_SETTINGS if key in settings]
+    remember_previous(state, "ui_settings", settings, UI_SETTINGS)
     state.setdefault("previous_terminal", deepcopy(settings.get("terminal")))
     state.setdefault("previous_panes", deepcopy(config.get("panes")))
     settings.update(UI_SETTINGS)
@@ -350,6 +400,63 @@ def update_ui(home, state):
     state["installed_ui_settings"] = {key: deepcopy(settings[key]) for key in UI_SETTINGS}
     state["installed_terminal"] = deepcopy(settings["terminal"])
     state["installed_panes"] = deepcopy(config["panes"])
+
+
+def update_mcp(mcp, state):
+    state.setdefault("previous_discovery", mcp.get("settings", {}).get("hostConfigDiscovery"))
+    settings = mcp.setdefault("settings", {})
+    state.setdefault("previous_mcp_settings", {key: deepcopy(settings[key]) for key in MCP_SETTINGS if key in settings})
+    settings["hostConfigDiscovery"] = "on"
+    settings.update(MCP_SETTINGS)
+    servers = mcp.setdefault("mcpServers", {})
+    state.setdefault("previous_mcp_server", deepcopy(servers.get(MCP_DISABLED_SERVER)))
+    servers[MCP_DISABLED_SERVER] = {**servers.get(MCP_DISABLED_SERVER, {}), "disabled": True}
+    state["installed_mcp_settings"] = dict(MCP_SETTINGS)
+    state["installed_mcp_server"] = deepcopy(servers[MCP_DISABLED_SERVER])
+
+
+def restore_mcp(mcp, state):
+    if mcp.get("settings", {}).get("hostConfigDiscovery") == "on":
+        previous = state.get("previous_discovery")
+        if previous is None:
+            mcp["settings"].pop("hostConfigDiscovery", None)
+        else:
+            mcp["settings"]["hostConfigDiscovery"] = previous
+    restore_managed_keys(mcp, "settings", state.get("installed_mcp_settings"), state.get("previous_mcp_settings"), tuple(MCP_SETTINGS))
+    if "mcpServers" in mcp:
+        restore_managed_keys(mcp["mcpServers"], MCP_DISABLED_SERVER, state.get("installed_mcp_server"), state.get("previous_mcp_server"), ("disabled",))
+        if not mcp["mcpServers"]:
+            mcp.pop("mcpServers")
+    if mcp.get("settings") == {}:
+        mcp.pop("settings")
+
+
+def update_lens(home, state):
+    path = home / LENS_CONFIG
+    config = read_json(path)
+    tools = config.setdefault("tools", {})
+    state.setdefault("previous_lens_tools", {name: deepcopy(tools[name]) for name in LENS_DISABLED_TOOLS if name in tools})
+    for name in LENS_DISABLED_TOOLS:
+        tools[name] = {**tools.get(name, {}), "enabled": False}
+    write_json(path, config)
+    state["installed_lens_tools"] = {name: deepcopy(tools[name]) for name in LENS_DISABLED_TOOLS}
+
+
+def restore_lens(home, state):
+    path = home / LENS_CONFIG
+    config = read_json(path)
+    tools = config.get("tools")
+    if not isinstance(tools, dict) or "installed_lens_tools" not in state:
+        return
+    previous = state.get("previous_lens_tools", {})
+    for name, installed in state["installed_lens_tools"].items():
+        restore_managed_keys(tools, name, installed, previous.get(name), ("enabled",))
+    if not tools:
+        config.pop("tools")
+    if config:
+        write_json(path, config)
+    elif path.exists():
+        path.unlink()
 
 
 def install(home, skip_external, force):
@@ -380,19 +487,21 @@ def install(home, skip_external, force):
         instructions_path.write_text(content)
     state["instructions_hash"] = hashlib.sha256(content.encode()).hexdigest()
     mcp = read_json(mcp_path)
-    state.setdefault("previous_discovery", mcp.get("settings", {}).get("hostConfigDiscovery"))
-    mcp.setdefault("settings", {})["hostConfigDiscovery"] = "on"
+    update_mcp(mcp, state)
     write_json(mcp_path, mcp)
+    update_lens(home, state)
     update_profile(home, state)
     update_ui(home, state)
     write_json(marker_path, state)
+    previous_ids = {package_id(value, agent_dir) for value in state["previous_packages"]}
+    retired_ids = {package_id(value, agent_dir) for value in RETIRED_PACKAGES} - previous_ids
     if not skip_external:
         run(["npm", "install", "-g", "@earendil-works/pi-coding-agent@latest"], home)
         run(["herdr", "integration", "install", "pi"], home)
         state["integration_installed"] = True
         write_json(marker_path, state)
         for package in PACKAGES:
-            run(["pi", "install", package], home)
+            run(["pi", "install", package_source(package)], home)
         for package in state["retired_packages"]:
             settings = read_json(settings_path)
             if package not in settings.get("packages", []):
@@ -402,26 +511,28 @@ def install(home, skip_external, force):
                 write_json(settings_path, settings)
             else:
                 run(["pi", "remove", package], home)
-        for package in RETIRED_PACKAGES:
-            if package in read_json(settings_path).get("packages", []) and package not in state["previous_packages"]:
-                run(["pi", "remove", package], home)
+        for package in read_json(settings_path).get("packages", []):
+            if package_id(package, agent_dir) in retired_ids:
+                run(["pi", "remove", package_source(package)], home)
         run(["pi", "install", state["aaaav"]], home)
         install_ported_resources(home, state, force)
         write_json(marker_path, state)
         run(["pi", "install", LOCAL_PACKAGE], home)
     else:
         settings = read_json(settings_path)
-        settings["packages"] = [package for package in dict.fromkeys(settings.get("packages", []) + PACKAGES + [state["aaaav"], LOCAL_PACKAGE]) if not obsolete_bridge(package)]
+        settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + PACKAGES + [state["aaaav"], LOCAL_PACKAGE], agent_dir) if not obsolete_bridge(package)]
         write_json(settings_path, settings)
     settings = read_json(settings_path)
     current = settings.get("packages", [])
     owned = PACKAGES + [state["aaaav"], LOCAL_PACKAGE]
     owned_ids = {package_id(value, agent_dir) for value in owned}
-    retired = [package for package in RETIRED_PACKAGES if package not in state["previous_packages"]]
     unmanaged = [value for value in current
-                 if package_id(value, agent_dir) not in owned_ids and not obsolete_bridge(value) and value not in retired]
-    managed = [next((value for value in current if package_id(value, agent_dir) == package_id(source, agent_dir)), source) for source in owned]
-    settings["packages"] = list(dict.fromkeys(unmanaged + managed))
+                 if package_id(value, agent_dir) not in owned_ids | retired_ids and not obsolete_bridge(value)]
+    # Registry and git specs are written as declared; `pi install` records a local path relative to the agent directory.
+    managed = [source if package_source(source).startswith(("npm:", "git:")) else
+               next((value for value in current if package_id(value, agent_dir) == package_id(source, agent_dir)), source)
+               for source in owned]
+    settings["packages"] = unique_packages(unmanaged + managed, agent_dir)
     write_json(settings_path, settings)
     write_json(marker_path, state)
 
@@ -450,19 +561,22 @@ def uninstall(home, skip_external):
         for package in managed_packages:
             identity = package_id(package, agent_dir)
             if identity in owned and identity in installed_ids:
-                run(["pi", "remove", package], home)
+                run(["pi", "remove", package_source(package)], home)
         if state.get("integration_installed", True):
             run(["herdr", "integration", "uninstall", "pi"], home)
     settings = read_json(settings_path)
-    settings["packages"] = [package for package in settings.get("packages", []) if package_id(package, agent_dir) not in owned]
+    # A package the user declared before install keeps the spec they wrote, not the pinned one.
+    prior = {package_id(value, agent_dir): value for value in previous_packages}
+    settings["packages"] = [prior.get(package_id(package, agent_dir), package) for package in settings.get("packages", [])
+                            if package_id(package, agent_dir) not in owned]
     for package in state.get("retired_packages", []):
         if package not in settings["packages"]:
             if not skip_external:
                 run(["pi", "install", package], home)
             settings["packages"].append(package)
-    settings["packages"] = list(dict.fromkeys(
-        [package for package in previous_packages if package in settings["packages"]] + settings["packages"]
-    ))
+    settings["packages"] = unique_packages(
+        [package for package in previous_packages if package in settings["packages"]] + settings["packages"], agent_dir
+    )
     if not settings["packages"]:
         settings.pop("packages")
     for key in FIELDS:
@@ -486,15 +600,9 @@ def uninstall(home, skip_external):
     restore_managed_keys(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
     retire_powerline(settings, state)
     write_json(settings_path, settings)
+    restore_lens(home, state)
     mcp = read_json(mcp_path)
-    if mcp.get("settings", {}).get("hostConfigDiscovery") == "on":
-        previous = state.get("previous_discovery")
-        if previous is None:
-            mcp["settings"].pop("hostConfigDiscovery", None)
-        else:
-            mcp["settings"]["hostConfigDiscovery"] = previous
-    if mcp.get("settings") == {}:
-        mcp.pop("settings")
+    restore_mcp(mcp, state)
     if mcp:
         write_json(mcp_path, mcp)
     elif mcp_path.exists():

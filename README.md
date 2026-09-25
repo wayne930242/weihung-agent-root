@@ -50,21 +50,24 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so 
 
 ### Packages
 
+Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts/pi-target.py), so every machine installs the same release and `pi update` leaves them alone; bump a version there and re-run the installer.
+
 | Package | Role |
 |---|---|
 | `pi-claude-bridge` | The `claude-bridge` provider: Claude models through the local Claude Code login. Pinned to the fork commit `wayne930242/pi-claude-bridge@de6b4d7` on `weihung-integration`, which merges three upstream PRs: 200K twins such as `claude-200k-opus-5-5` beside each 1M model ([#131](https://github.com/elidickinson/pi-claude-bridge/pull/131)), so main and complex tiers run Opus 5.5 1M while other tiers run 200K; Claude subscription usage in the footer plus `/claude-usage` ([#132](https://github.com/elidickinson/pi-claude-bridge/pull/132)); and `provider.reportApiCost`, which prices usage at API list prices ([#133](https://github.com/elidickinson/pi-claude-bridge/pull/133)). |
 | `pi-herdr-agents` | The `subagent` tool: dispatches workers into visible Herdr panes or isolated Git worktrees, with per-task model routing and a status widget. |
-| `pi-mcp-adapter` | The `mcp` gateway for MCP servers. Servers come from `~/.config/mcp/mcp.json`, `~/.agents/mcp.json`, or pi's own config; host configs of other tools on the machine load as a lowest-precedence fallback because the installer sets `hostConfigDiscovery` to `on`. |
+| `pi-mcp-adapter` | The `mcp` gateway for MCP servers. Servers come from `~/.config/mcp/mcp.json`, `~/.agents/mcp.json`, or pi's own config; host configs of other tools on the machine load as a lowest-precedence fallback because the installer sets `hostConfigDiscovery` to `on`. The installer disables the imported `codebase-memory-mcp`, whose tools `cbmem.ts` already registers directly, and turns off the per-server `mcp__<server>` proxy tools, so MCP servers are reached through `mcp` alone. |
 | `pi-intercom` | The `intercom` tool: messages and questions between pi sessions on the same machine. |
 | `pi-ask-user` | The `ask_user` tool: structured questions with options for decisions that belong to the user. |
-| `@capdiem/pi-todo` | The `todo` tool: one atomic task plan per session. |
+| `@juicesharp/rpiv-todo` | The `todo` tool and `/todos`: a task list with dependencies shown above the editor, rebuilt from the session so it survives `/reload` and compaction. |
 | `pi-open-tui` | The interface: logo header, Starship-style footer with Git, context, tokens, and cost, and a rounded editor. `/open-tui` edits its settings in `~/.pi/agent/open-tui.json`. |
-| `catppuccin-pi-theme` | The `catppuccin-mocha` theme. |
+| `@victor-software-house/pi-curated-themes` | The `vesper` theme, matching Herdr's `vesper` theme. A package filter loads only `themes/vesper.json` and none of the package's skills. |
 | `pi-web-access` | `web_search`, `fetch_content`, and video understanding. Search works without keys through Exa MCP or the Codex login; provider keys go in `~/.pi/agent/web-search.json`. |
-| `pi-lens` | Code intelligence tools (`lens_diagnostics`, `symbol_search`, `read_symbol`, and others) plus ast-grep and LSP navigation skills. |
+| `pi-lens` | Diagnostics after each edit, `lens_diagnostics`, `read_symbol`, `read_enclosing`, and on-demand ast-grep and LSP navigation tools. The installer disables `project_report`, `symbol_search`, and `module_report` in `~/.pi-lens/config.json`, because codebase-memory owns structural discovery. |
 | `pi-usage` | The `/usage` command: daily and weekly limits of the current provider. Pinned to the fork commit `wayne930242/pi-usage@a683c24`, which adds `claude-bridge` by reading Claude Code's login ([upstream PR #4](https://github.com/iefnaf/pi-usage/pull/4)); Codex, Z.AI, and Kimi work as in the npm release. |
 | `@moyai/pi-session-hoarder` | Verified local archives of every session in `~/.pi/agent/session-hoarder/`; `/hoarder status` reports it. Nothing leaves the machine unless `/hoarder storage s3` is configured. |
 | `pi-jev-compaction` | Every compaction, including `idle-compaction`'s, first asks TypeSafe Jev which stale tool calls and results to drop or truncate and keeps user and assistant text verbatim; without `TYPESAFE_API_KEY` or on a Jev error it falls back to pi's summary. `/jev-status` shows the key and thresholds. |
+| `cc-safety-net` | Blocks destructive commands (`git reset --hard`, `git push --force`, `rm -rf` on dangerous targets) and reads of secrets such as SSH keys, `.env`, and `~/.aws`, in every project. `npx cc-safety-net explain "<command>"` shows why a command is blocked; `npx cc-safety-net gui` edits the policy. |
 | aaaav | The development workflow skills (`aaaav-do`, `investigating`, `inspecting`, `grilling`, and others) that the instructions route work through. |
 
 ### This repository's pi package
@@ -87,9 +90,10 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so 
 
 | File | Keys |
 |---|---|
-| `~/.pi/agent/settings.json` | `packages`, `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `theme`, `editorPaddingX`, `collapseChangelog`, `terminal.showTerminalProgress` |
+| `~/.pi/agent/settings.json` | `packages`, `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `enabledModels` (every model the active strategy's tiers use), `theme`, `editorPaddingX`, `collapseChangelog`, `enableInstallTelemetry` (`false`), `terminal.showTerminalProgress` |
 | `~/.pi/agent/herdr-agents/config.json` | `models.default`, `models.tasks`, `status`, `panes.mode` (`split`), `panes.direction` (`right`) |
-| `~/.pi/agent/mcp.json` | `settings.hostConfigDiscovery` |
+| `~/.pi/agent/mcp.json` | `settings.hostConfigDiscovery`, `settings.namespaceProxyTools`, `mcpServers.codebase-memory-mcp.disabled` |
+| `~/.pi-lens/config.json` | `tools.project_report`, `tools.symbol_search`, and `tools.module_report` `.enabled` |
 
 Other keys in these files stay as the user wrote them.
 
@@ -152,7 +156,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-user-claude`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、pi-skills）、aaaav、本 repo 的擴充（派工紀錄與復原、主代理移交、閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、pi-skills，npm 套件皆鎖定版本）、aaaav、本 repo 的擴充（派工紀錄與復原、主代理移交、閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
 - 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。

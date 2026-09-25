@@ -221,7 +221,7 @@ class PiReviewFixes(unittest.TestCase):
             upgraded = json.loads(settings.read_text())
             self.assertNotIn("npm:pi-powerline-footer", upgraded["packages"])
             self.assertNotIn("npm:pi-notify", upgraded["packages"])
-            self.assertIn("npm:pi-open-tui", upgraded["packages"])
+            self.assertIn("npm:pi-open-tui@0.3.9", upgraded["packages"])
             self.assertIn("npm:user-package", upgraded["packages"])
             self.assertEqual(upgraded["powerline"], {"welcome": False})
             run_script("uninstall.sh", home, "--skip-external")
@@ -244,6 +244,49 @@ class PiReviewFixes(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             usage = [item for item in json.loads(settings.read_text())["packages"] if "pi-usage" in item]
             self.assertEqual(usage, ["git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"])
+
+    def test_upgrade_pins_packages_and_retires_replaced_ones(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            settings = agent / "settings.json"
+            settings.write_text(json.dumps({"packages": ["npm:user-package"]}))
+            run_script("install.sh", home, "--skip-external")
+            # Reproduce the unpinned packages and marker an install before pinning left behind.
+            marker = agent / ".weihung-user-claude.json"
+            state = json.loads(marker.read_text())
+            for key in ("previous_settings", "previous_ui_settings"):
+                state[key] = {name: value for name, value in state[key].items() if name not in ("enabledModels", "enableInstallTelemetry")}
+                state.pop(f"{key}_present")
+            marker.write_text(json.dumps(state))
+            current = json.loads(settings.read_text())
+            current["packages"] = ["npm:user-package", "npm:pi-lens", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
+            current.pop("enabledModels")
+            current.pop("enableInstallTelemetry")
+            settings.write_text(json.dumps(current))
+            run_script("install.sh", home, "--skip-external")
+            upgraded = json.loads(settings.read_text())
+            sources = [item["source"] if isinstance(item, dict) else item for item in upgraded["packages"]]
+            self.assertEqual([item for item in sources if "pi-lens" in item], ["npm:pi-lens@4.3.0"])
+            self.assertFalse(any("pi-todo" in item or "catppuccin" in item for item in sources), sources)
+            self.assertIn("npm:@juicesharp/rpiv-todo@2.11.0", sources)
+            self.assertIs(upgraded["enableInstallTelemetry"], False)
+            run_script("uninstall.sh", home, "--skip-external")
+            restored = json.loads(settings.read_text())
+            self.assertEqual(restored["packages"], ["npm:user-package"])
+            self.assertNotIn("enabledModels", restored)
+            self.assertNotIn("enableInstallTelemetry", restored)
+
+    def test_package_identity_ignores_the_npm_version(self):
+        spec = importlib.util.spec_from_file_location("pi_target_identity", PI_TARGET)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        agent = Path("/unused")
+        self.assertEqual(target.package_id("npm:pi-lens@4.3.0", agent), "npm:pi-lens")
+        self.assertEqual(target.package_id("npm:@scope/name@1.0.0", agent), "npm:@scope/name")
+        self.assertEqual(target.package_id("npm:@scope/name", agent), "npm:@scope/name")
+        self.assertEqual(target.package_id({"source": "npm:pi-lens", "skills": []}, agent), "npm:pi-lens")
 
     def test_user_owned_powerline_survives_install(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -87,16 +87,28 @@ with tempfile.TemporaryDirectory() as directory:
     text = (home / ".pi/agent/AGENTS.md").read_text()
     assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 15, settings
+    assert len(settings["packages"]) == 16, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@de6b4d744d608e8d72af1483ade01bb98ec9fd07", settings
+    sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
+    registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
+    assert registry and all("@" in name[1:] for name in registry), registry
+    assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/vesper.json"], "skills": []} in settings["packages"], settings
+    assert "npm:@juicesharp/rpiv-todo@2.11.0" in sources and "npm:cc-safety-net@2.4.7" in sources, sources
+    assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
-    assert settings["theme"] == "catppuccin-mocha", settings
+    assert settings["enabledModels"][0] == "claude-bridge/claude-opus-5-5", settings
+    assert "openai-codex/gpt-6-luna" in settings["enabledModels"], settings
+    assert settings["theme"] == "vesper", settings
+    assert settings["enableInstallTelemetry"] is False, settings
     assert settings["editorPaddingX"] == 1, settings
     assert settings["collapseChangelog"] is True, settings
     assert settings["terminal"]["showTerminalProgress"] is True, settings
-    assert "powerline" not in settings and "npm:pi-open-tui" in settings["packages"], settings
+    assert "powerline" not in settings and "npm:pi-open-tui@0.3.9" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
-    assert mcp["settings"]["hostConfigDiscovery"] == "on", mcp
+    assert mcp["settings"] == {"hostConfigDiscovery": "on", "namespaceProxyTools": False}, mcp
+    assert mcp["mcpServers"] == {"codebase-memory-mcp": {"disabled": True}}, mcp
+    lens = json.loads((home / ".pi-lens/config.json").read_text())
+    assert lens == {"tools": {name: {"enabled": False} for name in ("project_report", "symbol_search", "module_report")}}, lens
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
     assert config["status"] == {"enabled": True}, config
     assert config["panes"] == {"mode": "split", "direction": "right"}, config
@@ -192,7 +204,13 @@ with tempfile.TemporaryDirectory() as directory:
     agent = home / ".pi/agent"
     agent.mkdir(parents=True)
     (agent / "AGENTS.md").write_text("user instructions\n")
-    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package"], "theme": "light", "terminal": {"showImages": False}, "powerline": {"welcome": False}}))
+    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], "theme": "light", "enabledModels": ["user/model"], "terminal": {"showImages": False}, "powerline": {"welcome": False}}))
+    original_mcp = {"settings": {"namespaceProxyTools": True}, "mcpServers": {"codebase-memory-mcp": {"command": "cbm"}, "user": {"url": "https://example.test/mcp"}}}
+    (agent / "mcp.json").write_text(json.dumps(original_mcp))
+    lens_path = home / ".pi-lens/config.json"
+    lens_path.parent.mkdir()
+    original_lens = {"lsp": {"enabled": False}, "tools": {"symbol_search": {"enabled": True}}}
+    lens_path.write_text(json.dumps(original_lens))
     config = agent / "herdr-agents/config.json"
     config.parent.mkdir(parents=True, exist_ok=True)
     original_models = {"default": "user/model", "agents": {"scout": "user/scout"}}
@@ -200,14 +218,23 @@ with tempfile.TemporaryDirectory() as directory:
     run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
-    assert any(package.startswith("git:github.com/wayne930242/pi-claude-bridge@de6b4d7") for package in installed_packages), installed_packages
+    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@de6b4d7") for package in installed_packages), installed_packages
+    assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
+    installed_mcp = json.loads((agent / "mcp.json").read_text())
+    assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": "cbm", "disabled": True}, installed_mcp
+    assert installed_mcp["settings"]["namespaceProxyTools"] is False, installed_mcp
+    assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
     assert json.loads(config.read_text())["models"]["agents"] == original_models["agents"]
     subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
     run(uninstall, home)
     assert (agent / "AGENTS.md").read_text() == "user instructions\n"
     settings = json.loads((agent / "settings.json").read_text())
-    assert settings["packages"] == ["npm:pi-claude-bridge", "npm:user-package"], settings
+    assert settings["packages"] == ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], settings
     assert settings["theme"] == "light", settings
+    assert settings["enabledModels"] == ["user/model"], settings
+    assert "enableInstallTelemetry" not in settings, settings
+    assert json.loads((agent / "mcp.json").read_text()) == original_mcp
+    assert json.loads(lens_path.read_text()) == original_lens
     assert settings["terminal"] == {"showImages": False}, settings
     assert settings["powerline"] == {"welcome": False}, settings
     assert json.loads(config.read_text()) == {"models": original_models, "panes": {"mode": "tab"}, "other": True}
