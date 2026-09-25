@@ -108,7 +108,7 @@ The files in [rules/](rules/) (git safety, deployment, dependencies, clean archi
 - every tier becomes a line in `~/.pi/agent/AGENTS.md` with an ordered model list, so a dispatch passes the tier's models and thinking level explicitly;
 - `pi-herdr-agents` task categories get the same candidates: `coding`, `review`, `recon`, and `docs` from their tiers, `qa` from `review`, and `architecture` from `complex_unclear`.
 
-Each list pairs the tier's model with a fallback from the other provider: a `claude-bridge` tier falls back to the matching OpenAI Codex model, and an `openai-codex` tier to `claude-bridge/claude-opus-5-5`.
+Each list pairs the tier's model with a fallback from the other provider: a `claude-bridge` tier falls back to the matching OpenAI Codex model; a Luna tier falls back to `claude-bridge/claude-haiku-4-5`, and any other `openai-codex` tier to `claude-bridge/claude-opus-5-5` (1M) for main and complex tiers or `claude-bridge/claude-200k-opus-5-5` otherwise.
 
 To switch, run `/managing-model-preferences <strategy>` in pi, or change the active link yourself and run:
 
@@ -116,7 +116,7 @@ To switch, run `/managing-model-preferences <strategy>` in pi, or change the act
 python3 scripts/pi-target.py apply-profile --home "$HOME"
 ```
 
-then reload pi. The console in [web/](web/) (deployed on Vercel) lists the strategies and commits a switch to the profile through the GitHub API; pull and run `apply-profile` on each machine afterwards.
+then reload pi.
 
 ## Phone access with Moshi (optional)
 
