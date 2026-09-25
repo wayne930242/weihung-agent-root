@@ -18,7 +18,7 @@ function runHook(name: string, input: object, cwd: string, timeout = 5000) {
   const result = spawnSync(name === "production-safety-hook" || name === "vault-check-hook" ? "python3" : "bash",
     [path, ...(name.startsWith("tool-after-edit-") ? [(input as { tool_input: { file_path: string } }).tool_input.file_path] : [])],
     { input: JSON.stringify(input), cwd, encoding: "utf8", timeout });
-  return { code: result.status ?? 2, text: [result.stdout, result.stderr, result.error?.message].filter(Boolean).join("\n").trim() };
+  return { code: result.status ?? 2, stdout: (result.stdout ?? "").trim(), text: [result.stdout, result.stderr, result.error?.message].filter(Boolean).join("\n").trim() };
 }
 
 export default function mpInfraHooks(pi: ExtensionAPI): void {
@@ -33,7 +33,10 @@ export default function mpInfraHooks(pi: ExtensionAPI): void {
     }
     if (result.code !== 0) return { block: true, reason: result.text || "mp-infra safety gate failed" };
     let output: any;
-    try { output = JSON.parse(result.text); } catch { return; }
+    if (!result.stdout) return;
+    try { output = JSON.parse(result.stdout); } catch {
+      return { block: true, reason: `mp-infra safety gate returned malformed output: ${result.text}` };
+    }
     const decision = output?.hookSpecificOutput?.permissionDecision;
     if (decision === "deny") return { block: true, reason: output?.hookSpecificOutput?.permissionDecisionReason || "mp-infra denied command" };
     if (decision !== "ask") return;

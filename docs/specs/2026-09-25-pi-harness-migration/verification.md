@@ -169,3 +169,11 @@ The `solid-loop` pass classified these as local discovery and test-environment f
 Existing install markers did not record whether a prior null-valued key existed. The real HOME marker uses that older format, so uninstall of a preexisting null value cannot be inferred from it. New installs record key presence; old markers retain their prior restoration behavior.
 
 Reflexive: the Pi event-definition lookup first used an agent-local npm path, then the active Node version's global npm root. This was a tool-use gap with no standing instruction to change; the `solid-loop` pass made no instruction edit.
+
+## Port review fixes (2026-09-25)
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| External-install regression tests pass again | `tests/pi_review_fixes.py` fixtures now produce what a successful install leaves: the team-toon-tack package with its skill and `ttt` CLI under the npm prefix, and a codebase-memory binary that writes the official Pi resources. `test_external_git_switch_keeps_the_new_checkout` and `test_failed_external_install_can_retry_and_uninstall` pass. | pass |
+| Safety gate blocks malformed exit-0 output | `pi/extensions/mp-infra-hooks.ts` parses stdout only. Empty stdout allows the command. Non-empty stdout that is not JSON blocks it, and the reason includes that output. `tests/pi-mp-infra-hooks.mjs` points the gate at a fake hook. Empty output returns allow, and `Traceback: not json` blocks with that text. The malformed assertion failed against the previous extension. | pass |
+| Repository suites and real install | `bash tests/install.sh`, `bash tests/uninstall.sh`, `bash tests/prompts.sh`, `node tests/profile.mjs`, all seven `tests/pi-*.mjs` suites, `python3 tests/pi_dispatch_cli.py`, `python3 tests/pi_port_install.py`, and `python3 -m unittest tests.pi_handoff_commit tests.pi_review_fixes -q` exited 0. `git diff --check` passed. `bash scripts/install.sh --target pi` completed on the authorized real HOME. | pass |

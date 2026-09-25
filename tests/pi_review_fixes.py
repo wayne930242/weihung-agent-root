@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,36 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PI_TARGET = ROOT / "scripts/pi-target.py"
+FAKE_CBMEM = """#!/usr/bin/env python3
+import os
+from pathlib import Path
+home = Path(os.environ['HOME'])
+(home / '.pi/agent/extensions').mkdir(parents=True, exist_ok=True)
+(home / '.pi/agent/skills/codebase-memory').mkdir(parents=True, exist_ok=True)
+(home / '.pi/agent/extensions/cbmem.ts').write_text("const BIN = '" + str(home / '.local/bin/codebase-memory-mcp') + "';\\n")
+(home / '.pi/agent/skills/codebase-memory/SKILL.md').write_text('---\\nname: codebase-memory\\n---\\n')
+"""
+
+
+def fake_npm_install(args):
+    """Produce what a successful `npm install --prefix` of team-toon-tack leaves behind."""
+    if "--prefix" not in args:
+        return
+    prefix = Path(args[args.index("--prefix") + 1])
+    skill = prefix / "node_modules/team-toon-tack/skills/managing-linear-tasks"
+    skill.mkdir(parents=True, exist_ok=True)
+    (skill / "SKILL.md").write_text("---\nname: managing-linear-tasks\n---\n")
+    cli = prefix / "node_modules/.bin/ttt"
+    cli.parent.mkdir(parents=True, exist_ok=True)
+    cli.write_text("#!/bin/sh\n")
+    cli.chmod(0o755)
+
+
+def seed_codebase_memory(home):
+    binary = home / ".local/bin/codebase-memory-mcp"
+    binary.parent.mkdir(parents=True, exist_ok=True)
+    binary.write_text(FAKE_CBMEM)
+    binary.chmod(0o755)
 
 
 def run_script(script, home, *args, env=None, check=True):
@@ -161,7 +192,11 @@ class PiReviewFixes(unittest.TestCase):
             settings.write_text(json.dumps({"packages": [old]}))
             removals = []
 
+            seed_codebase_memory(home)
+
             def fake_run(args, _home):
+                if args[0] == "npm":
+                    fake_npm_install(args)
                 if args[:2] == ["pi", "install"]:
                     current = json.loads(settings.read_text())
                     current.setdefault("packages", []).append(args[2])
@@ -179,9 +214,11 @@ class PiReviewFixes(unittest.TestCase):
             home = Path(directory)
             bin_dir = home / "bin"
             bin_dir.mkdir()
+            seed_codebase_memory(home)
             for name in ("npm", "herdr", "pi"):
                 script = bin_dir / name
-                script.write_text("#!/bin/sh\n[ -e \"$HOME/fail-once\" ] && { rm \"$HOME/fail-once\"; exit 4; }\nexit 0\n")
+                script.write_text("#!/bin/sh\n[ -e \"$HOME/fail-once\" ] && { rm \"$HOME/fail-once\"; exit 4; }\n"
+                                  + (f"exec python3 {Path(__file__).resolve()} fake-npm \"$@\"\n" if name == "npm" else "exit 0\n"))
                 script.chmod(0o755)
             (home / "fail-once").write_text("")
             env = {"PATH": str(bin_dir) + os.pathsep + os.environ["PATH"]}
@@ -204,4 +241,7 @@ class PiReviewFixes(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    if sys.argv[1:2] == ["fake-npm"]:
+        fake_npm_install(sys.argv[2:])
+    else:
+        unittest.main()

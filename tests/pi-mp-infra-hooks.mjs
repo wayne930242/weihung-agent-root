@@ -24,6 +24,19 @@ try {
   const review = await handlers.get("tool_call")({ toolName: "bash", input: { command: "git reset --hard" } }, ctx);
   assert.equal(review.block, true);
 
+  const fake = join(home, "fake-mp-infra");
+  mkdirSync(join(fake, "hooks"), { recursive: true });
+  writeFileSync(join(fake, "hooks", "production-safety-hook"), "import os, sys\nsys.stdout.write(os.environ.get('FAKE_GATE_STDOUT', ''))\n");
+  writeFileSync(join(agent, "mp-infra.json"), JSON.stringify({ root: fake }));
+  process.env.FAKE_GATE_STDOUT = "";
+  assert.equal(await handlers.get("tool_call")({ toolName: "bash", input: { command: "echo empty" } }, ctx), undefined);
+  process.env.FAKE_GATE_STDOUT = "Traceback: not json";
+  const malformed = await handlers.get("tool_call")({ toolName: "bash", input: { command: "echo malformed" } }, ctx);
+  assert.equal(malformed.block, true);
+  assert.match(malformed.reason, /malformed output: Traceback: not json/);
+  delete process.env.FAKE_GATE_STDOUT;
+  writeFileSync(join(agent, "mp-infra.json"), JSON.stringify({ root }));
+
   const path = join(home, "role", "tasks.yml");
   mkdirSync(join(home, "role"));
   writeFileSync(path, "- name: Example\n  debug:\n    msg: okay\n");
