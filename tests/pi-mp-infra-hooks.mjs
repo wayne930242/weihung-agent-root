@@ -12,6 +12,12 @@ try {
   writeFileSync(join(agent, "mp-infra.json"), JSON.stringify({ root }));
   process.env.PI_CODING_AGENT_DIR = agent;
   const { default: extension } = await import("../pi/extensions/mp-infra-hooks.ts");
+  const absent = new Map();
+  const { renameSync } = await import("node:fs");
+  renameSync(join(agent, "mp-infra.json"), join(agent, "mp-infra.json.hold"));
+  extension({ on(name, handler) { absent.set(name, handler); }, sendMessage() {} });
+  assert.equal(absent.size, 0, "without mp-infra.json the extension registers no hooks");
+  renameSync(join(agent, "mp-infra.json.hold"), join(agent, "mp-infra.json"));
   const handlers = new Map();
   const messages = [];
   extension({ on(name, handler) { handlers.set(name, handler); }, sendMessage(message) { messages.push(message); } });

@@ -22,6 +22,8 @@ function runHook(name: string, input: object, cwd: string, timeout = 5000) {
 }
 
 export default function mpInfraHooks(pi: ExtensionAPI): void {
+  // The installer writes mp-infra.json only on machines that have the company plugin.
+  if (!existsSync(join(agentDir, "mp-infra.json"))) return;
   pi.on("tool_call", async (event, ctx) => {
     if (event.toolName !== "bash") return;
     const command = String(event.input.command ?? "");

@@ -151,7 +151,9 @@ bash scripts/install.sh --target full
 bash scripts/uninstall.sh --target claude,codex,gemini
 ```
 
-The Pi target installs Pi, its Herdr integration, the selected community packages, local aaaav, and this repository's Pi package. The Claude bridge is pinned to upstream git commit `227f5eb4450a070dfbc083a7fe75b8b35366b941` for Opus 5.5 1M until a release containing #120 reaches npm. It generates `~/.pi/agent/AGENTS.md`, MCP discovery settings, and model routing from the active profile. `--skip-external` prepares local configuration without running npm, Pi package installation, or Herdr integration commands. `uninstall.sh --target pi` removes this repository's Pi configuration and package registrations while retaining the Pi binary and login state. The decision to remove the old targets belongs to the user.
+The Pi target installs Pi, its Herdr integration, the selected community packages, aaaav (the checkout beside this repo when present, otherwise `github.com/wayne930242/aaaav`), and this repository's Pi package. The company mp-infra plugin is added when its checkout exists at the default path or `PI_MP_INFRA_ROOT`; otherwise the installer skips it and says so. The Claude bridge is pinned to upstream git commit `227f5eb4450a070dfbc083a7fe75b8b35366b941` for Opus 5.5 1M until a release containing #120 reaches npm. It generates `~/.pi/agent/AGENTS.md`, MCP discovery settings, and model routing from the active profile. `--skip-external` prepares local configuration without running npm, Pi package installation, or Herdr integration commands. `uninstall.sh --target pi` removes this repository's Pi configuration and package registrations while retaining the Pi binary and login state. The decision to remove the old targets belongs to the user.
+
+On a new machine, clone this repository, run `bash scripts/install.sh --target pi`, then start `pi` inside Herdr and run `/login` for OpenAI Codex; Claude models go through pi-claude-bridge and use the Claude Code login on that machine.
 
 Bootstrap a new machine by cloning or updating the repo into the standard location and then running the installer:
 

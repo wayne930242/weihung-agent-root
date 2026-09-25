@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from copy import deepcopy
 from datetime import datetime
@@ -28,7 +29,8 @@ PACKAGES = [
     "npm:catppuccin-pi-theme",
 ]
 LOCAL_PACKAGE = str(ROOT)
-AAAAV = ROOT.parent / "aaaav"
+AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
+AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel")
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True}
@@ -120,11 +122,18 @@ def managed_resource(home, state, destination, source, force=False, link=False):
     write_json(home / ".pi/agent/.weihung-user-claude.json", state)
 
 
+def aaaav_source():
+    # A machine with an aaaav checkout beside this repo develops against it; any other installs the published repo.
+    return str(AAAAV) if AAAAV.exists() else AAAAV_GIT
+
+
 def install_ported_resources(home, state, force):
     agent_dir = home / ".pi/agent"
     mp_root = Path(os.environ.get("PI_MP_INFRA_ROOT", MP_INFRA)).resolve()
-    if not (mp_root / "hooks/production-safety-hook").is_file():
-        raise ValueError(f"mp-infra source is missing: {mp_root}")
+    has_mp_infra = (mp_root / "hooks/production-safety-hook").is_file()
+    if not has_mp_infra:
+        print(f"mp-infra not found at {mp_root}; skipped its skills and hooks. "
+              "Set PI_MP_INFRA_ROOT to the plugin checkout and rerun to add them.", file=sys.stderr)
     prefix = home / TTT_PREFIX
     run(["npm", "install", "--prefix", str(prefix), "--no-save", "--no-package-lock", "team-toon-tack@latest"], home)
     ttt_root = prefix / "node_modules/team-toon-tack"
@@ -155,10 +164,11 @@ def install_ported_resources(home, state, force):
                 content = content.replace(staged_binary, str(binary))
             managed_resource(home, state, agent_dir / relative, content.encode(), force)
 
-    managed_resource(home, state, agent_dir / "mp-infra.json", (json.dumps({"root": str(mp_root)}, indent=2) + "\n").encode(), force)
-    for skill in sorted((mp_root / "skills").iterdir()):
-        if (skill / "SKILL.md").is_file():
-            managed_resource(home, state, agent_dir / "skills" / skill.name, skill, force, link=True)
+    if has_mp_infra:
+        managed_resource(home, state, agent_dir / "mp-infra.json", (json.dumps({"root": str(mp_root)}, indent=2) + "\n").encode(), force)
+        for skill in sorted((mp_root / "skills").iterdir()):
+            if (skill / "SKILL.md").is_file():
+                managed_resource(home, state, agent_dir / "skills" / skill.name, skill, force, link=True)
     managed_resource(home, state, agent_dir / "skills/managing-linear-tasks", ttt_root / "skills/managing-linear-tasks", force, link=True)
     for command in sorted((ttt_root / "commands").glob("ttt-*.md")):
         action = ("Create the resulting project skill under `.agents/skills/` for Pi."
@@ -304,6 +314,7 @@ def install(home, skip_external, force):
     marker_path = agent_dir / ".weihung-user-claude.json"
     first_install = not marker_path.exists()
     state = read_json(marker_path)
+    state["aaaav"] = aaaav_source()
     settings_path = agent_dir / "settings.json"
     mcp_path = agent_dir / "mcp.json"
     instructions_path = agent_dir / "AGENTS.md"
@@ -348,19 +359,17 @@ def install(home, skip_external, force):
                 write_json(settings_path, settings)
             else:
                 run(["pi", "remove", package], home)
-        if not AAAAV.exists():
-            raise ValueError(f"aaaav package is missing: {AAAAV}")
-        run(["pi", "install", str(AAAAV)], home)
+        run(["pi", "install", state["aaaav"]], home)
         install_ported_resources(home, state, force)
         write_json(marker_path, state)
         run(["pi", "install", LOCAL_PACKAGE], home)
     else:
         settings = read_json(settings_path)
-        settings["packages"] = [package for package in dict.fromkeys(settings.get("packages", []) + PACKAGES + [str(AAAAV), LOCAL_PACKAGE]) if not obsolete_bridge(package)]
+        settings["packages"] = [package for package in dict.fromkeys(settings.get("packages", []) + PACKAGES + [state["aaaav"], LOCAL_PACKAGE]) if not obsolete_bridge(package)]
         write_json(settings_path, settings)
     settings = read_json(settings_path)
     current = settings.get("packages", [])
-    owned = PACKAGES + [str(AAAAV), LOCAL_PACKAGE]
+    owned = PACKAGES + [state["aaaav"], LOCAL_PACKAGE]
     owned_ids = {package_id(value, agent_dir) for value in owned}
     unmanaged = [value for value in current if package_id(value, agent_dir) not in owned_ids and not obsolete_bridge(value)]
     managed = [next((value for value in current if package_id(value, agent_dir) == package_id(source, agent_dir)), source) for source in owned]
@@ -386,10 +395,11 @@ def uninstall(home, skip_external):
             shutil.move(backup, instructions_path)
     previous_packages = state.get("previous_packages", [])
     previous_ids = {package_id(value, agent_dir) for value in previous_packages}
-    owned = {package_id(value, agent_dir) for value in PACKAGES + [str(AAAAV), LOCAL_PACKAGE]} - previous_ids
+    managed_packages = PACKAGES + [state.get("aaaav", str(AAAAV)), LOCAL_PACKAGE]
+    owned = {package_id(value, agent_dir) for value in managed_packages} - previous_ids
     if not skip_external:
         installed_ids = {package_id(value, agent_dir) for value in read_json(settings_path).get("packages", [])}
-        for package in PACKAGES + [str(AAAAV), LOCAL_PACKAGE]:
+        for package in managed_packages:
             identity = package_id(package, agent_dir)
             if identity in owned and identity in installed_ids:
                 run(["pi", "remove", package], home)
