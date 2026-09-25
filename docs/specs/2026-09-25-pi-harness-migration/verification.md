@@ -1,5 +1,19 @@
 # Pi harness migration verification
 
+## Claude plugin ports (2026-09-25)
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| Official codebase-memory Pi integration without a second instructions block | The target ran `codebase-memory-mcp install --clients=pi -y` in a staging HOME, installed its generated `cbmem.ts` and skill in the real HOME, and replaced the staged binary path with `~/.local/bin/codebase-memory-mcp`. The generated Pi `AGENTS.md` has one `Code discovery` section. Pi RPC loaded with zero extension errors and listed `skill:codebase-memory`. | pass |
+| mp-infra skills and hooks in Pi | The live marketplace checkout supplies all 14 current skills (the scope inventory said 13); Pi RPC listed all 14. `node --experimental-strip-types tests/pi-mp-infra-hooks.mjs` ran the original production hook: `DROP DATABASE example` blocked, `echo hello` passed, and `git reset --hard` required interactive review. The same test observed the original session-start output and appended playbook, Nomad, and decrypted-vault findings to model-facing edit/write results. | pass locally |
+| team-toon-tack skill, commands, and CLI | The private-prefix npm package is version 3.10.2. Pi RPC listed `skill:managing-linear-tasks` and all 12 `ttt-*` prompts; `~/.local/bin/ttt version` returned `team-toon-tack v3.10.2`. | pass |
+| Repeatable Pi install and Pi uninstall | `python3 tests/pi_port_install.py` first withheld the CLI link and observed an install failure with recorded port resources, then reran `bash scripts/install.sh --target pi` twice and `bash scripts/uninstall.sh --target pi` under a temporary HOME with external commands stubbed. It checked 14 mp-infra links, the official integration artifacts, 12 prompts, CLI, user-file restoration, and retention of `moshi-hooks.ts`. Two consecutive real-HOME installs exited 0 and left the settings, instructions, marker, hook config, cbmem extension, and Herdr config byte identical. The real HOME was not uninstalled. | pass for temporary HOME and real reinstall |
+| Default and legacy targets | `bash tests/install.sh` and `bash tests/uninstall.sh` exited 0 after the port. | local test pass |
+
+The first real-HOME install stopped at a wrong npm prefix CLI path after writing new port resources. The adapter now records each resource as it installs, uses `node_modules/.bin/ttt`, and a second real-HOME install completed. `git diff --check` passed.
+
+Reflexive pass: the post-edit validator path was nested under `tool_input` (gap; resolved by the adapter and hook test); npm's local prefix used `node_modules/.bin` (gap; resolved by the installer and interrupted-install test); the Nomad matcher and script supported different suffixes (gap; resolved by the Pi adapter's additional triggers); zsh's `status` variable rejected an exit-code assignment (gap; local command slip resolved with `pi_port_rc`). The solid-loop no-op check found no standing instruction to change.
+
 Status: real HOME Pi target installed after user authorization; the core Herdr paths below were verified. Legacy targets remain installed until the user chooses to remove them.
 
 ## Pi interface and idle compaction follow-up (2026-09-25)

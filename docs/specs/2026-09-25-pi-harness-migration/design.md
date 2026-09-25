@@ -36,7 +36,28 @@ The Pi target writes `panes.mode: split` and `panes.direction: right` to the exi
 
 The repository Pi package loads `idle-compaction.ts`. Its `agent_end` and `session_start` checks run after a short settlement delay, then require idle state, no pending messages, and more than 300,000 estimated tokens. An in-flight guard prevents a second request until the compaction callback completes. The extension calls Pi's own compaction API, retaining the bridge and native auto-compaction paths.
 
+## Claude plugin ports into Pi
+
+The Pi target runs codebase-memory-mcp's official Pi installer in a temporary HOME, copies its generated extension and skill, and substitutes the target HOME's installed binary path for the temporary path embedded in the generated extension. The installer keeps sole ownership of `~/.pi/agent/AGENTS.md`; its existing Code discovery section supplies the instructions. The extension and skill are tracked in the Pi target marker for repeat install and uninstall.
+
+The mp-infra port links skills from the live `moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra` checkout and records that checkout in `~/.pi/agent/mp-infra.json`. The Pi extension invokes the plugin's original hooks: the Bash pre-call gate maps block and review decisions to Pi's tool-call result and UI confirmation, the session-start check enters model context, and edit/write validators append their output to the tool result. The Nomad hook configuration selects `.nomad.j2`, while its script validates `.nomad` and `.hcl`; Pi also invokes it for those supported file types. The checkout currently contains 14 skills; the earlier scope inventory counted 13.
+
+The team-toon-tack port installs the latest npm package under a private HOME prefix, links its CLI into `~/.local/bin/ttt`, links its skill, and generates Pi prompt templates for its 12 commands. Templates refer to the installed command source and pass Pi's `$ARGUMENTS` through to the `ttt` CLI workflow. Reapplying the target refreshes both external sources. Uninstall removes only paths recorded by the Pi target marker and restores backed-up user files.
+
 ## Friction Notes
+
+- Tried: passing the post-edit input's top-level `file_path` to the mp-infra validator.
+  Found: the Pi adapter wraps that path under `tool_input`, so the validator received no file path and the output test failed.
+  Led by: the hook port's model-facing output anchor.
+- Tried: resolving the private-prefix `ttt` CLI at `<prefix>/bin/ttt`.
+  Found: npm's local prefix puts executable links at `<prefix>/node_modules/.bin/ttt`; the first real-HOME install stopped after creating the other port resources.
+  Led by: the approved real-HOME install anchor.
+- Tried: applying the Claude Nomad hook's `.nomad.j2` matcher as the only Pi trigger.
+  Found: the original validator script checks only `.nomad` and `.hcl`, so that matcher produces no validation output.
+  Led by: the hook-effect contract.
+- Tried: capturing the first install's exit code in zsh variable `status`.
+  Found: zsh reserves `status` as read-only; reading the install log exposed the actual npm prefix error.
+  Led by: none.
 
 - Tried: filtering `npm search --json` with a Python one-liner containing escaped quote characters.
   Found: the extra escaping produced a Python syntax error; a plain JSON parser returned the theme package list.

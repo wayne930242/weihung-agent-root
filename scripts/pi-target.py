@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -32,6 +33,8 @@ PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel")
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True}
 POWERLINE_QUEUE = {"compactPromptMode": "native"}
+MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
+TTT_PREFIX = Path(".local/share/weihung-user-claude/team-toon-tack")
 
 
 def package_id(value, agent_dir):
@@ -84,6 +87,114 @@ def run(args, home):
     env["HOME"] = str(home)
     env["PI_CODING_AGENT_DIR"] = str(home / ".pi/agent")
     subprocess.run(args, check=True, env=env)
+
+
+def managed_resource(home, state, destination, source, force=False, link=False):
+    """Install a file or link while retaining a user-owned predecessor."""
+    key = str(destination.relative_to(home))
+    records = state.setdefault("ported_resources", {})
+    record = records.get(key)
+    if destination.exists() or destination.is_symlink():
+        current = (destination.readlink().as_posix() if destination.is_symlink() else
+                   hashlib.sha256(destination.read_bytes()).hexdigest() if destination.is_file() else None)
+        if record and current == record["installed"]:
+            destination.unlink()
+        elif not record and ((link and destination.is_symlink() and current == str(source)) or
+                             (not link and destination.is_file() and current == hashlib.sha256(source).hexdigest())):
+            return
+        else:
+            if not force:
+                raise ValueError(f"{destination} exists; use --force to back it up")
+            backup = home / ".local/state/weihung-user-claude/backups" / datetime.now().strftime("%Y%m%d-%H%M%S") / key
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(destination, backup)
+            record = {**(record or {}), "backup": str(backup)}
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if link:
+        destination.symlink_to(source)
+        installed = str(source)
+    else:
+        destination.write_bytes(source)
+        installed = hashlib.sha256(source).hexdigest()
+    records[key] = {**(record or {}), "installed": installed, "link": link}
+    write_json(home / ".pi/agent/.weihung-user-claude.json", state)
+
+
+def install_ported_resources(home, state, force):
+    agent_dir = home / ".pi/agent"
+    mp_root = Path(os.environ.get("PI_MP_INFRA_ROOT", MP_INFRA)).resolve()
+    if not (mp_root / "hooks/production-safety-hook").is_file():
+        raise ValueError(f"mp-infra source is missing: {mp_root}")
+    prefix = home / TTT_PREFIX
+    run(["npm", "install", "--prefix", str(prefix), "--no-save", "--no-package-lock", "team-toon-tack@latest"], home)
+    ttt_root = prefix / "node_modules/team-toon-tack"
+    if not (ttt_root / "skills/managing-linear-tasks/SKILL.md").is_file():
+        raise ValueError(f"team-toon-tack package is missing: {ttt_root}")
+    state["ttt_prefix"] = str(prefix)
+    write_json(agent_dir / ".weihung-user-claude.json", state)
+
+    # The official installer generates Pi's current extension and skill in a staging HOME.
+    # Our generated AGENTS.md remains the sole owner of Pi instructions.
+    with tempfile.TemporaryDirectory(prefix="pi-cbmem-") as temporary:
+        stage = Path(temporary)
+        env = {**os.environ, "HOME": str(stage), "XDG_CACHE_HOME": str(stage / ".cache")}
+        binary = home / ".local/bin/codebase-memory-mcp"
+        if not binary.is_file():
+            raise ValueError(f"codebase-memory-mcp binary is missing: {binary}")
+        subprocess.run([str(binary), "install", "--clients=pi", "-y"], check=True, env=env,
+                       stdout=subprocess.DEVNULL)
+        for relative in ("extensions/cbmem.ts", "skills/codebase-memory/SKILL.md"):
+            source = stage / ".pi/agent" / relative
+            if not source.is_file():
+                raise ValueError(f"official codebase-memory Pi resource is missing: {relative}")
+            content = source.read_text()
+            if relative.endswith("cbmem.ts"):
+                staged_binary = str(stage / ".local/bin/codebase-memory-mcp")
+                if staged_binary not in content:
+                    raise ValueError("official Pi extension did not identify its staged binary")
+                content = content.replace(staged_binary, str(binary))
+            managed_resource(home, state, agent_dir / relative, content.encode(), force)
+
+    managed_resource(home, state, agent_dir / "mp-infra.json", (json.dumps({"root": str(mp_root)}, indent=2) + "\n").encode(), force)
+    for skill in sorted((mp_root / "skills").iterdir()):
+        if (skill / "SKILL.md").is_file():
+            managed_resource(home, state, agent_dir / "skills" / skill.name, skill, force, link=True)
+    managed_resource(home, state, agent_dir / "skills/managing-linear-tasks", ttt_root / "skills/managing-linear-tasks", force, link=True)
+    for command in sorted((ttt_root / "commands").glob("ttt-*.md")):
+        action = ("Create the resulting project skill under `.agents/skills/` for Pi."
+                  if command.stem == "ttt-write-work-on-skill" else
+                  f"Use Pi's shell tool and `{home / '.local/bin/ttt'}` for the matching CLI operation.")
+        prompt = (f"---\ndescription: Run team-toon-tack {command.stem.removeprefix('ttt-')}\n"
+                  f"argument-hint: '[arguments]'\n---\n"
+                  f"Read and follow `{command}` for this request. Interpret its `{{{{ ... }}}}` placeholders "
+                  "from these arguments: $ARGUMENTS. Translate `/ttt:*` references to Pi's `/ttt-*` templates. "
+                  f"{action}\n")
+        managed_resource(home, state, agent_dir / "prompts" / command.name, prompt.encode(), force)
+    cli = prefix / "node_modules/.bin/ttt"
+    if not cli.exists():
+        raise ValueError(f"team-toon-tack CLI is missing: {cli}")
+    managed_resource(home, state, home / ".local/bin/ttt", cli, force, link=True)
+
+
+def uninstall_ported_resources(home, state):
+    for key, record in reversed(list(state.get("ported_resources", {}).items())):
+        destination = home / key
+        if destination.is_symlink():
+            current = destination.readlink().as_posix()
+        elif destination.is_file():
+            current = hashlib.sha256(destination.read_bytes()).hexdigest()
+        else:
+            continue
+        if current != record["installed"]:
+            continue
+        destination.unlink()
+        backup = record.get("backup")
+        if backup and Path(backup).exists():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(backup, destination)
+    prefix = state.get("ttt_prefix")
+    if prefix and Path(prefix) == home / TTT_PREFIX and Path(prefix).exists():
+        shutil.rmtree(prefix)
 
 
 def active_strategy():
@@ -250,6 +361,8 @@ def install(home, skip_external, force):
         if not AAAAV.exists():
             raise ValueError(f"aaaav package is missing: {AAAAV}")
         run(["pi", "install", str(AAAAV)], home)
+        install_ported_resources(home, state, force)
+        write_json(marker_path, state)
         run(["pi", "install", LOCAL_PACKAGE], home)
     else:
         settings = read_json(settings_path)
@@ -272,6 +385,7 @@ def uninstall(home, skip_external):
     if not marker_path.exists():
         return
     state = read_json(marker_path)
+    uninstall_ported_resources(home, state)
     settings_path = agent_dir / "settings.json"
     mcp_path = agent_dir / "mcp.json"
     instructions_path = agent_dir / "AGENTS.md"
