@@ -3,8 +3,8 @@
 The claude-drive-codex tiers under a Codex Sol high main session, kept as a separate entry for its own history.
 
 Created: 2026-09-07.
-Updated: 2026-09-24.
-Rationale: The user requested lower Astra spending, Luna high for documentation, Sol high for investigation, Astra low for simple implementation, and Astra high for complex work.
+Updated: 2026-09-25.
+Rationale: The user requested lower Astra spending, Luna high for documentation, Sol high for investigation, Astra low for simple implementation, and Astra high for complex work. On 2026-09-25 the user kept Opus 5.5 1M only for main coordination and complex work; other Opus tiers use the bridge's 200K twin `claude-bridge/claude-200k-opus-5-5`, and a Luna tier falls back to Haiku 4.5 rather than Opus.
 On 2026-09-24 the user aligned this strategy with claude-drive-codex: investigation moves to Luna medium, routine review to Sol low, UI/UX to Sol medium, implementation to Claude Opus 5.5 low and medium, complex work to Sol high or Astra low by instruction clarity, and Astra high is reserved for academic research and forward-looking hard problems.
 
 ## Pi tiers
@@ -16,8 +16,8 @@ On 2026-09-24 the user aligned this strategy with claude-drive-codex: investigat
 | recon | `openai-codex/gpt-6-luna` | medium |
 | ui | `openai-codex/gpt-6-sol` | medium |
 | review | `openai-codex/gpt-6-sol` | low |
-| simple | `claude-bridge/claude-opus-5-5` | low |
-| coding | `claude-bridge/claude-opus-5-5` | medium |
+| simple | `claude-bridge/claude-200k-opus-5-5` | low |
+| coding | `claude-bridge/claude-200k-opus-5-5` | medium |
 | complex_clear | `openai-codex/gpt-6-sol` | high |
 | complex_unclear | `openai-codex/gpt-6-astra` | low |
 | academic | `openai-codex/gpt-6-astra` | high |

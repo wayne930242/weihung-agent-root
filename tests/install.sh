@@ -88,7 +88,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 10, settings
-    assert settings["packages"][0] == "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941", settings
+    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@bbe46c7654cd1a4eb069cee9e9e52db088f9a704", settings
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["theme"] == "catppuccin-mocha", settings
     assert settings["editorPaddingX"] == 1, settings
@@ -200,7 +200,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
-    assert any(package.startswith("git:github.com/elidickinson/pi-claude-bridge@227f5eb") for package in installed_packages), installed_packages
+    assert any(package.startswith("git:github.com/wayne930242/pi-claude-bridge@bbe46c7") for package in installed_packages), installed_packages
     assert json.loads(config.read_text())["models"]["agents"] == original_models["agents"]
     subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
     run(uninstall, home)

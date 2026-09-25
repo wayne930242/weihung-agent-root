@@ -3,8 +3,8 @@
 Codex-light routing: Luna medium covers documents, investigation, UI, and review, which were the former agy tier; Opus 5.5 covers implementation and all complex work.
 
 Created: 2026-09-15.
-Updated: 2026-09-24.
-Rationale: The user requested a drive-all variant that consumes no Codex tokens: Astra low becomes Claude opus[1m] and Astra high becomes Claude Fable 5.1, each keeping its effort level, and the user chose agy-medium to replace Codex sol-low for UI/UX and routine review, keeping a non-Claude review perspective. On 2026-09-23 the user replaced Fable 5.1 high with Opus 5.5 1M xhigh and pinned Opus to 5.5. On 2026-09-24 the user retired Sonnet and moved implementation to Opus 5.5: low for simple work, medium for standard work.
+Updated: 2026-09-25.
+Rationale: The user requested a drive-all variant that consumes no Codex tokens: Astra low becomes Claude opus[1m] and Astra high becomes Claude Fable 5.1, each keeping its effort level, and the user chose agy-medium to replace Codex sol-low for UI/UX and routine review, keeping a non-Claude review perspective. On 2026-09-23 the user replaced Fable 5.1 high with Opus 5.5 1M xhigh and pinned Opus to 5.5. On 2026-09-24 the user retired Sonnet and moved implementation to Opus 5.5: low for simple work, medium for standard work. On 2026-09-25 the user kept Opus 5.5 1M only for main coordination and complex work; other Opus tiers use the bridge's 200K twin `claude-bridge/claude-200k-opus-5-5`, and a Luna tier falls back to Haiku 4.5 rather than Opus.
 
 ## Pi tiers
 
@@ -15,8 +15,8 @@ Rationale: The user requested a drive-all variant that consumes no Codex tokens:
 | recon | `openai-codex/gpt-6-luna` | medium |
 | ui | `openai-codex/gpt-6-luna` | medium |
 | review | `openai-codex/gpt-6-luna` | medium |
-| simple | `claude-bridge/claude-opus-5-5` | low |
-| coding | `claude-bridge/claude-opus-5-5` | medium |
+| simple | `claude-bridge/claude-200k-opus-5-5` | low |
+| coding | `claude-bridge/claude-200k-opus-5-5` | medium |
 | complex_clear | `claude-bridge/claude-opus-5-5` | low |
 | complex_unclear | `claude-bridge/claude-opus-5-5` | xhigh |
 | academic | `claude-bridge/claude-opus-5-5` | xhigh |

@@ -170,6 +170,35 @@ class PiReviewFixes(unittest.TestCase):
                     expected = ", ".join(target.candidates(model, tier))
                     self.assertIn(f"model `{expected}`; thinking `{thinking}`", instructions)
 
+    def test_only_main_and_complex_tiers_fall_back_to_opus_1m(self):
+        spec = importlib.util.spec_from_file_location("pi_target_tiers", PI_TARGET)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
+        one_m = {"main", "complex_clear", "complex_unclear", "academic"}
+        for strategy, tiers in profiles.items():
+            for tier, (model, _) in tiers.items():
+                with self.subTest(strategy=strategy, tier=tier):
+                    self.assertNotEqual(model == target.OPUS_1M and tier not in one_m, True)
+                    if model == target.LUNA:
+                        self.assertEqual(target.candidates(model, tier)[1], target.HAIKU)
+        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "complex_clear")[1], target.OPUS_1M)
+        self.assertEqual(target.candidates("openai-codex/gpt-6-astra", "architecture")[1], target.OPUS_1M)
+        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "review")[1], target.OPUS_200K)
+        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "ui")[1], target.OPUS_200K)
+
+    def test_upstream_bridge_pin_is_retired_for_the_fork(self):
+        upstream = "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941"
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            (agent / "settings.json").write_text(json.dumps({"packages": [upstream]}))
+            run_script("install.sh", home, "--skip-external")
+            installed = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
+                             ["git:github.com/wayne930242/pi-claude-bridge@bbe46c7654cd1a4eb069cee9e9e52db088f9a704"])
+
     def test_previous_git_bridge_revision_is_restored(self):
         old = "git:github.com/elidickinson/pi-claude-bridge@old-commit"
         with tempfile.TemporaryDirectory() as directory:

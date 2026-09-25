@@ -16,8 +16,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BRIDGE_SOURCE = "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941"
+BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@bbe46c7654cd1a4eb069cee9e9e52db088f9a704"
 LEGACY_BRIDGE = "npm:pi-claude-bridge"
+BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
+OPUS_1M = "claude-bridge/claude-opus-5-5"
+OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
+HAIKU = "claude-bridge/claude-haiku-4-5"
+LUNA = "openai-codex/gpt-6-luna"
+ONE_M_TIERS = {"main", "complex_clear", "complex_unclear", "academic", "architecture"}
 PACKAGES = [
     BRIDGE_SOURCE,
     "npm:pi-herdr-agents",
@@ -49,7 +55,7 @@ def package_id(value, agent_dir):
 
 def obsolete_bridge(value):
     return value == LEGACY_BRIDGE or (
-        value.startswith("git:github.com/elidickinson/pi-claude-bridge@")
+        value.startswith(BRIDGE_GIT_PREFIXES)
         and value != BRIDGE_SOURCE
     )
 
@@ -229,14 +235,19 @@ def routing():
 
 def candidates(model, tier):
     codex_fallback = {
-        "docs": "openai-codex/gpt-6-luna",
-        "recon": "openai-codex/gpt-6-luna",
-        "simple": "openai-codex/gpt-6-luna",
+        "docs": LUNA,
+        "recon": LUNA,
+        "simple": LUNA,
         "complex_unclear": "openai-codex/gpt-6-astra",
         "architecture": "openai-codex/gpt-6-astra",
         "academic": "openai-codex/gpt-6-astra",
     }.get(tier, "openai-codex/gpt-6-sol")
-    other = codex_fallback if model.startswith("claude-bridge/") else "claude-bridge/claude-opus-5-5"
+    if model.startswith("claude-bridge/"):
+        other = codex_fallback
+    elif model == LUNA:
+        other = HAIKU
+    else:
+        other = OPUS_1M if tier in ONE_M_TIERS else OPUS_200K
     return list(dict.fromkeys((model, other)))
 
 

@@ -51,7 +51,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so 
 
 | Package | Role |
 |---|---|
-| `pi-claude-bridge` | The `claude-bridge` provider: Claude models through the local Claude Code login. Pinned to upstream commit `227f5eb` for Opus 5.5 with a 1M context window until a release containing that fix reaches npm. |
+| `pi-claude-bridge` | The `claude-bridge` provider: Claude models through the local Claude Code login. Pinned to the fork commit `wayne930242/pi-claude-bridge@bbe46c7`, which adds 200K twins such as `claude-200k-opus-5-5` beside each 1M model ([upstream PR #131](https://github.com/elidickinson/pi-claude-bridge/pull/131)), so main and complex tiers run Opus 5.5 1M while other tiers run 200K. |
 | `pi-herdr-agents` | The `subagent` tool: dispatches workers into visible Herdr panes or isolated Git worktrees, with per-task model routing and a status widget. |
 | `pi-mcp-adapter` | The `mcp` gateway for MCP servers. Servers come from `~/.config/mcp/mcp.json`, `~/.agents/mcp.json`, or pi's own config; host configs of other tools on the machine load as a lowest-precedence fallback because the installer sets `hostConfigDiscovery` to `on`. |
 | `pi-intercom` | The `intercom` tool: messages and questions between pi sessions on the same machine. |
