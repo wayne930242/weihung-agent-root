@@ -70,21 +70,19 @@ class PiReviewFixes(unittest.TestCase):
             self.assertIsNone(restored["theme"])
             self.assertNotIn("defaultModel", restored)
 
-    def test_legacy_model_routing_remains_available(self):
-        strategies = ROOT / "skills/managing-model-preferences/strategies"
-        for path in strategies.glob("*.md"):
-            with self.subTest(strategy=path.name):
-                content = path.read_text()
-                self.assertIn("## Selection order", content)
-                self.assertIn("## Application", content)
-                if path.stem != "claude-coding-codex-doc":
-                    self.assertIn("agent-kind", content)
-                    self.assertIn("agent-model", content)
-                    self.assertIn("agent-effort", content)
-                    self.assertIn("environment is unpredictable", content)
-        skill = (ROOT / "skills/managing-model-preferences/SKILL.md").read_text()
-        self.assertIn("Claude and Codex", skill)
-        self.assertIn("Pi model profiles", skill)
+    def test_strategy_tables_mirror_pi_profiles(self):
+        preferences = ROOT / "skills/managing-model-preferences"
+        profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
+        catalog = (preferences / "model-preference-profile.md").read_text()
+        self.assertEqual(sorted(path.stem for path in (preferences / "strategies").glob("*.md")), sorted(profiles))
+        for name, tiers in profiles.items():
+            with self.subTest(strategy=name):
+                content = (preferences / f"strategies/{name}.md").read_text()
+                rows = [line for line in content.splitlines() if line.startswith("| ") and "`" in line]
+                expected = [f"| {tier} | `{model}` | {thinking} |" for tier, (model, thinking) in tiers.items()]
+                self.assertEqual(rows, expected)
+                self.assertIn(f"[{name}](strategies/{name}.md)", catalog)
+                self.assertNotIn("agent-kind", content)
 
     def test_plain_uninstall_keeps_shared_skills_for_pi(self):
         with tempfile.TemporaryDirectory() as directory:

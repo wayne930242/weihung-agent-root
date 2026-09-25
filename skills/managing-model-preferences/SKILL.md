@@ -1,6 +1,6 @@
 ---
 name: managing-model-preferences
-description: Manage model preference strategies for this project. Use when viewing the active strategy, adding or switching strategies, or adjusting model tiers, dispatch priority, and effort levels.
+description: Manage model preference strategies for this project. Use when viewing the active strategy, adding or switching strategies, or adjusting model tiers, dispatch priority, and thinking levels.
 argument-hint: "[strategy name | status | preference to add or revise]"
 ---
 
@@ -8,15 +8,15 @@ argument-hint: "[strategy name | status | preference to add or revise]"
 
 Route the request's argument first:
 
-- None, `status`, or `list`: read [model-preference-profile.md](model-preference-profile.md), its active strategy, and [Pi model profiles](../../pi/model-profiles.json); report the active strategy, activation date, rationale, Claude and Codex dispatch rows, Pi tiers, and the other strategies in the catalog. This branch is read-only and ends here.
+- None, `status`, or `list`: read [model-preference-profile.md](model-preference-profile.md), its active strategy, and [Pi model profiles](../../pi/model-profiles.json); report the active strategy, activation date, rationale, its pi tiers, and the other strategies in the catalog. This branch is read-only and ends here.
 - A strategy name from the catalog: switch to it through steps 1, 3, and 4, changing only the entrypoint's active link, date, and rationale.
 - A new or adjusted preference: run steps 1 through 4.
 
-1. Read [model-preference-profile.md](model-preference-profile.md) in this directory, then read the currently active strategy and any requested strategy for its legacy selection order and agent-kind, model, and effort rows. Read [Pi model profiles](../../pi/model-profiles.json) for Pi model and thinking tiers. Claude and Codex dispatch use the strategy rows; Pi dispatch uses the JSON map.
+1. Read [model-preference-profile.md](model-preference-profile.md) in this directory, then the currently active strategy and any requested strategy, and their entries in [Pi model profiles](../../pi/model-profiles.json).
    Completion criteria: Explain the difference between currently active rules and requested changes.
-2. Determine updates based on stated user preferences. If an unresolved choice alters the model or effort, ask one question at a time. Verify model identifiers and effort parameters against the current harness model list, CLI help, or official documentation, distinguishing preference names from actual CLI arguments.
-   Completion criteria: Each tier has an explicit model, effort, and verified parameter reference; unsupported settings are reported.
-3. Continue authorized modifications through `aaaav-do`. Resolve the actual source directory of this skill and operate in the source checkout: keep Claude and Codex selection and application rules in `strategies/<name>.md`, put Pi model and thinking tiers in `pi/model-profiles.json`, and register the strategy in the index; update the entrypoint link, date, and rationale for strategy switches. The user's current judgment serves as the preference rationale. When Pi is installed, run `python3 scripts/pi-target.py apply-profile --home "$HOME"` from this repository and reload Pi so the new default model and `pi-herdr-agents` routing take effect.
-   Completion criteria: The entrypoint specifies one active strategy; Pi settings reflect that strategy; Git diff verifies the additions, revisions, or switches. When the user requests version control, perform a scoped commit after verification and report the commit; push only when authorized.
-4. Verify Claude and Codex dispatch parameters and Pi task candidates. In the source checkout, run `bash tests/prompts.sh`, `bash tests/install.sh`, and `bash tests/uninstall.sh`. For Pi, also run `node --experimental-strip-types tests/pi-dispatch.mjs` and inspect the installed `~/.pi/agent/settings.json` and `~/.pi/agent/herdr-agents/config.json` after applying the profile. Walk through simple, standard, complex, zero-defect, and explicit override scenarios.
-   Completion criteria: Report selection results across scenarios, distinguishing local validation, installation, and real dispatch evidence.
+2. Determine updates based on stated user preferences. If an unresolved choice alters a model or thinking level, ask one question at a time. Verify each `provider/model-id` and thinking level against `pi --list-models` or the pi documentation.
+   Completion criteria: Each tier has an explicit model and thinking level that pi accepts; unsupported settings are reported.
+3. Continue authorized modifications through `aaaav-do`. Resolve the actual source directory of this skill and operate in the source checkout: put the executable tiers in `pi/model-profiles.json`, mirror them in the tier table of `strategies/<name>.md` with the user's current judgment as its rationale, and register a new strategy in the entrypoint's table; a switch updates the entrypoint link, date, and rationale. Then run `python3 scripts/pi-target.py apply-profile --home "$HOME"` from the repository and reload pi so the new default model and `pi-herdr-agents` routing take effect.
+   Completion criteria: The entrypoint names one active strategy; pi settings reflect it; the Git diff shows the additions, revisions, or switch. When the user requests version control, commit after verification and report the commit; push only when authorized.
+4. In the source checkout, run `python3 tests/pi_review_fixes.py`, `bash tests/install.sh`, `node --experimental-strip-types --test tests/pi-dispatch.mjs`, and `node --experimental-strip-types --test tests/profile.mjs`. Inspect `~/.pi/agent/settings.json`, `~/.pi/agent/herdr-agents/config.json`, and the model strategy section of `~/.pi/agent/AGENTS.md`. Walk through simple, standard, complex, academic, and explicit override scenarios with the tier guide.
+   Completion criteria: Report the selected tier and model for each scenario, distinguishing local test, installation, and real dispatch evidence.

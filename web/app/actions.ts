@@ -39,7 +39,7 @@ export async function switchStrategy(
 
     return {
       tone: "ok",
-      message: `已切換至 ${strategy}（${activatedOn}），下次開 session 會自動同步到本機`,
+      message: `已切換至 ${strategy}（${activatedOn}）；在本機 git pull 後執行 scripts/pi-target.py apply-profile 並重新載入 pi 即生效`,
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
