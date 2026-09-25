@@ -73,6 +73,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so 
 
 - [dispatch-recovery.ts](pi/extensions/dispatch-recovery.ts): records every `subagent` dispatch in `~/.pi/agent/dispatch-ledger/` and adds the `dispatch_control` tool, which lists unfinished dispatches, resumes a stopped worker session in a new pane, and hands the current main scope to a new Herdr pane. The `dispatch-recovery` and `orchestrator-handoff` skills drive it, with [scripts/pi-dispatch.py](scripts/pi-dispatch.py) as the command-line side.
 - [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn.
+- [pane-balance.ts](pi/extensions/pane-balance.ts): after the main session opens or closes a worker pane, evens out the column and row sizes of its Herdr tab, since each `subagent` split otherwise halves the parent pane.
 - [mp-infra-hooks.ts](pi/extensions/mp-infra-hooks.ts): when `~/.pi/agent/mp-infra.json` exists, runs the mp-infra session-start hook, its production-safety check before shell commands, and its vault, playbook, and Nomad checks after edits.
 - `shipping-task` skill: carries an approved task through the target app's branch or worktree, commit, pull request, and merge workflow.
 
