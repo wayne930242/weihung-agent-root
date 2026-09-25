@@ -16,7 +16,7 @@ Amended at: 2026-09-25；使用者改定 bridge 來源為上游 commit `227f5eb4
      - pi 本體（npm 全域安裝）與 Herdr 的 pi integration。
      - 社群套件：`pi-claude-bridge` 固定上游 git commit `227f5eb4450a070dfbc083a7fe75b8b35366b941`（待 npm 版本包含 #120 才改回 npm）、`pi-herdr-agents`、`pi-mcp-adapter`，以及 design 階段選定的 ask／todo 套件。
      - aaaav，以本機路徑用 `pi install` 安裝。
-     - `~/.pi/agent/AGENTS.md`：由 `CLAUDE.md` 與 `shared/*.md` 展開 `@import` 後產生。內容改寫成 pi 的用詞，不再提到 Claude Code 專屬工具名稱、`boss-say`、straw-boss、`/codex:rescue`。
+     - `~/.pi/agent/AGENTS.md`：由 `pi/AGENTS.md.in` 單獨產生，長度約 500–700 字，適用於 OpenAI Codex 與 Claude，包含恰好一個 code-discovery 區塊及依目前策略產生的模型路由。它不拼接 `CLAUDE.md` 或 `shared/*.md`，不提及 Claude Code 專屬工具名稱、`boss-say`、straw-boss、`/codex:rescue`，並保留提交訊息不含 AI 工具歸屬的規則。
      - user root 的 skill，放到 `~/.agents/skills`（Codex 目前也用這個位置，兩邊共用）。
      - `pi-mcp-adapter` 的 MCP 設定。
      - 依目前啟用的策略產生 `pi-herdr-agents` 設定，以及 pi 的預設 model 和 thinking。

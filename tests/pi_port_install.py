@@ -82,6 +82,12 @@ if '--prefix' in args:
     assert failed.returncode != 0 and "CLI is missing" in failed.stderr
     assert json.loads((agent / ".weihung-user-claude.json").read_text())["ported_resources"]
     run("install.sh", home, env)
+    instructions = (agent / "AGENTS.md").read_text()
+    assert 500 <= len(instructions.split()) <= 700
+    assert instructions.count("## Code discovery") == 1
+    assert instructions.count("Commit messages contain no AI tool attribution.") == 1
+    assert "@shared/" not in instructions
+    assert "boss-say" not in instructions and "/codex:rescue" not in instructions
     assert len(list((agent / "skills").iterdir())) == len(SKILLS) + 2
     assert len(list((agent / "prompts").glob("ttt-*.md"))) == 12
     assert str(home / ".local/bin/ttt") in (agent / "prompts/ttt-show.md").read_text()

@@ -235,17 +235,7 @@ def default_candidates(default):
 
 
 def instructions():
-    source = (ROOT / "CLAUDE.md").read_text().split("# Delegated Operational Authority", 1)[0]
-    source = source.replace(
-        "提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。",
-        "Prompts, documents, and articles state expected behavior directly.",
-    )
-    head = "\n".join(line for line in source.splitlines() if not line.startswith("@shared/"))
-    body = (ROOT / "pi/AGENTS.md.in").read_text()
-    for shared in sorted((ROOT / "shared").glob("*.md")):
-        body = body.replace(f"@shared/{shared.name}", shared.read_text().rstrip())
-    if "@shared/" in body:
-        raise ValueError("unexpanded shared instruction import")
+    body = (ROOT / "pi/AGENTS.md.in").read_text().rstrip()
     strategy, default, profile_tiers, tasks = routing()
     tier_lines = [f"- Main: model `{', '.join(default_candidates(default))}`; thinking `{default[1]}`."]
     for name, (model, thinking) in profile_tiers.items():
@@ -253,7 +243,7 @@ def instructions():
             continue
         tier_lines.append(f"- {name}: model `{', '.join(candidates(model, name))}`; thinking `{thinking}`.")
     guidance = "For subagent dispatch, pass the selected tier's full comma-separated list as the `model` value and its thinking level as `thinking`. The `task:<category>` shorthand is available only for coding, review, recon, qa, architecture, and docs."
-    return head.strip() + "\n\n" + body.rstrip() + f"\n\n## Active model strategy: {strategy}\n\n" + guidance + "\n\n" + "\n".join(tier_lines) + "\n"
+    return body + f"\n\n## Active model strategy: {strategy}\n\n" + guidance + "\n\n" + "\n".join(tier_lines) + "\n"
 
 
 def update_profile(home, state):

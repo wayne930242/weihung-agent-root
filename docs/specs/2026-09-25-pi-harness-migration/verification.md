@@ -1,5 +1,57 @@
 # Pi harness migration verification
 
+## Integrated Pi instruction rewrite (2026-09-25)
+
+Baseline: the pre-change real-HOME `~/.pi/agent/AGENTS.md` (1,234 words). The table maps every directive in that generated file; repeated shared rules are listed together by their baseline line numbers.
+
+| Baseline rule | New location or disposition |
+|---|---|
+| Traditional Chinese communication (line 1) | Retained positively in Language and communication. |
+| English prompts and agent instructions (line 3) | Retained in Language and communication. |
+| Direct expected behavior and concise replies (lines 5–6) | Retained in Language and communication. |
+| Source changes use `aaaav-do` and state Alignment and Reality anchor (lines 7, 14, 28) | Retained in Work and Verification and delivery; duplicate wording is consolidated. |
+| Resolve uncertainty from conversation before asking (line 8) | Retained as resolving assigned execution choices and bringing user-owned decisions with context and a recommendation. |
+| Choose the specialized skill or research/review/explanation/feedback/decision skill (line 12) | Retained in Work. |
+| Read model profile before choosing a delegated model and respect user choice (line 16) | Retained in Model and dispatch. |
+| Use active tier model and thinking and provide worker objective, cwd, ownership, anchor, model, thinking, and app guide (lines 16, 20) | Retained in Model and dispatch; the full ordered model list is explicit. |
+| Workers have assigned permission; worktree persists for review; main integrates (line 20) | Retained as execution within assigned scope and main-session review/integration. |
+| Carry bounded work; use visible cross-app/check-out Pi worker when useful (line 20) | Retained in Model and dispatch. |
+| Outside Herdr explain pane dispatch is unavailable and continue in the current session (line 22) | Retained in Model and dispatch. |
+| Recover workers, contact related main sessions, and hand off a scope (line 22) | Retained through `dispatch-recovery`, `intercom`, and `orchestrator-handoff`. |
+| Use app's Git workflow for branch/worktree, commit, PR, merge (line 22) | Retained through `shipping-task`. |
+| Ask users about consequential decisions with context and recommendation (line 24) | Retained in Model and dispatch; combined questions are covered by the concise recommendation rule. |
+| Track multi-step work and report actual worker result (line 24) | Retained through `todo` and explicit result reporting. |
+| Explain reasoning, report problems, read first, make scoped changes, verify, use the required languages, and avoid AI attribution in commits (line 28) | Retained in Language and communication, Work, Verification and delivery; duplicate rules are consolidated. |
+| Read app guide, check project skills, and follow applicable language/Git/deployment/UI rules (line 30) | Retained in Work. |
+| Translate Windows attachment paths in WSL and quote the translated path (line 32) | Retained in Work. |
+| Use graph tools for symbols, calls, snippets, and architecture (line 36) | Retained in the single Code discovery section. |
+| Query existing graph first; index missing project once; re-index when stale (line 36) | Retained in Code discovery. |
+| Check coverage, read uncovered lines, and text-search prose/config/scripts/literals (line 36) | Retained in Code discovery. |
+| Explain decisions, surface problems, speak directly, and reassess repeated failures (lines 42–45) | Retained across Language and communication, Work, and Verification and delivery. |
+| State assumptions, surface tradeoffs, resolve ambiguity, and do not hide confusion (lines 49–56) | Retained as explaining assumptions/tradeoffs and distinguishing execution choices from user-owned decisions; rhetorical repetitions are consolidated. |
+| Give exact TTL when discussing cache expiry (lines 60–61) | Dropped: this narrow cache-reporting case is outside the core Pi work instructions and can be verified from the relevant source when it applies. |
+| Follow the user's architecture and suggest refactoring for poor architecture (lines 64–66) | Following the user's architecture is retained. The unsolicited-refactor directive is dropped; report material problems and keep changes within the requested scope. |
+| Read files and understand existing patterns before edits (line 67) | Retained as Read before editing. |
+| Avoid unrequested docs, refactors, and adjacent changes (line 68) | Retained as scope control and cleanup of only changes made by this work. |
+| Avoid extra features, single-use abstractions, unrequested configurability, impossible-case handling, and overlong solutions (lines 74–80) | Retained in the smallest useful approach; illustrative examples are omitted. |
+| Avoid adjacent formatting/refactors; match style; report rather than remove unrelated dead code; clean only new orphans (lines 86–94) | Scope and owned-cleanup rules are retained. Existing project style and user request govern formatting; old cleanup examples are omitted. |
+| Prefer composition, explicit dependencies, single-purpose functions, domain organization, and no hypothetical design (lines 100–102) | Dropped as generic design advice; follow the target app's established architecture and the user's chosen approach instead. |
+| Translate requests into measurable outcomes and use examples (lines 104–118) | Verifiable goal, Reality anchor, and behavior checks are retained; examples are omitted. |
+| Deliver finished code without TODOs, stubs, or mocks (line 123) | No TODOs or stubs are retained. Mock policy is left to the relevant test or project rules. |
+| Test before deployment and verify destructive deploy commands (line 124) | Testing before deployment is retained; deployment-specific safeguards come from the app's deployment rules. |
+| Keep commit messages free of AI tool attribution (lines 28, 125) | Retained once in Verification and delivery. |
+| Summarize/checkpoint after research, difficult debugging, and failed attempts; preserve context through verification (lines 128–131) | Retained in Work. |
+| Active strategy, tier model lists, thinking levels, and dispatch model-selection guidance, including supported `task:` categories (lines 133–146) | Retained dynamically in the Active model strategy section generated from the current profile. |
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| Pi instructions come from one integrated template without appended Claude/shared content | `python3 tests/pi_port_install.py` asserts generated output has no `@shared/` imports or legacy `boss-say`/`/codex:rescue` references. | pass |
+| Generated instructions stay within 500–700 words | `python3 tests/pi_port_install.py` passed; after final template edits, `scripts/pi-target.py` measured 657 words. | pass |
+| Exactly one code-discovery section and one AI-attribution commit rule remain | `python3 tests/pi_port_install.py` asserted one of each; the real-HOME file has one `## Code discovery` heading and one commit attribution rule. | pass |
+| Real HOME file is regenerated within range and Pi loads it | `bash scripts/install.sh --target pi` exited 0. `~/.pi/agent/AGENTS.md` measured 657 words. Pi RPC returned a successful `get_state` response with the configured model and eight MCP servers. Both `openai-codex/gpt-6-luna` and `claude-bridge/claude-opus-5-5` answered a prompt about the loaded language and commit rules correctly; neither startup reported errors. | pass |
+
+The unrelated `tests/bootstrap.sh` run was stopped after its external codebase-memory binary and Chrome downloads remained below 15% after several minutes. The direct install, uninstall, prompt, Pi target, Pi runtime, profile, and Python suites ran independently; this bootstrap result is not evidence about the Pi instruction generator.
+
 ## Claude plugin ports (2026-09-25)
 
 | Requirement | Evidence | Result |
@@ -177,3 +229,6 @@ Reflexive: the Pi event-definition lookup first used an agent-local npm path, th
 | External-install regression tests pass again | `tests/pi_review_fixes.py` fixtures now produce what a successful install leaves: the team-toon-tack package with its skill and `ttt` CLI under the npm prefix, and a codebase-memory binary that writes the official Pi resources. `test_external_git_switch_keeps_the_new_checkout` and `test_failed_external_install_can_retry_and_uninstall` pass. | pass |
 | Safety gate blocks malformed exit-0 output | `pi/extensions/mp-infra-hooks.ts` parses stdout only. Empty stdout allows the command. Non-empty stdout that is not JSON blocks it, and the reason includes that output. `tests/pi-mp-infra-hooks.mjs` points the gate at a fake hook. Empty output returns allow, and `Traceback: not json` blocks with that text. The malformed assertion failed against the previous extension. | pass |
 | Repository suites and real install | `bash tests/install.sh`, `bash tests/uninstall.sh`, `bash tests/prompts.sh`, `node tests/profile.mjs`, all seven `tests/pi-*.mjs` suites, `python3 tests/pi_dispatch_cli.py`, `python3 tests/pi_port_install.py`, and `python3 -m unittest tests.pi_handoff_commit tests.pi_review_fixes -q` exited 0. `git diff --check` passed. `bash scripts/install.sh --target pi` completed on the authorized real HOME. | pass |
+
+
+Main-agent follow-up after fresh-context review (2026-09-25): restored four rules the rewrite had dropped or weakened — fail fast instead of silent degradation (Work), worktree workers keep their checkout for main-session review (Model and dispatch), gather related pending decisions into one `ask_user` round (Model and dispatch), and no mocks in delivered code (Verification and delivery).
