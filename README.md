@@ -62,7 +62,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so 
 | `catppuccin-pi-theme` | The `catppuccin-mocha` theme. |
 | `pi-web-access` | `web_search`, `fetch_content`, and video understanding. Search works without keys through Exa MCP or the Codex login; provider keys go in `~/.pi/agent/web-search.json`. |
 | `pi-lens` | Code intelligence tools (`lens_diagnostics`, `symbol_search`, `read_symbol`, and others) plus ast-grep and LSP navigation skills. |
-| `pi-usage` | The `/usage` command: daily and weekly limits of the current provider. It supports Codex (and Z.AI, Kimi), so it reports nothing while a `claude-bridge` model is active. |
+| `pi-usage` | The `/usage` command: daily and weekly limits of the current provider. Pinned to the fork commit `wayne930242/pi-usage@a683c24`, which adds `claude-bridge` by reading Claude Code's login ([upstream PR #4](https://github.com/iefnaf/pi-usage/pull/4)); Codex, Z.AI, and Kimi work as in the npm release. |
 | `@moyai/pi-session-hoarder` | Verified local archives of every session in `~/.pi/agent/session-hoarder/`; `/hoarder status` reports it. Nothing leaves the machine unless `/hoarder storage s3` is configured. |
 | `pi-jev-compaction` | Every compaction, including `idle-compaction`'s, first asks TypeSafe Jev which stale tool calls and results to drop or truncate and keeps user and assistant text verbatim; without `TYPESAFE_API_KEY` or on a Jev error it falls back to pi's summary. `/jev-status` shows the key and thresholds. |
 | aaaav | The development workflow skills (`aaaav-do`, `investigating`, `inspecting`, `grilling`, and others) that the instructions route work through. |

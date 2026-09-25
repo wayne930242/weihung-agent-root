@@ -18,6 +18,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@31891e9395e510f583def3bd0e01a663582d59a4"
 LEGACY_BRIDGE = "npm:pi-claude-bridge"
+# Fork commit adding claude-bridge to /usage (upstream iefnaf/pi-usage#4).
+USAGE_SOURCE = "git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
 OPUS_1M = "claude-bridge/claude-opus-5-5"
 OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
@@ -35,7 +37,7 @@ PACKAGES = [
     "npm:pi-open-tui",
     "npm:pi-web-access",
     "npm:pi-lens",
-    "npm:pi-usage",
+    USAGE_SOURCE,
     "npm:@moyai/pi-session-hoarder",
     "npm:pi-jev-compaction",
 ]
@@ -46,8 +48,9 @@ PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel")
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True}
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
-# powerline footer, and pi-notify wrote escapes into `pi -p` output from every worker pane.
-RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify"]
+# powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, and the
+# pi-usage fork replaces its npm release, which would otherwise register a second /usage.
+RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage"]
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
 TTT_PREFIX = Path(".local/share/weihung-user-claude/team-toon-tack")
 # pi-skills ships bare skill directories without a pi manifest; its README installs it as a clone under the skills root.

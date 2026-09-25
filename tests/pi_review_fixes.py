@@ -229,6 +229,22 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual(restored["packages"], ["npm:user-package"])
             self.assertEqual(restored["powerline"], {"welcome": False})
 
+    def test_upgrade_replaces_npm_pi_usage_with_the_fork(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            settings = agent / "settings.json"
+            settings.write_text(json.dumps({"packages": ["npm:user-package"]}))
+            run_script("install.sh", home, "--skip-external")
+            # An install from before the fork registered the npm release.
+            current = json.loads(settings.read_text())
+            current["packages"].append("npm:pi-usage")
+            settings.write_text(json.dumps(current))
+            run_script("install.sh", home, "--skip-external")
+            usage = [item for item in json.loads(settings.read_text())["packages"] if "pi-usage" in item]
+            self.assertEqual(usage, ["git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"])
+
     def test_user_owned_powerline_survives_install(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
