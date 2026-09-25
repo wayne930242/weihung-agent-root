@@ -69,10 +69,16 @@ if '--prefix' in args:
         target.write_text('#!/bin/sh\\necho ttt\\n')
         target.chmod(0o755)
 """, True)
+    pi_skills = base / "pi-skills"
+    write(pi_skills / "brave-search/SKILL.md", "---\nname: brave-search\ndescription: Test skill\n---\n")
+    subprocess.run(["git", "init", "-q", str(pi_skills)], check=True)
+    subprocess.run(["git", "-C", str(pi_skills), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(pi_skills), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture"], check=True)
     write(bin_dir / "pi", "#!/bin/sh\nexit 0\n", True)
     write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
-           "PI_MP_INFRA_ROOT": str(plugin), "TEST_TTT_FIXTURE": str(fixture)}
+           "PI_MP_INFRA_ROOT": str(plugin), "TEST_TTT_FIXTURE": str(fixture),
+           "PI_SKILLS_GIT": str(pi_skills)}
     agent = home / ".pi/agent"
     write(agent / "prompts/ttt-status.md", "user prompt\n")
     write(agent / "skills/infra-owner/SKILL.md", "user skill\n")
@@ -88,7 +94,8 @@ if '--prefix' in args:
     assert instructions.count("Commit messages contain no AI tool attribution.") == 1
     assert "@shared/" not in instructions
     assert "boss-say" not in instructions and "/codex:rescue" not in instructions
-    assert len(list((agent / "skills").iterdir())) == len(SKILLS) + 2
+    assert len(list((agent / "skills").iterdir())) == len(SKILLS) + 3
+    assert (agent / "skills/pi-skills/brave-search/SKILL.md").is_file()
     assert len(list((agent / "prompts").glob("ttt-*.md"))) == 12
     assert str(home / ".local/bin/ttt") in (agent / "prompts/ttt-show.md").read_text()
     assert "`.agents/skills/`" in (agent / "prompts/ttt-write-work-on-skill.md").read_text()
@@ -104,5 +111,7 @@ if '--prefix' in args:
     assert (agent / "skills/infra-owner/SKILL.md").read_text() == "user skill\n"
     assert not (agent / "extensions/cbmem.ts").exists()
     assert not (home / ".local/bin/ttt").exists()
+    assert not (agent / "skills/pi-skills").exists()
+    assert not (home / ".local/share/weihung-user-claude/pi-skills").exists()
     assert (agent / "extensions/moshi-hooks.ts").read_text() == "user extension\n"
     print("pi port install: pass")

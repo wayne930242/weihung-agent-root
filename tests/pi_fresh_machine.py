@@ -52,11 +52,16 @@ if '--prefix' in args:
     cli.write_text('#!/bin/sh\\n')
     cli.chmod(0o755)
 """, True)
+    pi_skills = base / "pi-skills"
+    write(pi_skills / "brave-search/SKILL.md", "---\nname: brave-search\ndescription: Test skill\n---\n")
+    subprocess.run(["git", "init", "-q", str(pi_skills)], check=True)
+    subprocess.run(["git", "-C", str(pi_skills), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(pi_skills), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture"], check=True)
     write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{calls}'\n", True)
     write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
            "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"),
-           "TEST_TTT_FIXTURE": str(fixture)}
+           "TEST_TTT_FIXTURE": str(fixture), "PI_SKILLS_GIT": str(pi_skills)}
     agent = home / ".pi/agent"
 
     result = run("install.sh", home, env)

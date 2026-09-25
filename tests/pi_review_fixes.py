@@ -255,7 +255,13 @@ class PiReviewFixes(unittest.TestCase):
                                   + (f"exec python3 {Path(__file__).resolve()} fake-npm \"$@\"\n" if name == "npm" else "exit 0\n"))
                 script.chmod(0o755)
             (home / "fail-once").write_text("")
-            env = {"PATH": str(bin_dir) + os.pathsep + os.environ["PATH"]}
+            pi_skills = home / "pi-skills-fixture"
+            (pi_skills / "brave-search").mkdir(parents=True)
+            (pi_skills / "brave-search/SKILL.md").write_text("---\nname: brave-search\ndescription: Test skill\n---\n")
+            subprocess.run(["git", "init", "-q", str(pi_skills)], check=True)
+            subprocess.run(["git", "-C", str(pi_skills), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(pi_skills), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture"], check=True)
+            env = {"PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "PI_SKILLS_GIT": str(pi_skills)}
             command = ["python3", str(PI_TARGET), "install", "--home", str(home)]
             failed = subprocess.run(command, env={**os.environ, "HOME": str(home), **env},
                                     text=True, capture_output=True)

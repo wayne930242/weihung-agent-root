@@ -33,6 +33,11 @@ PACKAGES = [
     "npm:@capdiem/pi-todo",
     "npm:pi-powerline-footer",
     "npm:catppuccin-pi-theme",
+    "npm:pi-web-access",
+    "npm:pi-lens",
+    "npm:pi-notify",
+    "npm:pi-usage",
+    "npm:@moyai/pi-session-hoarder",
 ]
 LOCAL_PACKAGE = str(ROOT)
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
@@ -43,6 +48,9 @@ UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChange
 POWERLINE_QUEUE = {"compactPromptMode": "native"}
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
 TTT_PREFIX = Path(".local/share/weihung-user-claude/team-toon-tack")
+# pi-skills ships bare skill directories without a pi manifest; its README installs it as a clone under the skills root.
+PI_SKILLS_GIT = os.environ.get("PI_SKILLS_GIT", "https://github.com/badlogic/pi-skills.git")
+PI_SKILLS_CLONE = Path(".local/share/weihung-user-claude/pi-skills")
 
 
 def package_id(value, agent_dir):
@@ -190,6 +198,14 @@ def install_ported_resources(home, state, force):
     if not cli.exists():
         raise ValueError(f"team-toon-tack CLI is missing: {cli}")
     managed_resource(home, state, home / ".local/bin/ttt", cli, force, link=True)
+    clone = home / PI_SKILLS_CLONE
+    if (clone / ".git").is_dir():
+        run(["git", "-C", str(clone), "pull", "-q", "--ff-only"], home)
+    else:
+        run(["git", "clone", "-q", "--depth", "1", PI_SKILLS_GIT, str(clone)], home)
+    state["pi_skills_clone"] = str(clone)
+    write_json(agent_dir / ".weihung-user-claude.json", state)
+    managed_resource(home, state, agent_dir / "skills/pi-skills", clone, force, link=True)
 
 
 def uninstall_ported_resources(home, state):
@@ -211,6 +227,9 @@ def uninstall_ported_resources(home, state):
     prefix = state.get("ttt_prefix")
     if prefix and Path(prefix) == home / TTT_PREFIX and Path(prefix).exists():
         shutil.rmtree(prefix)
+    clone = state.get("pi_skills_clone")
+    if clone and Path(clone) == home / PI_SKILLS_CLONE and Path(clone).exists():
+        shutil.rmtree(clone)
 
 
 def active_strategy():
