@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, watch, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, unlinkSync, watch, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,23 @@ const dispatchScript = fileURLToPath(new URL("../../scripts/pi-dispatch.py", imp
 const processSessions = ((globalThis as any).__weihungDispatchSessions ??= new Set<string>());
 const watchers = new Map<string, ReturnType<typeof watch>>();
 const timers = new Map<string, ReturnType<typeof setInterval>>();
+const lockWait = new Int32Array(new SharedArrayBuffer(4));
+
+function withLedgerLock<T>(sessionId: string, action: () => T): T {
+  mkdirSync(ledgerDir, { recursive: true });
+  const lock = join(ledgerDir, `.${sessionId}.lock`);
+  for (let attempt = 0; attempt < 500; attempt++) {
+    try {
+      mkdirSync(lock);
+      break;
+    } catch (error: any) {
+      if (error.code !== "EEXIST") throw error;
+      if (attempt === 499) throw new Error(`Timed out waiting for dispatch ledger ${sessionId}`);
+      Atomics.wait(lockWait, 0, 0, 10);
+    }
+  }
+  try { return action(); } finally { rmdirSync(lock); }
+}
 
 function ledgerFile(sessionId: string): string {
   return join(ledgerDir, `${sessionId}.json`);
@@ -101,34 +118,36 @@ function observe(sessionId: string, parentFile: string, record: Dispatch, pi: Ex
   const forwarded = forwardedFile(record.id);
   const settle = () => {
     if (!existsSync(sidecar) && !existsSync(forwarded)) return;
-    const records = readLedger(sessionId);
-    const current = records.find((item) => item.id === record.id);
-    if (!current || current.status !== "running") return;
-    let result: any = {};
-    try { result = JSON.parse(readFileSync(existsSync(forwarded) ? forwarded : sidecar, "utf8")); }
-    catch { result = { type: "error" }; }
-    current.status = result.status === "done" || result.status === "failed"
-      ? result.status : (result.type === "done" ? "done" : "failed");
-    current.delivered = deliveredInParent(parentFile, current.sessionFile);
-    writeLedger(sessionId, records);
-    watchers.get(record.id)?.close();
-    watchers.delete(record.id);
-    clearInterval(timers.get(record.id));
-    timers.delete(record.id);
-    if (!current.delivered) {
-      pi.sendMessage({
-        customType: "recovered_dispatch_result",
-        content: `Recovered dispatch ${current.name} (${current.status}). Session: ${current.sessionFile}\n\n${result.content || finalMessage(current.sessionFile)}`,
-        display: true,
-        details: { id: current.id, sessionFile: current.sessionFile, status: current.status },
-      }, { triggerTurn: true, deliverAs: "steer" });
-      current.delivered = true;
+    withLedgerLock(sessionId, () => {
+      const records = readLedger(sessionId);
+      const current = records.find((item) => item.id === record.id);
+      if (!current || current.status !== "running") return;
+      let result: any;
+      try { result = JSON.parse(readFileSync(existsSync(forwarded) ? forwarded : sidecar, "utf8")); }
+      catch { return; }
+      current.status = result.status === "done" || result.status === "failed"
+        ? result.status : (result.type === "done" ? "done" : "failed");
+      current.delivered = Boolean(deliveredInParent(parentFile, current.sessionFile));
       writeLedger(sessionId, records);
-    }
-    mkdirSync(deliveredDir, { recursive: true });
-    writeFileSync(deliveredFile(record.id), "");
-    chmodSync(deliveredFile(record.id), 0o600);
-    if (existsSync(forwarded)) unlinkSync(forwarded);
+      watchers.get(record.id)?.close();
+      watchers.delete(record.id);
+      clearInterval(timers.get(record.id));
+      timers.delete(record.id);
+      if (!current.delivered) {
+        pi.sendMessage({
+          customType: "recovered_dispatch_result",
+          content: `Recovered dispatch ${current.name} (${current.status}). Session: ${current.sessionFile}\n\n${result.content || finalMessage(current.sessionFile)}`,
+          display: true,
+          details: { id: current.id, sessionFile: current.sessionFile, status: current.status },
+        }, { triggerTurn: true, deliverAs: "steer" });
+        current.delivered = true;
+        writeLedger(sessionId, records);
+      }
+      mkdirSync(deliveredDir, { recursive: true });
+      writeFileSync(deliveredFile(record.id), "");
+      chmodSync(deliveredFile(record.id), 0o600);
+      if (existsSync(forwarded)) unlinkSync(forwarded);
+    });
   };
   mkdirSync(dirname(sidecar), { recursive: true });
   watchers.set(record.id, watch(dirname(sidecar), (_event, name) => {
@@ -199,23 +218,30 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
   pi.on("message_end", (event, ctx) => {
     const message = event.message as any;
     if (message.role !== "custom" || message.customType !== "subagent_result") return;
-    const record = readLedger(ctx.sessionManager.getSessionId()).find((item) =>
-      item.status === "transferred" && item.sessionFile === message.details?.sessionFile
-    );
-    if (!record) return;
-    if (!existsSync(deliveredFile(record.id))) {
-      writeForwarded(record.id, {
-        status: message.details?.exitCode === 0 ? "done" : "failed",
-        content: String(message.details?.resultContent || finalMessage(record.sessionFile)),
-      });
-    }
-    return { message: {
-      ...message,
-      customType: "transferred_dispatch_notice",
-      content: `Dispatch ${record.name} was transferred. Its result is routed to the receiving main session.`,
-      display: false,
-      details: { id: record.id, sessionFile: record.sessionFile },
-    } };
+    return withLedgerLock(ctx.sessionManager.getSessionId(), () => {
+      const records = readLedger(ctx.sessionManager.getSessionId());
+      const record = records.find((item) => item.sessionFile === message.details?.sessionFile);
+      if (!record) return;
+      if (record.status === "running") {
+        record.status = message.details?.exitCode === 0 ? "done" : "failed";
+        record.delivered = true;
+        writeLedger(ctx.sessionManager.getSessionId(), records);
+        return;
+      }
+      if (record.status === "transferred" && !existsSync(deliveredFile(record.id))) {
+        writeForwarded(record.id, {
+          status: message.details?.exitCode === 0 ? "done" : "failed",
+          content: String(message.details?.resultContent || finalMessage(record.sessionFile)),
+        });
+      }
+      return { message: {
+        ...message,
+        customType: "transferred_dispatch_notice",
+        content: `Dispatch ${record.name} was ${record.status === "transferred" ? "transferred" : "already delivered"}.`,
+        display: false,
+        details: { id: record.id, sessionFile: record.sessionFile },
+      } };
+    });
   });
 
   pi.on("session_start", (event, ctx) => {

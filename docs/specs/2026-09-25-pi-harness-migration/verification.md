@@ -44,6 +44,27 @@ The real HOME `bash scripts/install.sh --target pi` completed after the repair; 
 
 The `solid-loop` pass found no standing agent instruction to change: each interface fact now lives in the design and executable checks, and the patch-context slip was local to this edit.
 
+## Handoff completion race follow-up (2026-09-25)
+
+`node --experimental-strip-types tests/pi-handoff-race.mjs` ran against commit `2e7fa92` before the fix and failed with two deliveries for a worker completing while `tab create` was in progress. After the fix it passed: a successful transfer delivered once to the receiver, and a failed pane creation restored delivery to the original owner. A second regression in `tests/pi-dispatch.mjs` failed before the sidecar repair because a partially written completion file immediately changed the ledger to `failed`; it passed after the watcher began retrying that read.
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| Completion during handoff reaches one owner | The cross-process test holds Herdr pane creation open, completes the worker, then starts the receiver. It observed one receiver message and zero original-owner messages after the fix; the pre-fix count was two. The ledger lock orders completion and transfer. | Local integration pass. |
+| Failed handoff retains original-owner delivery | The same test completes a worker while pane creation fails. The old watcher delivered one result after the transfer rolled back, and its ledger recorded `delivered=true`. | Local integration pass. |
+| A transient completion-file read preserves the worker status | `tests/pi-dispatch.mjs` held a partial `.exit` file and observed `running`, then wrote a complete `done` payload and observed one message with ledger status `done`. | Local runtime pass. |
+| Existing suites remain green | `bash tests/install.sh`, `bash tests/uninstall.sh`, `bash tests/prompts.sh`, `node tests/profile.mjs`, `node --experimental-strip-types tests/pi-dispatch.mjs`, `node --experimental-strip-types tests/pi-handoff-race.mjs`, `python3 tests/pi_dispatch_cli.py`, and `python3 -m unittest tests.pi_review_fixes -q` exited 0. | Local pass. |
+| Real HOME uses the repaired package | `bash scripts/install.sh --target pi` exited 0 on the real HOME. `pi list` resolves the local package to this checkout. | Installation pass. |
+| An active Herdr dispatch reaches the receiver once with the correct status | A real Pi main launched active `uat-release-recon-2`, handed it to `handoff-fde124a8`, then released its wait gate. The old session persisted zero `subagent_result` and one `transferred_dispatch_notice` for dispatch `c4c4b25b-130d-4957-af5f-7e58d83fa3b8`; the receiving session persisted one `recovered_dispatch_result`. Its ledger reached `done`, `delivered=true`. The test tabs were closed. | Real Herdr pass. |
+
+The first real handoff delivered once but incorrectly marked the completed worker `failed`. The watcher treated any unreadable completion file as a failure; the partial-file regression reproduced that path, although the first live run did not capture the exact failed read. After the retry change, the second real handoff reported `done`; the first run remains recorded as a failed status check, not a pass. The Herdr check exercised a worker completing after ownership transfer. The cross-process regression exercises completion inside the pane-creation window.
+
+### Reflexive pass for the follow-up
+
+- Friction: the graph trace required the full qualified name (`gap`). Action: resolved by using the identifier from `search_graph`; the existing graph guidance already states this.
+- Friction: a test-only `PI_HANDOFF_ID` leaked into the next scenario (`gap`). Action: resolved by clearing it between test sessions.
+- Friction: a consumed completion sidecar produced a false `failed` result (`gap`). Action: resolved in the watcher, regression test, and runtime design. No standing agent instruction changed.
+
 ## Appropriateness review
 
 The implementation delegates dispatch, intercom, ask, todo, MCP, Claude bridge, and aaaav validation to their packages. Local code covers the three approved gaps: durable dispatch recovery, handoff, and shipping guidance. The default legacy install path remains available. Upstream measured Opus 5.5 1M on Max with Extra Usage off; Pro remained unmeasured in the cited commit. The local model catalog reports 1M, while a full-context request on this user's subscription remains untested.

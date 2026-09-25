@@ -37,6 +37,7 @@ Amended at: 2026-09-25；使用者改定 bridge 來源為上游 commit `227f5eb4
 6. **多主代理協調與交接**：
    - 同一台機器上的主代理可以互相找到對方、互傳訊息。
    - 一個工作範圍可以交接給新開的主代理 pane，新主代理會帶著交接內容與進行中的 dispatch 接手。
+   - 進行中的 dispatch 完成時，結果只送達當時擁有它的主代理一次；交接期間完成也遵守此規則。交接失敗後，原主代理繼續接收結果。
 7. **shipping-task**：每個任務依目標 app 的慣例，走完 branch 或 worktree → commit → PR → merge。
 8. **model profile**：
    - `managing-model-preferences` 切換策略時，把該策略的設定套用到 `pi-herdr-agents` 和 pi 預設 model。

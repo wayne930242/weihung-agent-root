@@ -14,7 +14,7 @@ Pi identifies git packages by repository when installing or removing them. Switc
 
 `pi-herdr-agents` owns pane dispatch, fallback attempts, and result delivery. `pi-intercom` owns peer discovery and messages. `pi-ask-user`, `@capdiem/pi-todo`, `pi-mcp-adapter`, `pi-claude-bridge`, and the aaaav package retain their own behavior. This repo adds the three missing workflows as a small Pi extension and skills: durable dispatch inventory and reattachment after parent restart, coordinated handoff into a new Herdr pane, and Git shipping through the target repository's conventions. They call the package interfaces rather than duplicate their runtime.
 
-An active handoff marks the old ledger `transferred` before the receiver starts. The package's original watcher still runs in the old Pi process, so the local extension changes its completed `subagent_result` to a transfer notice before it enters the old model context. It forwards the result through an agent-local sidecar; the receiver also watches the worker's completion sidecar and delivers whichever result appears first. A delivered marker prevents a late original result from recreating a forwarded payload.
+An active handoff locks the old session ledger, records the running dispatches, and marks them `transferred` before creating the receiving pane. The completion watcher and native `subagent_result` handler use the same ledger lock, so a completion that wins the lock stays with the old owner and a transfer that wins routes to the receiver. A definite pane-creation or startup failure restores `running` under the lock; an uncertain startup retains the transfer for inspection. The package's watcher still runs in the old Pi process, so the local extension changes its completed result to a transfer notice before it enters the old model context and forwards its content through an agent-local sidecar. The receiver also watches the worker's completion sidecar and delivers whichever complete result appears first. It retries a sidecar that is momentarily unreadable while the package consumes or replaces it. A delivered marker prevents a late original result from recreating a forwarded payload.
 
 ## Model routing
 
@@ -55,3 +55,12 @@ Shell tests run with an isolated HOME, stub external commands, and inspect per-t
 - Tried: removing an obsolete git bridge registration through `pi remove` after installing the pinned commit.
   Found: Pi matches git package removal by repository rather than commit, which would also remove the new checkout. Exact settings cleanup preserves the pinned checkout.
   Led by: aaaav-do's package identity regression check.
+- Tried: tracing `scripts.pi-dispatch.handoff` through the code graph with a shortened qualified name.
+  Found: the graph requires the complete qualified name returned by `search_graph`; the exact symbol resolved the trace.
+  Led by: the project graph-discovery instruction.
+- Tried: reusing the first handoff's test process environment for a failed-handoff scenario.
+  Found: `PI_HANDOFF_ID` imported the earlier transfer into the second test session; clearing that test-only variable isolated the owner.
+  Led by: aaaav-do's red-capable handoff test.
+- Tried: accepting the first real Herdr delivery as complete based on its single result message.
+  Found: the worker succeeded but the receiver marked it `failed`; the watcher mapped transient unreadable completion files to failure, and a partial-file regression reproduced that path. The recovery watcher now waits for a readable sidecar or forwarded result.
+  Led by: aaaav-do's real Herdr handoff anchor.

@@ -2,6 +2,7 @@
 """Inspect and recover Pi dispatches recorded by the local extension."""
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
 import shlex
@@ -42,6 +43,25 @@ def write_json(path, data):
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+@contextmanager
+def lock_ledger(owner):
+    LEDGER_DIR.mkdir(parents=True, exist_ok=True)
+    lock = LEDGER_DIR / f".{owner}.lock"
+    deadline = time.monotonic() + 5
+    while True:
+        try:
+            lock.mkdir()
+            break
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"Timed out waiting for dispatch ledger {owner}")
+            time.sleep(0.01)
+    try:
+        yield
+    finally:
+        lock.rmdir()
 
 
 def herdr(*args):
@@ -138,15 +158,31 @@ def reattach(owner, dispatch_id):
 
 def handoff(owner, cwd, summary):
     transfer_id = uuid.uuid4().hex
-    current = read_ledger(owner)
-    records = [record.copy() for record in current if record["status"] == "running"]
-    pane = new_pane(cwd, f"handoff-{transfer_id[:8]}", {"PI_HANDOFF_ID": transfer_id})
     handoff_file = HANDOFF_DIR / f"{transfer_id}.json"
-    write_json(handoff_file, {"from": owner, "summary": summary, "dispatches": records})
-    for record in current:
-        if record["status"] == "running":
-            record["status"] = "transferred"
-    write_json(ledger_path(owner), current)
+    with lock_ledger(owner):
+        current = read_ledger(owner)
+        records = [record.copy() for record in current if record["status"] == "running"]
+        write_json(handoff_file, {"from": owner, "summary": summary, "dispatches": records})
+        for record in current:
+            if record["status"] == "running":
+                record["status"] = "transferred"
+        write_json(ledger_path(owner), current)
+
+    def restore_owner():
+        transferred_ids = {record["id"] for record in records}
+        with lock_ledger(owner):
+            current = read_ledger(owner)
+            for record in current:
+                if record["id"] in transferred_ids and record["status"] == "transferred":
+                    record["status"] = "running"
+            write_json(ledger_path(owner), current)
+        handoff_file.unlink(missing_ok=True)
+
+    try:
+        pane = new_pane(cwd, f"handoff-{transfer_id[:8]}", {"PI_HANDOFF_ID": transfer_id})
+    except Exception:
+        restore_owner()
+        raise
     prompt = f"You are taking over a main-agent scope. Handoff ID: {transfer_id}. Summary: {summary} Use the dispatch_control tool with action roll-call to inspect active dispatches, then continue the work."
     name = f"handoff-{transfer_id[:8]}"
     try:
@@ -154,17 +190,11 @@ def handoff(owner, cwd, summary):
     except RuntimeError as error:
         if "agent_pane_busy" not in str(error):
             raise RuntimeError(f"Handoff {transfer_id} may have started in pane {pane}; inspect it before retrying") from error
-        transferred_ids = {record["id"] for record in records}
-        current = read_ledger(owner)
-        for record in current:
-            if record["id"] in transferred_ids and record["status"] == "transferred":
-                record["status"] = "running"
-        write_json(ledger_path(owner), current)
-        handoff_file.unlink(missing_ok=True)
         try:
             herdr("pane", "close", pane)
         except RuntimeError:
-            pass
+            raise RuntimeError(f"Handoff {transfer_id} may have started in pane {pane}; inspect it before retrying") from error
+        restore_owner()
         raise
     herdr("agent", "prompt", name, prompt)
     print(f"Handoff {transfer_id} started in pane {pane}; active dispatches: {len(records)}")

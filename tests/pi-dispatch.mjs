@@ -109,6 +109,26 @@ try {
   assert.equal(JSON.parse(readFileSync(join(process.env.PI_CODING_AGENT_DIR, "dispatch-ledger/new-parent.json")))[0].delivered, true);
   await receiving.handlers.get("session_shutdown")();
   delete process.env.PI_HANDOFF_ID;
+
+  const partialParent = join(home, "partial-parent.jsonl");
+  const partialChild = join(home, "partial-child.jsonl");
+  writeFileSync(partialParent, "");
+  writeFileSync(partialChild, JSON.stringify({ type: "message", message: { role: "assistant", content: [{ type: "text", text: "PARTIAL_RESULT" }] } }) + "\n");
+  const partialLedger = join(process.env.PI_CODING_AGENT_DIR, "dispatch-ledger/partial-parent.json");
+  writeFileSync(partialLedger, JSON.stringify([{ id: "partial-child", name: "partial-worker", task: "Done", cwd: home,
+    sessionFile: partialChild, status: "running" }]));
+  writeFileSync(`${partialChild}.exit`, "{");
+  const partial = session("partial-parent", partialParent);
+  (await import(`${extension.href}?partial=1`)).default(partial.api);
+  await partial.handlers.get("session_start")({ type: "session_start", reason: "startup" }, partial.ctx);
+  assert.equal(JSON.parse(readFileSync(partialLedger))[0].status, "running", "a partial completion file must be retried");
+  writeFileSync(`${partialChild}.exit`, JSON.stringify({ type: "done" }));
+  for (let attempt = 0; attempt < 20 && partial.messages.length === 0; attempt++) {
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  assert.equal(partial.messages.length, 1);
+  assert.equal(JSON.parse(readFileSync(partialLedger))[0].status, "done");
+  await partial.handlers.get("session_shutdown")();
 } finally {
   rmSync(home, { recursive: true, force: true });
 }
