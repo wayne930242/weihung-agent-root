@@ -64,6 +64,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so 
 | `pi-lens` | Code intelligence tools (`lens_diagnostics`, `symbol_search`, `read_symbol`, and others) plus ast-grep and LSP navigation skills. |
 | `pi-usage` | The `/usage` command: daily and weekly limits of the current provider. It supports Codex (and Z.AI, Kimi), so it reports nothing while a `claude-bridge` model is active. |
 | `@moyai/pi-session-hoarder` | Verified local archives of every session in `~/.pi/agent/session-hoarder/`; `/hoarder status` reports it. Nothing leaves the machine unless `/hoarder storage s3` is configured. |
+| `pi-jev-compaction` | Every compaction, including `idle-compaction`'s, first asks TypeSafe Jev which stale tool calls and results to drop or truncate and keeps user and assistant text verbatim; without `TYPESAFE_API_KEY` or on a Jev error it falls back to pi's summary. `/jev-status` shows the key and thresholds. |
 | aaaav | The development workflow skills (`aaaav-do`, `investigating`, `inspecting`, `grilling`, and others) that the instructions route work through. |
 
 ### This repository's pi package
@@ -151,7 +152,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-user-claude`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、pi-skills）、aaaav、本 repo 的擴充（派工紀錄與復原、主代理移交、閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、pi-skills）、aaaav、本 repo 的擴充（派工紀錄與復原、主代理移交、閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
 - 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。

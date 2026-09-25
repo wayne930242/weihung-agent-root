@@ -87,7 +87,7 @@ with tempfile.TemporaryDirectory() as directory:
     text = (home / ".pi/agent/AGENTS.md").read_text()
     assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 14, settings
+    assert len(settings["packages"]) == 15, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@bbe46c7654cd1a4eb069cee9e9e52db088f9a704", settings
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["theme"] == "catppuccin-mocha", settings

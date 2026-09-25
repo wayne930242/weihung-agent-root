@@ -37,6 +37,7 @@ PACKAGES = [
     "npm:pi-lens",
     "npm:pi-usage",
     "npm:@moyai/pi-session-hoarder",
+    "npm:pi-jev-compaction",
 ]
 LOCAL_PACKAGE = str(ROOT)
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
