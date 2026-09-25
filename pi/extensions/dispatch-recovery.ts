@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, unlinkSync, watch, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync, unlinkSync, watch, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,10 +21,12 @@ const agentDir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agen
 const ledgerDir = join(agentDir, "dispatch-ledger");
 const forwardedDir = join(agentDir, "dispatch-forwarded");
 const deliveredDir = join(agentDir, "dispatch-delivered");
+const handoffDir = join(agentDir, "handoffs");
 const dispatchScript = fileURLToPath(new URL("../../scripts/pi-dispatch.py", import.meta.url));
 const processSessions = ((globalThis as any).__weihungDispatchSessions ??= new Set<string>());
 const watchers = new Map<string, ReturnType<typeof watch>>();
 const timers = new Map<string, ReturnType<typeof setInterval>>();
+const handoffTimers = new Set<ReturnType<typeof setInterval>>();
 const lockWait = new Int32Array(new SharedArrayBuffer(4));
 
 function withLedgerLock<T>(sessionId: string, action: () => T): T {
@@ -56,8 +58,26 @@ function readLedger(sessionId: string): Dispatch[] {
 
 function writeLedger(sessionId: string, records: Dispatch[]): void {
   mkdirSync(ledgerDir, { recursive: true });
-  writeFileSync(ledgerFile(sessionId), JSON.stringify(records, null, 2) + "\n");
-  chmodSync(ledgerFile(sessionId), 0o600);
+  const path = ledgerFile(sessionId);
+  const temporary = `${path}.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`;
+  try {
+    writeFileSync(temporary, JSON.stringify(records, null, 2) + "\n", { mode: 0o600 });
+    chmodSync(temporary, 0o600);
+    renameSync(temporary, path);
+  } finally {
+    if (existsSync(temporary)) unlinkSync(temporary);
+  }
+}
+
+function committedTransfer(id: string, sessionId: string): boolean {
+  if (!existsSync(handoffDir)) return false;
+  for (const name of readdirSync(handoffDir)) {
+    if (!name.endsWith(".json")) continue;
+    const handoff = JSON.parse(readFileSync(join(handoffDir, name), "utf8"));
+    if (handoff.from === sessionId && handoff.state === "committed" &&
+        handoff.dispatches?.some((item: Dispatch) => item.id === id)) return true;
+  }
+  return false;
 }
 
 function forwardedFile(id: string): string {
@@ -84,25 +104,29 @@ function sessionEntries(file: string): any[] {
   });
 }
 
-function deliveredInParent(parentFile: string, childFile: string): any | undefined {
+function deliveredInParent(parentFile: string, childFile: string, id?: string): any | undefined {
   return sessionEntries(parentFile).find((entry) =>
-    entry.type === "custom_message" && entry.customType === "subagent_result" &&
-    entry.details?.sessionFile === childFile
+    entry.type === "custom_message" && (
+      (entry.customType === "subagent_result" && entry.details?.sessionFile === childFile) ||
+      (id !== undefined && entry.customType === "recovered_dispatch_result" && entry.details?.id === id)
+    )
   );
 }
 
 function reconcileDelivered(sessionId: string, parentFile: string): void {
-  const records = readLedger(sessionId);
-  let changed = false;
-  for (const record of records) {
-    if (record.status !== "running") continue;
-    const result = deliveredInParent(parentFile, record.sessionFile);
-    if (!result) continue;
-    record.status = result.details?.exitCode === 0 ? "done" : "failed";
-    record.delivered = true;
-    changed = true;
-  }
-  if (changed) writeLedger(sessionId, records);
+  withLedgerLock(sessionId, () => {
+    const records = readLedger(sessionId);
+    let changed = false;
+    for (const record of records) {
+      if (record.status !== "running" || committedTransfer(record.id, sessionId)) continue;
+      const result = deliveredInParent(parentFile, record.sessionFile);
+      if (!result) continue;
+      record.status = result.details?.exitCode === 0 ? "done" : "failed";
+      record.delivered = true;
+      changed = true;
+    }
+    if (changed) writeLedger(sessionId, records);
+  });
 }
 
 function finalMessage(childFile: string): string {
@@ -118,36 +142,50 @@ function observe(sessionId: string, parentFile: string, record: Dispatch, pi: Ex
   const forwarded = forwardedFile(record.id);
   const settle = () => {
     if (!existsSync(sidecar) && !existsSync(forwarded)) return;
-    withLedgerLock(sessionId, () => {
+    withLedgerLock(`delivery-${record.id}`, () => withLedgerLock(sessionId, () => {
       const records = readLedger(sessionId);
       const current = records.find((item) => item.id === record.id);
-      if (!current || current.status !== "running") return;
+      if (!current || (current.status !== "running" && current.status !== "transferred")) return;
       let result: any;
       try { result = JSON.parse(readFileSync(existsSync(forwarded) ? forwarded : sidecar, "utf8")); }
       catch { return; }
-      current.status = result.status === "done" || result.status === "failed"
+      if (committedTransfer(current.id, sessionId)) {
+        if (!existsSync(deliveredFile(current.id))) writeForwarded(current.id, {
+          status: result.status === "done" || result.type === "done" ? "done" : "failed",
+          content: String(result.content || finalMessage(current.sessionFile)),
+        });
+        return;
+      }
+      if (current.status !== "running") return;
+      const status = result.status === "done" || result.status === "failed"
         ? result.status : (result.type === "done" ? "done" : "failed");
-      current.delivered = Boolean(deliveredInParent(parentFile, current.sessionFile));
+      const delivered = existsSync(deliveredFile(current.id)) ||
+        Boolean(deliveredInParent(parentFile, current.sessionFile, current.id));
+      if (!delivered) {
+        try {
+          pi.sendMessage({
+            customType: "recovered_dispatch_result",
+            content: `Recovered dispatch ${current.name} (${status}). Session: ${current.sessionFile}\n\n${result.content || finalMessage(current.sessionFile)}`,
+            display: true,
+            details: { id: current.id, sessionFile: current.sessionFile, status },
+          }, { triggerTurn: true, deliverAs: "steer" });
+        } catch (error) {
+          console.error(`Dispatch ${current.id} delivery will retry:`, error);
+          return;
+        }
+      }
+      mkdirSync(deliveredDir, { recursive: true });
+      writeFileSync(deliveredFile(record.id), "", { mode: 0o600 });
+      chmodSync(deliveredFile(record.id), 0o600);
+      current.status = status;
+      current.delivered = true;
       writeLedger(sessionId, records);
       watchers.get(record.id)?.close();
       watchers.delete(record.id);
       clearInterval(timers.get(record.id));
       timers.delete(record.id);
-      if (!current.delivered) {
-        pi.sendMessage({
-          customType: "recovered_dispatch_result",
-          content: `Recovered dispatch ${current.name} (${current.status}). Session: ${current.sessionFile}\n\n${result.content || finalMessage(current.sessionFile)}`,
-          display: true,
-          details: { id: current.id, sessionFile: current.sessionFile, status: current.status },
-        }, { triggerTurn: true, deliverAs: "steer" });
-        current.delivered = true;
-        writeLedger(sessionId, records);
-      }
-      mkdirSync(deliveredDir, { recursive: true });
-      writeFileSync(deliveredFile(record.id), "");
-      chmodSync(deliveredFile(record.id), 0o600);
       if (existsSync(forwarded)) unlinkSync(forwarded);
-    });
+    }));
   };
   mkdirSync(dirname(sidecar), { recursive: true });
   watchers.set(record.id, watch(dirname(sidecar), (_event, name) => {
@@ -200,19 +238,21 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
     const details = event.details as any;
     if (details?.status !== "started" || !details.id || !details.sessionFile) return;
     const sessionId = ctx.sessionManager.getSessionId();
-    const records = readLedger(sessionId);
-    if (records.some((record) => record.id === details.id)) return;
-    let paneId = details.worktree?.paneId;
-    if (!paneId && details.launchScriptFile && existsSync(details.launchScriptFile)) {
-      const script = readFileSync(details.launchScriptFile, "utf8");
-      paneId = script.match(/PI_SUBAGENT_SURFACE=([^\s;]+)/)?.[1]?.replaceAll("'", "");
-    }
-    records.push({
-      id: details.id, name: details.name, task: details.task,
-      cwd: String(event.input.cwd || ctx.cwd), sessionFile: details.sessionFile,
-      launchScriptFile: details.launchScriptFile, paneId, status: "running",
+    withLedgerLock(sessionId, () => {
+      const records = readLedger(sessionId);
+      if (records.some((record) => record.id === details.id)) return;
+      let paneId = details.worktree?.paneId;
+      if (!paneId && details.launchScriptFile && existsSync(details.launchScriptFile)) {
+        const script = readFileSync(details.launchScriptFile, "utf8");
+        paneId = script.match(/PI_SUBAGENT_SURFACE=([^\s;]+)/)?.[1]?.replaceAll("'", "");
+      }
+      records.push({
+        id: details.id, name: details.name, task: details.task,
+        cwd: String(event.input.cwd || ctx.cwd), sessionFile: details.sessionFile,
+        launchScriptFile: details.launchScriptFile, paneId, status: "running",
+      });
+      writeLedger(sessionId, records);
     });
-    writeLedger(sessionId, records);
   });
 
   pi.on("message_end", (event, ctx) => {
@@ -222,13 +262,14 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
       const records = readLedger(ctx.sessionManager.getSessionId());
       const record = records.find((item) => item.sessionFile === message.details?.sessionFile);
       if (!record) return;
-      if (record.status === "running") {
+      const transferred = committedTransfer(record.id, ctx.sessionManager.getSessionId());
+      if (record.status === "running" && !transferred) {
         record.status = message.details?.exitCode === 0 ? "done" : "failed";
         record.delivered = true;
         writeLedger(ctx.sessionManager.getSessionId(), records);
         return;
       }
-      if (record.status === "transferred" && !existsSync(deliveredFile(record.id))) {
+      if ((record.status === "transferred" || transferred) && !existsSync(deliveredFile(record.id))) {
         writeForwarded(record.id, {
           status: message.details?.exitCode === 0 ? "done" : "failed",
           content: String(message.details?.resultContent || finalMessage(record.sessionFile)),
@@ -237,7 +278,7 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
       return { message: {
         ...message,
         customType: "transferred_dispatch_notice",
-        content: `Dispatch ${record.name} was ${record.status === "transferred" ? "transferred" : "already delivered"}.`,
+        content: `Dispatch ${record.name} was ${transferred ? "transferred" : "already delivered"}.`,
         display: false,
         details: { id: record.id, sessionFile: record.sessionFile },
       } };
@@ -253,15 +294,39 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
     reconcileDelivered(sessionId, parentFile);
     const handoffId = process.env.PI_HANDOFF_ID;
     if (handoffId) {
-      const handoffFile = join(agentDir, "handoffs", `${handoffId}.json`);
-      if (existsSync(handoffFile)) {
+      mkdirSync(handoffDir, { recursive: true });
+      writeFileSync(join(handoffDir, `${handoffId}.ready`), sessionId, { mode: 0o600 });
+      const importHandoff = () => {
+        const handoffFile = join(handoffDir, `${handoffId}.json`);
+        if (!existsSync(handoffFile)) return;
         const handoff = JSON.parse(readFileSync(handoffFile, "utf8"));
-        const existing = readLedger(sessionId);
-        for (const record of handoff.dispatches || []) {
-          if (!existing.some((item) => item.id === record.id)) existing.push(record);
+        if (handoff.state !== "committed") return;
+        withLedgerLock(sessionId, () => {
+          const existing = readLedger(sessionId);
+          for (const record of handoff.dispatches || []) {
+            if (!existing.some((item) => item.id === record.id)) existing.push(record);
+          }
+          writeLedger(sessionId, existing);
+        });
+        for (const record of readLedger(sessionId)) {
+          if (record.status === "running") observe(sessionId, parentFile, record, pi);
         }
-        writeLedger(sessionId, existing);
-      }
+      };
+      importHandoff();
+      const timer = setInterval(() => {
+        const handoffFile = join(handoffDir, `${handoffId}.json`);
+        if (!existsSync(handoffFile)) {
+          clearInterval(timer);
+          handoffTimers.delete(timer);
+          return;
+        }
+        importHandoff();
+        if (JSON.parse(readFileSync(handoffFile, "utf8")).state === "committed") {
+          clearInterval(timer);
+          handoffTimers.delete(timer);
+        }
+      }, 200);
+      handoffTimers.add(timer);
     }
     for (const record of readLedger(sessionId)) {
       if (record.status === "running") observe(sessionId, parentFile, record, pi);
@@ -273,5 +338,7 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
     watchers.clear();
     for (const timer of timers.values()) clearInterval(timer);
     timers.clear();
+    for (const timer of handoffTimers) clearInterval(timer);
+    handoffTimers.clear();
   });
 }

@@ -14,7 +14,11 @@ Pi identifies git packages by repository when installing or removing them. Switc
 
 `pi-herdr-agents` owns pane dispatch, fallback attempts, and result delivery. `pi-intercom` owns peer discovery and messages. `pi-ask-user`, `@capdiem/pi-todo`, `pi-mcp-adapter`, `pi-claude-bridge`, and the aaaav package retain their own behavior. This repo adds the three missing workflows as a small Pi extension and skills: durable dispatch inventory and reattachment after parent restart, coordinated handoff into a new Herdr pane, and Git shipping through the target repository's conventions. They call the package interfaces rather than duplicate their runtime.
 
-An active handoff locks the old session ledger, records the running dispatches, and marks them `transferred` before creating the receiving pane. The completion watcher and native `subagent_result` handler use the same ledger lock, so a completion that wins the lock stays with the old owner and a transfer that wins routes to the receiver. A definite pane-creation or startup failure restores `running` under the lock; an uncertain startup retains the transfer for inspection. The package's watcher still runs in the old Pi process, so the local extension changes its completed result to a transfer notice before it enters the old model context and forwards its content through an agent-local sidecar. The receiver also watches the worker's completion sidecar and delivers whichever complete result appears first. It retries a sidecar that is momentarily unreadable while the package consumes or replaces it. A delivered marker prevents a late original result from recreating a forwarded payload.
+The handoff interface is `dispatch_control` plus an immutable handoff ID. The Python CLI writes a pending file, creates the pane, starts the receiving Pi agent, waits for the extension's ready marker, and submits the scope prompt. The old owner keeps every active dispatch through these steps. Under its ledger lock, the CLI then reads the still-running records and atomically replaces the pending file with a committed handoff file. This file is the ownership decision: completion before its replacement reaches the old session; completion afterward reaches the receiver. The old ledger's `transferred` status is a repairable view. A write failure in that view reports a warning and leaves the committed handoff authoritative. Pane, shell, start, readiness, prompt, or pending/commit-file failures leave ownership with the old session.
+
+The Pi extension imports records only after commitment. Its startup readiness marker and import poll keep the Python CLI independent of Pi session timing. The old process's `pi-herdr-agents` watcher still emits a native result, so the extension replaces it with a transfer notice and forwards the payload through an agent-local sidecar. The receiver watches that sidecar and the worker completion file. Atomic ledger replacement and directory locks cover concurrent processes; a per-dispatch delivery lock and marker allow one recovered delivery across receivers. The completion watcher retries a temporarily unreadable sidecar while the package consumes or replaces it.
+
+The previous shape transferred the old ledger before pane creation and then rolled it back on selected failures. That made each later startup step a separate recovery case. The committed-file shape has one ownership transition after the receiver is ready, and `roll-call` derives stale old-ledger status from that file. The Python CLI and Pi extension occupy the existing dispatch-control seam; callers still use one `handoff` action. Tests exercise the CLI boundary with Herdr fault injection, the extension's result hooks, and real Herdr sessions.
 
 ## Model routing
 
@@ -64,3 +68,21 @@ Shell tests run with an isolated HOME, stub external commands, and inspect per-t
 - Tried: accepting the first real Herdr delivery as complete based on its single result message.
   Found: the worker succeeded but the receiver marked it `failed`; the watcher mapped transient unreadable completion files to failure, and a partial-file regression reproduced that path. The recovery watcher now waits for a readable sidecar or forwarded result.
   Led by: aaaav-do's real Herdr handoff anchor.
+- Tried: replacing the race test in one patch with a delete and add for the same path.
+  Found: the patch tool rejects multiple operations on one path in a single patch. A separate window-matrix test kept the existing regression focused.
+  Led by: aaaav-do's red-capable test loop.
+- Tried: naming the spawned child process `process` inside a Node test function.
+  Found: the local binding shadowed Node's global `process` before initialization. A distinct `handoffProcess` name fixed the fixture.
+  Led by: aaaav-do's failure-window test.
+- Tried: reusing one Pi session ID for every isolated window scenario.
+  Found: the extension's process-local session set treated later scenarios as repeat startups. Unique session IDs made each scenario independent.
+  Led by: aaaav-do's failure-window test.
+- Tried: putting the Herdr failure shim in a new tab's environment.
+  Found: shell startup moved `/opt/homebrew/bin` ahead of that path. Starting Pi through `herdr pane run` with an explicit leading PATH exercised the intended agent-start failure.
+  Led by: aaaav-do's real Herdr failure anchor.
+- Tried: gating every Python `write_json` call as if its data were an object.
+  Found: ledger writes pass a list. The test fixture now gates only dictionary data with `state: committed`.
+  Led by: aaaav-do's commit-window failure injection.
+- Tried: directing only the source agent to leave the final UAT gate closed.
+  Found: the receiving agent inferred that it should create the release file from the handoff summary. The final check records that actor and verifies the ledger was running before completion.
+  Led by: aaaav-do's final real Herdr anchor.

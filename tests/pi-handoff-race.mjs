@@ -20,6 +20,9 @@ from pathlib import Path
 args = sys.argv[1:]
 root = Path(os.environ["HANDOFF_TEST_DIR"])
 if args[:2] == ["tab", "create"]:
+    for index, value in enumerate(args):
+        if value == "--env" and args[index + 1].startswith("PI_HANDOFF_ID="):
+            (root / "transfer-id").write_text(args[index + 1].split("=", 1)[1])
     (root / "pane-created").write_text("")
     for _ in range(100):
         if (root / "release-pane").exists():
@@ -31,6 +34,10 @@ if args[:2] == ["tab", "create"]:
     print(json.dumps({"result": {"root_pane": {"pane_id": "test:pane"}}}))
 elif args[:2] == ["pane", "process-info"]:
     print(json.dumps({"result": {"process_info": {"foreground_processes": [{"name": "zsh"}]}}}))
+elif args[:2] == ["agent", "start"]:
+    transfer_id = (root / "transfer-id").read_text()
+    (Path(os.environ["PI_CODING_AGENT_DIR"]) / "handoffs" / (transfer_id + ".ready")).write_text("receiver")
+    print(json.dumps({"result": {}}))
 else:
     print(json.dumps({"result": {}}))
 `);
@@ -88,7 +95,7 @@ try {
 
   const handoff = await runHandoff("old");
   writeFileSync(`${childFile}.exit`, JSON.stringify({ type: "done" }));
-  await new Promise((done) => setTimeout(done, 250));
+  await until(() => old.messages.length === 1, "original owner result before commit");
   writeFileSync(join(home, "release-pane"), "");
   assert.equal(await handoff.exit, 0, handoff.stderr());
 
@@ -97,10 +104,9 @@ try {
   const receiver = session("new", newFile);
   (await import(`${extension.href}?race=receiver`)).default(receiver.api);
   await receiver.handlers.get("session_start")({ type: "session_start", reason: "startup" }, receiver.ctx);
-  await until(() => receiver.messages.length > 0, "receiver result");
   assert.equal(old.messages.length + receiver.messages.length, 1, "a completion during handoff must reach one owner");
-  assert.equal(receiver.messages.length, 1);
-  assert.match(receiver.messages[0].content, /RACE_RESULT/);
+  assert.equal(old.messages.length, 1);
+  assert.match(old.messages[0].content, /RACE_RESULT/);
   await old.handlers.get("session_shutdown")();
   await receiver.handlers.get("session_shutdown")();
   delete process.env.PI_HANDOFF_ID;

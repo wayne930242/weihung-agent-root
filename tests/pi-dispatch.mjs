@@ -96,7 +96,7 @@ try {
   const handoffDir = join(process.env.PI_CODING_AGENT_DIR, "handoffs");
   const { mkdirSync } = await import("node:fs");
   mkdirSync(handoffDir, { recursive: true });
-  writeFileSync(join(handoffDir, "transfer-1.json"), JSON.stringify({ from: "old-parent", dispatches: [{ ...transferred, status: "running" }] }));
+  writeFileSync(join(handoffDir, "transfer-1.json"), JSON.stringify({ from: "old-parent", state: "committed", dispatches: [{ ...transferred, status: "running" }] }));
   process.env.PI_HANDOFF_ID = "transfer-1";
   const receiving = session("new-parent", newParent);
   (await import(`${extension.href}?transfer=new`)).default(receiving.api);
@@ -129,6 +129,37 @@ try {
   assert.equal(partial.messages.length, 1);
   assert.equal(JSON.parse(readFileSync(partialLedger))[0].status, "done");
   await partial.handlers.get("session_shutdown")();
+
+  const retryParent = join(home, "retry-parent.jsonl");
+  const retryChild = join(home, "retry-child.jsonl");
+  writeFileSync(retryParent, "");
+  writeFileSync(retryChild, JSON.stringify({ type: "message", message: { role: "assistant", content: [{ type: "text", text: "RETRY_RESULT" }] } }) + "\n");
+  writeFileSync(`${retryChild}.exit`, JSON.stringify({ type: "done" }));
+  const retryLedger = join(process.env.PI_CODING_AGENT_DIR, "dispatch-ledger/retry-parent.json");
+  writeFileSync(retryLedger, JSON.stringify([{ id: "retry-child", name: "retry-worker", task: "Done", cwd: home,
+    sessionFile: retryChild, status: "running" }]));
+  const retry = session("retry-parent", retryParent);
+  let attempts = 0;
+  retry.api.sendMessage = (message, options) => {
+    if (++attempts === 1) throw new Error("injected send failure");
+    retry.messages.push({ message, options });
+  };
+  (await import(`${extension.href}?retry=1`)).default(retry.api);
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    await retry.handlers.get("session_start")({ type: "session_start", reason: "startup" }, retry.ctx);
+    assert.equal(JSON.parse(readFileSync(retryLedger))[0].status, "running");
+    for (let attempt = 0; attempt < 20 && retry.messages.length === 0; attempt++) {
+      await new Promise((done) => setTimeout(done, 100));
+    }
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(attempts, 2);
+  assert.equal(retry.messages.length, 1);
+  assert.equal(JSON.parse(readFileSync(retryLedger))[0].status, "done");
+  await retry.handlers.get("session_shutdown")();
 } finally {
   rmSync(home, { recursive: true, force: true });
 }

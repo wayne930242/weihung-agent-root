@@ -46,7 +46,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertTrue((home / ".pi/agent/.weihung-user-claude.json").exists())
             self.assertTrue((home / ".agents/skills/managing-model-preferences").is_symlink())
 
-    def test_handoff_transfers_before_receiver_starts(self):
+    def test_handoff_commits_after_receiver_starts(self):
         spec = importlib.util.spec_from_file_location("pi_dispatch", ROOT / "scripts/pi-dispatch.py")
         dispatch = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(dispatch)
@@ -66,17 +66,20 @@ class PiReviewFixes(unittest.TestCase):
                 nonlocal starts
                 calls.append(args)
                 if args[:2] == ("agent", "start"):
-                    self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "transferred")
+                    self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "running")
                     starts += 1
                     if starts == 1:
                         raise RuntimeError('agent_pane_busy: shell is not ready')
+                    transfer = next(dispatch.HANDOFF_DIR.glob("*.json"))
+                    transfer.with_suffix(".ready").write_text("receiver")
                 return {}
 
             dispatch.herdr = herdr
             dispatch.handoff("owner", directory, "Continue")
             self.assertEqual(starts, 2)
+            self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "transferred")
 
-    def test_uncertain_receiver_start_keeps_transfer_record(self):
+    def test_uncertain_receiver_start_keeps_original_owner(self):
         spec = importlib.util.spec_from_file_location("pi_dispatch_uncertain", ROOT / "scripts/pi-dispatch.py")
         dispatch = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(dispatch)
@@ -90,10 +93,10 @@ class PiReviewFixes(unittest.TestCase):
             }])
             dispatch.new_pane = lambda *_args: "w1:p3"
             dispatch.herdr = lambda *_args: (_ for _ in ()).throw(RuntimeError("timeout: startup may continue"))
-            with self.assertRaisesRegex(RuntimeError, "inspect it before retrying"):
+            with self.assertRaisesRegex(RuntimeError, "timeout: startup may continue"):
                 dispatch.handoff("owner", directory, "Continue")
-            self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "transferred")
-            self.assertEqual(len(list(dispatch.HANDOFF_DIR.glob("*.json"))), 1)
+            self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "running")
+            self.assertEqual(len(list(dispatch.HANDOFF_DIR.glob("*.json"))), 0)
 
     def test_all_tiers_have_distinct_task_fallbacks(self):
         spec = importlib.util.spec_from_file_location("pi_target", PI_TARGET)

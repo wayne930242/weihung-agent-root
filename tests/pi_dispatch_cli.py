@@ -35,7 +35,15 @@ if args[:2] == ['pane', 'process-info']:
     processes = [{'name': 'zsh'}] if args[-1] == 'w1:p3' else []
     print(json.dumps({'result': {'process_info': {'foreground_processes': processes}}}))
 elif args[:2] == ['tab', 'create']:
+    Path(os.environ['HERDR_TEST_LOG']).with_suffix('.handoff').write_text(next(
+        value.split('=', 1)[1] for index, value in enumerate(args) if index > 0 and args[index - 1] == '--env' and value.startswith('PI_HANDOFF_ID=')
+    ))
     print(json.dumps({'result': {'root_pane': {'pane_id': 'w1:p3'}}}))
+elif args[:2] == ['agent', 'start']:
+    transfer_id = Path(os.environ['HERDR_TEST_LOG']).with_suffix('.handoff').read_text()
+    ready = Path(os.environ['PI_CODING_AGENT_DIR']) / 'handoffs' / f'{transfer_id}.ready'
+    ready.write_text('receiver')
+    print(json.dumps({'result': {}}))
 elif args[:2] == ['pane', 'run']:
     pass
 else:
