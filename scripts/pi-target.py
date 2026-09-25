@@ -16,10 +16,12 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@de6b4d744d608e8d72af1483ade01bb98ec9fd07"
+BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e"
 LEGACY_BRIDGE = "npm:pi-claude-bridge"
 # Fork commit adding claude-bridge to /usage (upstream iefnaf/pi-usage#4).
 USAGE_SOURCE = "git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"
+# Fork commit reading Pi's exported VERSION for lazy web-tool activation (upstream nicobailon/pi-web-access#429).
+WEB_ACCESS_SOURCE = "git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
 OPUS_1M = "claude-bridge/claude-opus-5-5"
 OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
@@ -38,7 +40,7 @@ PACKAGES = [
     "npm:@juicesharp/rpiv-todo@2.11.0",
     THEME_PACKAGE,
     "npm:pi-open-tui@0.3.9",
-    "npm:pi-web-access@0.31.0",
+    WEB_ACCESS_SOURCE,
     "npm:pi-lens@4.3.0",
     USAGE_SOURCE,
     "npm:@moyai/pi-session-hoarder@0.2.0",
@@ -53,9 +55,10 @@ FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledMod
 UI_SETTINGS = {"theme": "vesper", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
 # powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, the
-# pi-usage fork replaces its npm release, which would otherwise register a second /usage,
-# rpiv-todo replaces pi-todo's minified-only bundle, and Vesper replaces the Catppuccin theme.
-RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
+# pi-usage and pi-web-access forks replace their npm releases, which would otherwise register
+# their tools twice, rpiv-todo replaces pi-todo's minified-only bundle, and Vesper replaces the
+# Catppuccin theme.
+RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:pi-web-access", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
 # cbmem.ts registers the codebase-memory tools directly; the same server imported from host
 # configs would add a second copy behind a namespace proxy.
 MCP_DISABLED_SERVER = "codebase-memory-mcp"

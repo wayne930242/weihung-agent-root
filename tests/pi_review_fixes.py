@@ -197,7 +197,7 @@ class PiReviewFixes(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
-                             ["git:github.com/wayne930242/pi-claude-bridge@de6b4d744d608e8d72af1483ade01bb98ec9fd07"])
+                             ["git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e"])
 
     def test_upgrade_retires_the_powerline_footer_and_notify(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -261,7 +261,7 @@ class PiReviewFixes(unittest.TestCase):
                 state.pop(f"{key}_present")
             marker.write_text(json.dumps(state))
             current = json.loads(settings.read_text())
-            current["packages"] = ["npm:user-package", "npm:pi-lens", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
+            current["packages"] = ["npm:user-package", "npm:pi-lens", "npm:pi-web-access@0.31.0", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
             current.pop("enabledModels")
             current.pop("enableInstallTelemetry")
             settings.write_text(json.dumps(current))
@@ -271,6 +271,8 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual([item for item in sources if "pi-lens" in item], ["npm:pi-lens@4.3.0"])
             self.assertFalse(any("pi-todo" in item or "catppuccin" in item for item in sources), sources)
             self.assertIn("npm:@juicesharp/rpiv-todo@2.11.0", sources)
+            self.assertEqual([item for item in sources if "pi-web-access" in item],
+                             ["git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c"])
             self.assertIs(upgraded["enableInstallTelemetry"], False)
             run_script("uninstall.sh", home, "--skip-external")
             restored = json.loads(settings.read_text())
