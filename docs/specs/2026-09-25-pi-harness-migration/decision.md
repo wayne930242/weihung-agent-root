@@ -49,7 +49,8 @@
 | model profile 的表達方式 | tier → model:thinking 與 fallback 寫入套件設定，切換策略即套用另一組設定；prose 只保留理由；拿掉 agent kind 維度 | 使用者選擇 | confirmed |
 | plan mode | 不裝 plan mode 套件；`/plan` 保留給 `pi-herdr-agents`，事前規劃由 aaaav-do 的流程負責 | 使用者選擇 | confirmed |
 | 非啟用策略的 Gemini／agy tier | 在 pi 的兩組模型中對應到 Codex Luna | 使用者 2026-09-25 回覆「改對應 Codex Luna（建議）」 | confirmed |
-| 原策略的 Opus 1M tier | 在 pi bridge 中對應 Opus 5.5 200K；使用者接受這項上下文容量差異 | 使用者 2026-09-25 回覆「Opus 5.5 200K（建議）」 | confirmed |
+| 原策略的 Opus 1M tier（初次對映） | 曾對應 bridge Opus 5.5 200K | 使用者 2026-09-25 初次回覆；後續被上游新證據取代 | superseded |
+| 原策略的 Opus 1M tier（更新對映） | 使用 bridge Opus 5.5 1M；將 `pi-claude-bridge` 固定在上游 commit `227f5eb4450a070dfbc083a7fe75b8b35366b941`，待 npm 發布包含 #120 的版本再切回 npm | 使用者 2026-09-25 新方向；上游 commit 與 #127 的測量紀錄 | confirmed |
 | 過渡期 | 直接切換；不改壞原本的腳本，而是讓 install／uninstall 支援 `--target`（claude、codex、gemini、pi、full），由使用者用 `--target pi` 加上移除舊目標完成切換；Claude Code 的 binary 與登入保留，作為 bridge 的後端 | 使用者選擇與核准時的修訂 | confirmed |
 
 核心規則已就緒：所有影響可觀察行為的決策皆已確認，沒有待決事項。

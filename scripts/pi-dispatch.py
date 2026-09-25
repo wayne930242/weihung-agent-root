@@ -6,6 +6,7 @@ import json
 import os
 import shlex
 import subprocess
+import time
 import uuid
 from pathlib import Path
 
@@ -41,23 +42,39 @@ def write_json(path, data):
 def herdr(*args):
     if os.environ.get("HERDR_ENV") != "1":
         raise ValueError("Herdr is unavailable; open Pi in a Herdr pane first")
-    result = subprocess.run(["herdr", *args], check=True, text=True, capture_output=True)
-    return json.loads(result.stdout)
+    try:
+        result = subprocess.run(["herdr", *args], check=True, text=True, capture_output=True)
+    except subprocess.CalledProcessError as error:
+        detail = (error.stderr or error.stdout or "").strip()
+        raise RuntimeError(f"herdr {' '.join(args[:2])} failed: {detail}") from error
+    return json.loads(result.stdout) if result.stdout.strip() else {}
 
 
 def new_pane(cwd, label, env=None):
     args = ["tab", "create", "--cwd", cwd, "--label", label, "--no-focus"]
+    workspace = os.environ.get("HERDR_WORKSPACE_ID")
+    if workspace:
+        args.extend(["--workspace", workspace])
     if env:
         for key, value in env.items():
             args.extend(["--env", f"{key}={value}"])
     response = herdr(*args)
-    return response["result"]["root_pane"]["pane_id"]
+    pane = response["result"]["root_pane"]["pane_id"]
+    for _ in range(25):
+        try:
+            processes = herdr("pane", "process-info", "--pane", pane)["result"]["process_info"]["foreground_processes"]
+        except RuntimeError:
+            processes = []
+        if any(item.get("name") in ("zsh", "bash", "fish", "sh") for item in processes):
+            return pane
+        time.sleep(0.2)
+    raise RuntimeError(f"New pane {pane} did not reach an interactive shell")
 
 
 def pane_available(pane):
     try:
         response = herdr("pane", "process-info", "--pane", pane)
-    except subprocess.CalledProcessError:
+    except RuntimeError:
         return None
     processes = response["result"]["process_info"]["foreground_processes"]
     return not processes or all(item.get("name") in ("zsh", "bash", "fish", "sh") for item in processes)
@@ -109,7 +126,7 @@ def handoff(owner, cwd, summary):
     records = [record.copy() for record in current if record["status"] == "running"]
     write_json(HANDOFF_DIR / f"{transfer_id}.json", {"from": owner, "summary": summary, "dispatches": records})
     pane = new_pane(cwd, f"handoff-{transfer_id[:8]}", {"PI_HANDOFF_ID": transfer_id})
-    prompt = f"You are taking over a main-agent scope. Handoff ID: {transfer_id}. Summary: {summary} Run `python3 {Path(__file__).resolve()} roll-call` to inspect active dispatches, then continue the work."
+    prompt = f"You are taking over a main-agent scope. Handoff ID: {transfer_id}. Summary: {summary} Use the dispatch_control tool with action roll-call to inspect active dispatches, then continue the work."
     name = f"handoff-{transfer_id[:8]}"
     herdr("agent", "start", name, "--kind", "pi", "--pane", pane, "--", "--name", name)
     herdr("agent", "prompt", name, prompt)

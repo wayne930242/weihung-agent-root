@@ -32,16 +32,19 @@ args = sys.argv[1:]
 with Path(os.environ['HERDR_TEST_LOG']).open('a') as out:
     out.write(json.dumps(args) + '\\n')
 if args[:2] == ['pane', 'process-info']:
-    print(json.dumps({'result': {'process_info': {'foreground_processes': []}}}))
+    processes = [{'name': 'zsh'}] if args[-1] == 'w1:p3' else []
+    print(json.dumps({'result': {'process_info': {'foreground_processes': processes}}}))
 elif args[:2] == ['tab', 'create']:
     print(json.dumps({'result': {'root_pane': {'pane_id': 'w1:p3'}}}))
+elif args[:2] == ['pane', 'run']:
+    pass
 else:
     print(json.dumps({'result': {}}))
 """)
             fake.chmod(0o755)
             log = home / "herdr.log"
             env = {**os.environ, "HOME": str(home), "PI_CODING_AGENT_DIR": str(agent),
-                   "PI_SESSION_ID": "owner", "HERDR_ENV": "1", "HERDR_TEST_LOG": str(log),
+                   "PI_SESSION_ID": "owner", "HERDR_ENV": "1", "HERDR_WORKSPACE_ID": "w9", "HERDR_TEST_LOG": str(log),
                    "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"]}
 
             def call(*args):
@@ -54,6 +57,7 @@ else:
             calls = [json.loads(line) for line in log.read_text().splitlines()]
             self.assertTrue(any(args[:2] == ["pane", "run"] and "PI_SUBAGENT_SESSION" in args[-1] for args in calls))
             self.assertTrue(any(args[:2] == ["tab", "create"] and "PI_HANDOFF_ID=" in " ".join(args) for args in calls))
+            self.assertTrue(any(args[:2] == ["tab", "create"] and args[args.index("--workspace") + 1] == "w9" for args in calls))
             self.assertTrue(any(args[:2] == ["agent", "start"] and "--kind" in args for args in calls))
             self.assertTrue(any(args[:2] == ["agent", "prompt"] and "Continue the task" in args[-1] for args in calls))
             self.assertEqual(json.loads(ledger.read_text())[0]["status"], "transferred")

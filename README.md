@@ -151,7 +151,7 @@ bash scripts/install.sh --target full
 bash scripts/uninstall.sh --target claude,codex,gemini
 ```
 
-The Pi target installs Pi, its Herdr integration, the selected community packages, local aaaav, and this repository's Pi package. It generates `~/.pi/agent/AGENTS.md`, MCP discovery settings, and model routing from the active profile. `--skip-external` prepares local configuration without running npm, Pi package installation, or Herdr integration commands. `uninstall.sh --target pi` removes this repository's Pi configuration and package registrations while retaining the Pi binary and login state. The decision to remove the old targets belongs to the user.
+The Pi target installs Pi, its Herdr integration, the selected community packages, local aaaav, and this repository's Pi package. The Claude bridge is pinned to upstream git commit `227f5eb4450a070dfbc083a7fe75b8b35366b941` for Opus 5.5 1M until a release containing #120 reaches npm. It generates `~/.pi/agent/AGENTS.md`, MCP discovery settings, and model routing from the active profile. `--skip-external` prepares local configuration without running npm, Pi package installation, or Herdr integration commands. `uninstall.sh --target pi` removes this repository's Pi configuration and package registrations while retaining the Pi binary and login state. The decision to remove the old targets belongs to the user.
 
 Bootstrap a new machine by cloning or updating the repo into the standard location and then running the installer:
 

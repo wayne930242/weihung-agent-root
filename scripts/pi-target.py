@@ -14,8 +14,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+BRIDGE_SOURCE = "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941"
+LEGACY_BRIDGE = "npm:pi-claude-bridge"
 PACKAGES = [
-    "npm:pi-claude-bridge",
+    BRIDGE_SOURCE,
     "npm:pi-herdr-agents",
     "npm:pi-mcp-adapter",
     "npm:pi-intercom",
@@ -31,6 +33,8 @@ FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel")
 def package_id(value, agent_dir):
     if value.startswith("npm:"):
         return value
+    if value.startswith("git:"):
+        return value.rsplit("@", 1)[0]
     return str((agent_dir / value).resolve())
 
 
@@ -141,6 +145,7 @@ def install(home, skip_external, force):
     settings = read_json(settings_path)
     previous_packages = state.get("previous_packages", list(settings.get("packages", [])))
     state["previous_packages"] = previous_packages
+    state.setdefault("retired_packages", [package for package in settings.get("packages", []) if package_id(package, agent_dir) == LEGACY_BRIDGE])
     content = instructions()
     current_hash = hashlib.sha256(instructions_path.read_bytes()).hexdigest() if instructions_path.exists() else None
     if current_hash and (first_install or current_hash != state.get("instructions_hash")):
@@ -164,13 +169,15 @@ def install(home, skip_external, force):
         run(["herdr", "integration", "install", "pi"], home)
         for package in PACKAGES:
             run(["pi", "install", package], home)
+        if any(package_id(package, agent_dir) == LEGACY_BRIDGE for package in read_json(settings_path).get("packages", [])):
+            run(["pi", "remove", LEGACY_BRIDGE], home)
         if not AAAAV.exists():
             raise ValueError(f"aaaav package is missing: {AAAAV}")
         run(["pi", "install", str(AAAAV)], home)
         run(["pi", "install", LOCAL_PACKAGE], home)
     else:
         settings = read_json(settings_path)
-        settings["packages"] = list(dict.fromkeys(settings.get("packages", []) + PACKAGES + [str(AAAAV), LOCAL_PACKAGE]))
+        settings["packages"] = [package for package in dict.fromkeys(settings.get("packages", []) + PACKAGES + [str(AAAAV), LOCAL_PACKAGE]) if package_id(package, agent_dir) != LEGACY_BRIDGE]
         write_json(settings_path, settings)
     write_json(marker_path, state)
 
@@ -201,6 +208,14 @@ def uninstall(home, skip_external):
         run(["herdr", "integration", "uninstall", "pi"], home)
     settings = read_json(settings_path)
     settings["packages"] = [package for package in settings.get("packages", []) if package_id(package, agent_dir) not in owned]
+    for package in state.get("retired_packages", []):
+        if package not in settings["packages"]:
+            if not skip_external:
+                run(["pi", "install", package], home)
+            settings["packages"].append(package)
+    settings["packages"] = list(dict.fromkeys(
+        [package for package in previous_packages if package in settings["packages"]] + settings["packages"]
+    ))
     if not settings["packages"]:
         settings.pop("packages")
     for key in FIELDS:

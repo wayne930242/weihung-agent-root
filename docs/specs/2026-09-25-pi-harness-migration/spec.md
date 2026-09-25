@@ -1,6 +1,7 @@
 Status: approved
 Approved at: 2026-09-25
 Approved from: 使用者回覆「核准。不是改安裝，本來的腳本不要弄壞，而是讓腳本支援 full install/pi install 等等等」；第 1、2 項已依此修訂
+Amended at: 2026-09-25；使用者改定 bridge 來源為上游 commit `227f5eb4450a070dfbc083a7fe75b8b35366b941`，原 1M tier 改用 Opus 5.5 1M
 
 # 規格：完整遷移到 pi
 
@@ -13,7 +14,7 @@ Approved from: 使用者回覆「核准。不是改安裝，本來的腳本不�
    - 不帶 `--target` 時，行為與現在完全相同（claude、codex、gemini），現有測試不需要修改就會通過。
    - `--target pi` 可以重複執行，每次都把以下內容安裝或更新到最新狀態：
      - pi 本體（npm 全域安裝）與 Herdr 的 pi integration。
-     - 社群套件：`pi-claude-bridge`、`pi-herdr-agents`、`pi-mcp-adapter`，以及 design 階段選定的 ask／todo／plan 套件。
+     - 社群套件：`pi-claude-bridge` 固定上游 git commit `227f5eb4450a070dfbc083a7fe75b8b35366b941`（待 npm 版本包含 #120 才改回 npm）、`pi-herdr-agents`、`pi-mcp-adapter`，以及 design 階段選定的 ask／todo 套件。
      - aaaav，以本機路徑用 `pi install` 安裝。
      - `~/.pi/agent/AGENTS.md`：由 `CLAUDE.md` 與 `shared/*.md` 展開 `@import` 後產生。內容改寫成 pi 的用詞，不再提到 Claude Code 專屬工具名稱、`boss-say`、straw-boss、`/codex:rescue`。
      - user root 的 skill，放到 `~/.agents/skills`（Codex 目前也用這個位置，兩邊共用）。

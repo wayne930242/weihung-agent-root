@@ -11,7 +11,7 @@ const parent = join(home, "parent.jsonl");
 const child = join(home, "child.jsonl");
 writeFileSync(parent, "");
 
-function session() {
+function session(id = "parent-1", file = parent) {
   const handlers = new Map();
   const messages = [];
   const tools = new Map();
@@ -22,7 +22,7 @@ function session() {
   };
   const ctx = {
     cwd: home,
-    sessionManager: { getSessionId: () => "parent-1", getSessionFile: () => parent },
+    sessionManager: { getSessionId: () => id, getSessionFile: () => file },
   };
   return { handlers, messages, tools, api, ctx };
 }
@@ -58,6 +58,23 @@ try {
   assert.match(resumed.messages[0].message.content, /Task complete/);
   assert.equal(resumed.messages[0].options.triggerTurn, true);
   await resumed.handlers.get("session_shutdown")();
+
+  const parent2 = join(home, "parent2.jsonl");
+  const child2 = join(home, "child2.jsonl");
+  writeFileSync(parent2, JSON.stringify({
+    type: "custom_message", customType: "subagent_result",
+    details: { sessionFile: child2, exitCode: 0 },
+  }) + "\n");
+  const ledger2 = join(process.env.PI_CODING_AGENT_DIR, "dispatch-ledger/parent-2.json");
+  writeFileSync(ledger2, JSON.stringify([{ id: "child-2", name: "worker2", task: "Done", cwd: home, sessionFile: child2, status: "running" }]));
+  delete globalThis.__weihungDispatchSessions;
+  const reconciled = session("parent-2", parent2);
+  (await import(`${extension.href}?restart=2`)).default(reconciled.api);
+  await reconciled.handlers.get("session_start")({ type: "session_start", reason: "resume" }, reconciled.ctx);
+  assert.equal(JSON.parse(readFileSync(ledger2))[0].status, "done");
+  assert.equal(JSON.parse(readFileSync(ledger2))[0].delivered, true);
+  assert.equal(reconciled.messages.length, 0);
+  await reconciled.handlers.get("session_shutdown")();
 } finally {
   rmSync(home, { recursive: true, force: true });
 }

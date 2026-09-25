@@ -798,6 +798,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -828,6 +829,7 @@ for target in ("claude", "codex", "gemini", "pi"):
             assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
             settings = json.loads((home / ".pi/agent/settings.json").read_text())
             assert len(settings["packages"]) == 8, settings
+            assert settings["packages"][0] == "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941", settings
             assert settings["defaultProvider"] == "claude-bridge", settings
             mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
             assert mcp["settings"]["hostConfigDiscovery"] == "on", mcp
@@ -867,6 +869,9 @@ with tempfile.TemporaryDirectory() as directory:
     original_models = {"default": "user/model", "agents": {"scout": "user/scout"}}
     config.write_text(json.dumps({"models": original_models, "other": True}))
     run(install, home, "--target", "pi", "--force")
+    installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
+    assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
+    assert any(package.startswith("git:github.com/elidickinson/pi-claude-bridge@227f5eb") for package in installed_packages), installed_packages
     applied = json.loads(config.read_text())
     assert applied["models"]["agents"] == original_models["agents"], applied
     subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
@@ -876,6 +881,31 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["packages"] == ["npm:pi-claude-bridge", "npm:user-package"], settings
     assert settings["theme"] == "light", settings
     assert json.loads(config.read_text()) == {"models": original_models, "other": True}
+
+with tempfile.TemporaryDirectory() as directory:
+    temporary = Path(directory)
+    source = Path(install).resolve().parent.parent
+    clone = temporary / "repo"
+    for relative in ("CLAUDE.md", "pi/AGENTS.md.in", "pi/model-profiles.json",
+                     "scripts/pi-target.py", "skills/managing-model-preferences/model-preference-profile.md"):
+        destination = clone / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source / relative, destination)
+    shutil.copytree(source / "shared", clone / "shared")
+    home = temporary / "home"
+    script = clone / "scripts/pi-target.py"
+    subprocess.run(["python3", str(script), "install", "--home", str(home), "--skip-external"], check=True)
+    profile = clone / "skills/managing-model-preferences/model-preference-profile.md"
+    profile.write_text(profile.read_text().replace(
+        "Active strategy: [claude-drive-codex](strategies/claude-drive-codex.md).",
+        "Active strategy: [codex-first](strategies/codex-first.md).",
+    ))
+    subprocess.run(["python3", str(script), "apply-profile", "--home", str(home)], check=True)
+    settings = json.loads((home / ".pi/agent/settings.json").read_text())
+    assert (settings["defaultProvider"], settings["defaultModel"]) == ("openai-codex", "gpt-6-sol")
+    config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
+    assert config["models"]["tasks"]["recon"][0] == "openai-codex/gpt-6-luna"
+    assert "Active model strategy: codex-first" in (home / ".pi/agent/AGENTS.md").read_text()
 PY
 }
 

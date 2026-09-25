@@ -48,11 +48,25 @@ function sessionEntries(file: string): any[] {
   });
 }
 
-function deliveredInParent(parentFile: string, childFile: string): boolean {
-  return sessionEntries(parentFile).some((entry) =>
+function deliveredInParent(parentFile: string, childFile: string): any | undefined {
+  return sessionEntries(parentFile).find((entry) =>
     entry.type === "custom_message" && entry.customType === "subagent_result" &&
     entry.details?.sessionFile === childFile
   );
+}
+
+function reconcileDelivered(sessionId: string, parentFile: string): void {
+  const records = readLedger(sessionId);
+  let changed = false;
+  for (const record of records) {
+    if (record.status !== "running") continue;
+    const result = deliveredInParent(parentFile, record.sessionFile);
+    if (!result) continue;
+    record.status = result.details?.exitCode === 0 ? "done" : "failed";
+    record.delivered = true;
+    changed = true;
+  }
+  if (changed) writeLedger(sessionId, records);
 }
 
 function finalMessage(childFile: string): string {
@@ -114,7 +128,10 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
         required: ["action"],
       },
       execute: async (_toolId, params, _signal, _update, ctx) => {
-        const args = [dispatchScript, params.action, "--session-id", ctx.sessionManager.getSessionId(), "--cwd", ctx.cwd];
+        const sessionId = ctx.sessionManager.getSessionId();
+        const parentFile = ctx.sessionManager.getSessionFile();
+        if (parentFile) reconcileDelivered(sessionId, parentFile);
+        const args = [dispatchScript, params.action, "--session-id", sessionId, "--cwd", ctx.cwd];
         if (params.action === "reattach") {
           if (!params.id) throw new Error("reattach requires a dispatch ID");
           args.splice(2, 0, params.id);
@@ -159,6 +176,7 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
     const sameProcess = processSessions.has(sessionId);
     processSessions.add(sessionId);
     if (sameProcess || !parentFile) return;
+    reconcileDelivered(sessionId, parentFile);
     const handoffId = process.env.PI_HANDOFF_ID;
     if (handoffId) {
       const handoffFile = join(agentDir, "handoffs", `${handoffId}.json`);
