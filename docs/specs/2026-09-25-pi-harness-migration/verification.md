@@ -142,3 +142,16 @@ The first isolated Herdr check imported the result but its model turn reported `
 - Friction: Pi RPC name and bash commands did not persist a session file (`gap`). Action: the final run used an authenticated prompt before killing Pi and resumed the resulting session file; no standing instruction changed.
 
 The `solid-loop` pass classified these as local discovery and test-environment facts. The skill edits passed the no-op check: each sentence states the ownership or delivery behavior a recovering agent needs.
+
+## Settled compaction and null restoration follow-up (2026-09-25)
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| Compaction checks after Pi finishes a turn | `tests/pi-idle-compaction.mjs` emits `agent_end`, waits 130 ms while active, then emits `agent_settled` and observes one compaction above 300,000 tokens. The test failed before the fix because no `agent_settled` handler existed and passed afterward. The installed Pi type declaration defines `agent_settled` as the point after retries, compaction, and queued continuations finish. | Local event-order pass; a live 300,000-token session was not constructed. |
+| Uninstall restores settings that previously contained JSON `null` | `test_uninstall_restores_present_null_settings` starts with `defaultProvider: null` and `theme: null`, installs twice, uninstalls, and observes both keys still present with null values while an originally absent key stays absent. It failed before the fix because `defaultProvider` disappeared and passed afterward. | Local install/uninstall pass. |
+| Powerline queue uses its declared setting | `scripts/pi-target.py` now applies `POWERLINE_QUEUE` at the write site; the installer and uninstall suites passed. | Source review and local suites pass. |
+| Repository checks and real HOME load | `bash tests/install.sh`, `bash tests/uninstall.sh`, `bash tests/prompts.sh`, `node tests/profile.mjs`, all six Pi runtime suites including idle compaction, `python3 tests/pi_dispatch_cli.py`, and `python3 -m unittest tests.pi_handoff_commit tests.pi_review_fixes -q` exited 0. `bash scripts/install.sh --target pi` completed on the authorized real HOME. Pi RPC started with the installed configuration, returned a `get_state` response, and exited 0 with empty stderr and no error event. `git diff --check` passed. | Local suites, real installation, and extension startup pass. |
+
+Existing install markers did not record whether a prior null-valued key existed. The real HOME marker uses that older format, so uninstall of a preexisting null value cannot be inferred from it. New installs record key presence; old markers retain their prior restoration behavior.
+
+Reflexive: the Pi event-definition lookup first used an agent-local npm path, then the active Node version's global npm root. This was a tool-use gap with no standing instruction to change; the `solid-loop` pass made no instruction edit.

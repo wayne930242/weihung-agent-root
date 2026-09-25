@@ -152,7 +152,9 @@ def update_profile(home, state):
     settings = read_json(settings_path)
     config = read_json(config_path)
     strategy, default, tiers, tasks = routing()
-    state.setdefault("previous_settings", {key: settings.get(key) for key in FIELDS})
+    if "previous_settings" not in state:
+        state["previous_settings"] = {key: settings.get(key) for key in FIELDS}
+        state["previous_settings_present"] = [key for key in FIELDS if key in settings]
     state.setdefault("previous_models", deepcopy(config.get("models")))
     state.setdefault("previous_status", deepcopy(config.get("status")))
     provider, model = default[0].split("/", 1)
@@ -176,13 +178,17 @@ def update_ui(home, state):
     config_path = agent_dir / "herdr-agents/config.json"
     settings = read_json(settings_path)
     config = read_json(config_path)
-    state.setdefault("previous_ui_settings", {key: deepcopy(settings.get(key)) for key in UI_SETTINGS})
+    if "previous_ui_settings" not in state:
+        state["previous_ui_settings"] = {key: deepcopy(settings.get(key)) for key in UI_SETTINGS}
+        state["previous_ui_settings_present"] = [key for key in UI_SETTINGS if key in settings]
     state.setdefault("previous_terminal", deepcopy(settings.get("terminal")))
     state.setdefault("previous_powerline", deepcopy(settings.get("powerline")))
     state.setdefault("previous_panes", deepcopy(config.get("panes")))
     settings.update(UI_SETTINGS)
     settings.setdefault("terminal", {})["showTerminalProgress"] = True
-    settings.setdefault("powerline", {}).setdefault("queue", {})["compactPromptMode"] = "native"
+    queue = settings.setdefault("powerline", {}).setdefault("queue", {})
+    for key, value in POWERLINE_QUEUE.items():
+        queue.setdefault(key, value)
     config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
     write_json(settings_path, settings)
     write_json(config_path, config)
@@ -300,17 +306,21 @@ def uninstall(home, skip_external):
     for key in FIELDS:
         if settings.get(key) == state.get("installed_settings", {}).get(key):
             previous = state.get("previous_settings", {}).get(key)
-            if previous is None:
-                settings.pop(key, None)
-            else:
+            present = state.get("previous_settings_present")
+            was_present = key in present if present is not None else previous is not None
+            if was_present:
                 settings[key] = previous
+            else:
+                settings.pop(key, None)
     for key in UI_SETTINGS:
         if settings.get(key) == state.get("installed_ui_settings", {}).get(key):
             previous = state.get("previous_ui_settings", {}).get(key)
-            if previous is None:
-                settings.pop(key, None)
-            else:
+            present = state.get("previous_ui_settings_present")
+            was_present = key in present if present is not None else previous is not None
+            if was_present:
                 settings[key] = previous
+            else:
+                settings.pop(key, None)
     restore_managed_keys(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
     current_powerline = settings.get("powerline")
     if isinstance(current_powerline, dict):

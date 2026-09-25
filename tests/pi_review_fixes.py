@@ -22,6 +22,23 @@ def run_script(script, home, *args, env=None, check=True):
 
 
 class PiReviewFixes(unittest.TestCase):
+    def test_uninstall_restores_present_null_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            settings_path = agent / "settings.json"
+            settings_path.write_text(json.dumps({"defaultProvider": None, "theme": None}))
+            run_script("install.sh", home, "--target", "pi", "--skip-external")
+            run_script("install.sh", home, "--target", "pi", "--skip-external")
+            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            restored = json.loads(settings_path.read_text())
+            self.assertIn("defaultProvider", restored)
+            self.assertIsNone(restored["defaultProvider"])
+            self.assertIn("theme", restored)
+            self.assertIsNone(restored["theme"])
+            self.assertNotIn("defaultModel", restored)
+
     def test_legacy_model_routing_remains_available(self):
         strategies = ROOT / "skills/managing-model-preferences/strategies"
         for path in strategies.glob("*.md"):

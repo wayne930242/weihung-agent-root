@@ -24,7 +24,7 @@ export default function idleCompaction(pi: ExtensionAPI): void {
   };
 
   pi.on("session_start", (_event, ctx) => schedule(ctx));
-  pi.on("agent_end", (_event, ctx) => schedule(ctx));
+  pi.on("agent_settled", (_event, ctx) => schedule(ctx));
   pi.on("session_shutdown", () => {
     if (pending) clearTimeout(pending);
     pending = undefined;
