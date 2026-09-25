@@ -1,480 +1,150 @@
 # weihung-user-claude
 
-Personal user-root light agent system for Claude Code, Codex, Antigravity, and Pi.
+Personal user-root setup for [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent). This repository is the source of truth for pi's user instructions, model routing, packages, skills, rules, and local extensions on every machine. It supports only pi; the last version that also configured Claude Code, Codex, and Gemini is the `legacy-claude-codex` tag.
 
-The repo keeps global behavior in version control, but deliberately separates:
+Claude models reach pi through `pi-claude-bridge`, which runs on the machine's Claude Code installation and login. Nothing in this repository configures Claude Code itself.
 
-- shared working agreements
-- Claude-specific prompt, agents, and hooks
-- Codex-specific prompt, subagents, rules, and hooks
-- Antigravity-specific rules and global customizations
+## New machine
 
-The goal is to keep the user-root layer thin and stable, while leaving personal machine config such as credentials, MCP servers, and trusted project state under direct user control.
-
-## Design
-
-This repo follows a light split:
-
-- `shared/`: cross-product principles that are stable across tools
-- `claude/`: assets that only make sense for Claude Code
-- `codex/`: assets that only make sense for Codex
-- `pi/`: Pi instructions, model tiers, dispatch recovery, handoff, and shipping skills
-
-That split matters because the products do not expose the same primitives:
-
-- Claude uses `CLAUDE.md`, `~/.claude/settings.json`, and Markdown subagents
-- Codex uses `AGENTS.md`, `rules/*.rules`, `hooks.json`, and TOML subagents
-
-Trying to force both products through one identical file model creates unnecessary coupling.
-
-For the longer design boundary, including what this repo should borrow from larger toolkits such as ECC and what it should avoid, see [docs/design-principles.md](docs/design-principles.md).
-
-## Layout
-
-```text
-CLAUDE.md                          # thin Claude root prompt, imports shared fragments
-AGENTS.md                          # thin Codex root prompt
-shared/
-  communication.md
-  engineering.md
-  context-management.md
-claude/
-  agents/
-    security-reviewer.md
-    silent-failure-hunter.md
-  hooks/
-    log-notification.sh
-    log-stop.sh
-    sync-repo.sh
-    warn-unpushed.sh
-  statusline.sh
-codex/
-  agents/
-    article-writer.toml
-    docs-researcher.toml
-    security-reviewer.toml
-    silent-failure-hunter.toml
-  rules/
-    weihung.rules                  # managed policy; default.rules stays Codex-owned
-  hooks/
-    log-session-start.sh
-    log-stop.sh
-  hooks.json
-rules/
-  clean-architecture.md
-  go.md
-  typescript.md
-  python.md
-  shell.md
-  markdown.md
-  deployment.md
-  chinese-writing.md
-  dependencies.md
-  git-safety.md
-  skill-writing.md
-  memory-index-sync.md
-  ui-design.md
-skills/
-  managing-model-preferences/      # also the /managing-model-preferences command
-  providing-knowledge/
-  reflecting-to-root/
-  writing-great-skills/
-evals/
-  mini-spec-3r.sh                  # real agent-behavior eval, run on demand
-scripts/
-  install.sh
-  uninstall.sh
-  bootstrap.sh
-  bridge-claude-projects.sh
-  install-codex-desktop-wsl.sh
-  token-sinks.py                   # where Claude Code token spend goes
-config/
-  claude-hooks.json
-  claude-settings.json             # Opus 1M main, 300k auto-compact, cross-session, empty commit/PR attribution
-  codex-managed.toml               # 300k auto-compact and [tui] status line, merged into ~/.codex/config.toml
-  gemini-skills.json               # registers .claude/skills for Antigravity
-```
-
-## AAAAV Development Loop (Mini SDD)
-
-The durable and inline development workflow is provided by `aaaav-do` from the [aaaav](https://github.com/wayne930242/aaaav) plugin, which installs itself: Align → Advance → Anchor → Act → Verify.
-In Chinese: 對齊 → 推進/延續 → 定錨 → 實作 → 驗證. Advance carries Decision → Spec →
-Design without changing owner or restarting context after the agent enters the
-target project.
-
-Five rules carry it, and nothing else is enforced:
-
-- **Align and route.** Every source change restates the task and intended outcome
-  in the model's own words and declares itself Inline or Durable. Clear,
-  localized, low-reuse work stays inline and writes no files; ambiguity,
-  cross-module or cross-session scope, a lasting contract, high risk, scope
-  expansion, or a user who wants the spec first makes it durable and leaves
-  `decision.md`, `spec.md`, `design.md`, and `verification.md` under
-  `docs/specs/YYYY-MM-DD-<slug>/`. Existing folders keep `requirements.md` as
-  their decision artifact.
-- **Advance decisions.** New durable work writes exploratory questions, answers,
-  bases, and statuses to `decision.md`. Grounded answers advance directly;
-  `grill-with-docs` asks only the unresolved user-owned frontier. The same run
-  then prepares the spec and design.
-- **Ratify.** Inline work states one observable `Contract:` and records the
-  user's request as its `Authorization:`, then executes without re-asking.
-  Durable work sits at `Status: proposed` — which forbids production edits —
-  until the user's explicit reply sets `Status: approved`, `Approved at`, and
-  `Approved from`.
-- **Anchor and act.** Before the first production edit, choose the simplest
-  credible reality anchor and checkpoint, then implement through the target
-  project's native practices.
-- **Result.** Verification gives every requirement its own
-  `Requirement | Evidence | Result` row, with `pass`, `fail`, or `unknown`. A
-  green suite is not evidence for a requirement nothing exercised.
-
-No hook enforces any of this. The contract is the text the agent reads, and
-[`evals/mini-spec-3r.sh`](evals/mini-spec-3r.sh) proves a real agent follows it.
-
-Phase transitions, the artifact contract (`MINI-SDD.md`), and the debug loop
-(`DEBUGGING.md`) live in the aaaav plugin's `aaaav-do` skill.
-
-## Install
-
-Install into your real user root:
+Prerequisites: Node.js with npm, Python 3, Git, Herdr, and Claude Code logged in with the account that should serve Claude models.
 
 ```bash
+git clone https://github.com/wayne930242/weihung-user-claude ~/projects/weihung-user-claude
+cd ~/projects/weihung-user-claude
 bash scripts/install.sh
 ```
 
-The default still installs Claude Code, Codex, and Gemini. Select individual targets or combine them with repeated or comma-separated `--target` values:
+Then start `pi` inside Herdr and run `/login` for OpenAI Codex. Claude models need no pi login; the bridge uses Claude Code's.
+
+Clone beside the related checkouts when they exist: the installer uses `~/projects/aaaav` when present (otherwise `github.com/wayne930242/aaaav`) and the mp-infra plugin from `~/projects/moldplan-center` (or `PI_MP_INFRA_ROOT`).
+
+Installer options:
+
+- `--home PATH` installs into another home directory, for example a throwaway smoke test.
+- `--skip-external` writes configuration only: no npm, pi package, Herdr, or network installs.
+- `--force` backs up conflicting targets to `~/.local/state/weihung-user-claude/backups/<timestamp>/` before replacing them. Without it, a conflict stops the install.
+
+The installer is idempotent; re-run it after pulling changes. `bash scripts/uninstall.sh` (same `--home` and `--skip-external` options) removes this repository's links, packages, generated instructions, and settings, and restores what the install backed up. The pi binary, its logins, and `codebase-memory-mcp` stay.
+
+## What the install sets up
+
+`scripts/install.sh` links the repository into the home directory, installs `codebase-memory-mcp` into `~/.local/bin` when it is missing, and runs `scripts/pi-target.py install`, which:
+
+- installs or upgrades pi (`npm install -g @earendil-works/pi-coding-agent`) and runs `herdr integration install pi`, which reports each pi session's state to Herdr;
+- installs the pi packages below, aaaav, and this repository as a local pi package;
+- generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in) plus the active model strategy;
+- sets the default model, thinking level, `pi-herdr-agents` task models, UI settings, and MCP host-config discovery;
+- ports resources pi cannot install as packages: codebase-memory, mp-infra, and team-toon-tack.
+
+Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so uninstall removes exactly those files and restores the previous settings values.
+
+### Links
+
+| Home path | Source |
+|---|---|
+| `~/.agents/skills/<name>` | [skills/](skills/): `managing-model-preferences`, `providing-knowledge`, `reflecting-to-root`, `writing-great-skills` |
+| `~/.pi/agent/rules` | [rules/](rules/): user-global rules |
+
+### Packages
+
+| Package | Role |
+|---|---|
+| `pi-claude-bridge` | The `claude-bridge` provider: Claude models through the local Claude Code login. Pinned to upstream commit `227f5eb` for Opus 5.5 with a 1M context window until a release containing that fix reaches npm. |
+| `pi-herdr-agents` | The `subagent` tool: dispatches workers into visible Herdr panes or isolated Git worktrees, with per-task model routing and a status widget. |
+| `pi-mcp-adapter` | The `mcp` gateway for MCP servers. Servers come from `~/.config/mcp/mcp.json`, `~/.agents/mcp.json`, or pi's own config; host configs of other tools on the machine load as a lowest-precedence fallback because the installer sets `hostConfigDiscovery` to `on`. |
+| `pi-intercom` | The `intercom` tool: messages and questions between pi sessions on the same machine. |
+| `pi-ask-user` | The `ask_user` tool: structured questions with options for decisions that belong to the user. |
+| `@capdiem/pi-todo` | The `todo` tool: one atomic task plan per session. |
+| `pi-powerline-footer` | The powerline footer; the queue uses pi's native compact prompt mode. |
+| `catppuccin-pi-theme` | The `catppuccin-mocha` theme. |
+| aaaav | The development workflow skills (`aaaav-do`, `investigating`, `inspecting`, `grilling`, and others) that the instructions route work through. |
+
+### This repository's pi package
+
+[package.json](package.json) registers these extensions and skills:
+
+- [dispatch-recovery.ts](pi/extensions/dispatch-recovery.ts): records every `subagent` dispatch in `~/.pi/agent/dispatch-ledger/` and adds the `dispatch_control` tool, which lists unfinished dispatches, resumes a stopped worker session in a new pane, and hands the current main scope to a new Herdr pane. The `dispatch-recovery` and `orchestrator-handoff` skills drive it, with [scripts/pi-dispatch.py](scripts/pi-dispatch.py) as the command-line side.
+- [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn.
+- [mp-infra-hooks.ts](pi/extensions/mp-infra-hooks.ts): when `~/.pi/agent/mp-infra.json` exists, runs the mp-infra session-start hook, its production-safety check before shell commands, and its vault, playbook, and Nomad checks after edits.
+- `shipping-task` skill: carries an approved task through the target app's branch or worktree, commit, pull request, and merge workflow.
+
+### Ported resources
+
+- **codebase-memory**: the official `codebase-memory-mcp install --clients=pi` output, generated in a staging home and installed as `~/.pi/agent/extensions/cbmem.ts` and the `codebase-memory` skill, pointing at `~/.local/bin/codebase-memory-mcp`.
+- **mp-infra** (only when its checkout exists): its skills linked into `~/.pi/agent/skills/`, and `~/.pi/agent/mp-infra.json` for the hooks extension. Without the checkout the installer prints that it skipped mp-infra.
+- **team-toon-tack**: installed under `~/.local/share/weihung-user-claude/team-toon-tack`, providing the `managing-linear-tasks` skill, `/ttt-*` prompt templates, and the `ttt` CLI in `~/.local/bin`.
+
+### Settings
+
+| File | Keys |
+|---|---|
+| `~/.pi/agent/settings.json` | `packages`, `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `theme`, `editorPaddingX`, `collapseChangelog`, `terminal.showTerminalProgress`, `powerline.queue.compactPromptMode` |
+| `~/.pi/agent/herdr-agents/config.json` | `models.default`, `models.tasks`, `status`, `panes.mode` (`split`), `panes.direction` (`right`) |
+| `~/.pi/agent/mcp.json` | `settings.hostConfigDiscovery` |
+
+Other keys in these files stay as the user wrote them.
+
+## Instructions and rules
+
+`~/.pi/agent/AGENTS.md` is generated, not linked: edit [pi/AGENTS.md.in](pi/AGENTS.md.in) and re-run the installer. It covers language, work routing through skills, dispatch in Herdr, code discovery with codebase-memory, and verification, and ends with the active strategy's model tiers.
+
+The files in [rules/](rules/) (git safety, deployment, dependencies, clean architecture, UI design, skill writing, Chinese writing, and Go, Python, shell, TypeScript, and Markdown conventions) are not loaded into every session. The instructions list each file with the work it covers, and pi reads the matching file from `~/.pi/agent/rules/` before that work. A new rule file needs its entry in that list.
+
+## Model strategies
+
+[skills/managing-model-preferences](skills/managing-model-preferences/) keeps a catalog of named strategies. [model-preference-profile.md](skills/managing-model-preferences/model-preference-profile.md) names the active one and holds the tier guide: which kind of work goes to `main`, `docs`, `recon`, `ui`, `review`, `simple`, `coding`, `complex_clear`, `complex_unclear`, or `academic`. [pi/model-profiles.json](pi/model-profiles.json) holds each strategy's exact `provider/model-id` and thinking level per tier, and each `strategies/<name>.md` mirrors its table with the rationale.
+
+`scripts/pi-target.py` turns the active strategy into pi configuration:
+
+- the `main` tier becomes pi's default model and thinking level;
+- every tier becomes a line in `~/.pi/agent/AGENTS.md` with an ordered model list, so a dispatch passes the tier's models and thinking level explicitly;
+- `pi-herdr-agents` task categories get the same candidates: `coding`, `review`, `recon`, and `docs` from their tiers, `qa` from `review`, and `architecture` from `complex_unclear`.
+
+Each list pairs the tier's model with a fallback from the other provider: a `claude-bridge` tier falls back to the matching OpenAI Codex model, and an `openai-codex` tier to `claude-bridge/claude-opus-5-5`.
+
+To switch, run `/managing-model-preferences <strategy>` in pi, or change the active link yourself and run:
 
 ```bash
-bash scripts/install.sh --target pi
-bash scripts/install.sh --target claude,codex
-bash scripts/install.sh --target full
-bash scripts/uninstall.sh --target claude,codex,gemini
+python3 scripts/pi-target.py apply-profile --home "$HOME"
 ```
 
-The Pi target installs Pi, its Herdr integration, the selected community packages, aaaav (the checkout beside this repo when present, otherwise `github.com/wayne930242/aaaav`), and this repository's Pi package. The company mp-infra plugin is added when its checkout exists at the default path or `PI_MP_INFRA_ROOT`; otherwise the installer skips it and says so. The Claude bridge is pinned to upstream git commit `227f5eb4450a070dfbc083a7fe75b8b35366b941` for Opus 5.5 1M until a release containing #120 reaches npm. It generates `~/.pi/agent/AGENTS.md`, MCP discovery settings, and model routing from the active profile. `--skip-external` prepares local configuration without running npm, Pi package installation, or Herdr integration commands. `uninstall.sh --target pi` removes this repository's Pi configuration and package registrations while retaining the Pi binary and login state. The decision to remove the old targets belongs to the user.
+then reload pi. The console in [web/](web/) (deployed on Vercel) lists the strategies and commits a switch to the profile through the GitHub API; pull and run `apply-profile` on each machine afterwards.
 
-On a new machine, clone this repository, run `bash scripts/install.sh --target pi`, then start `pi` inside Herdr and run `/login` for OpenAI Codex; Claude models go through pi-claude-bridge and use the Claude Code login on that machine.
+## Phone access with Moshi (optional)
 
-Bootstrap a new machine by cloning or updating the repo into the standard location and then running the installer:
+[Moshi](https://getmoshi.app) reaches pi sessions from a phone: it shows agent notifications and approvals, and attaches to the machine's terminal sessions over SSH or Mosh. The installer does not manage it.
 
 ```bash
-bash scripts/bootstrap.sh
+brew install rjyo/moshi/moshi-hook
+moshi-hook pair --token <pairing-token>   # token from the Moshi app
+moshi-hook install --target pi            # writes ~/.pi/agent/extensions/moshi-hooks.ts
+brew services start moshi-hook            # keeps the hook daemon running
 ```
 
-Install the repository-managed Codex agent system into Windows Codex Desktop
-from WSL:
+For terminal access from outside the local network, join the machine and the phone to the same [Tailscale](https://tailscale.com) tailnet and pair the host with its tailnet address:
 
 ```bash
-bash scripts/install-codex-desktop-wsl.sh
+moshi-hook host enable-ssh
+moshi-hook host setup --host <tailscale-hostname-or-100.x-address>
 ```
 
-The Desktop installer discovers the Windows user profile automatically and
-copies only the managed Codex surface. It preserves Windows-only `.system`
-skills, plugins, `config.toml`, authentication, history, and runtime state.
-Conflicting managed targets fail safely; use `--force` to back them up under
-Windows Local AppData before replacement:
+## Tests
 
 ```bash
-bash scripts/install-codex-desktop-wsl.sh --force
+bash tests/install.sh
+bash tests/uninstall.sh
+for test in tests/*.py; do python3 "$test"; done
+for test in tests/*.mjs; do node --experimental-strip-types --test "$test"; done
 ```
 
-Remote one-liner bootstrap:
+The installer tests run against temporary homes with `--skip-external`; `tests/pi_fresh_machine.py` and `tests/pi_port_install.py` exercise the external install path with stub `npm`, `pi`, and `herdr` commands.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/wayne930242/weihung-user-claude/main/scripts/bootstrap.sh | bash
-```
+## 中文摘要
 
-Smoke test against a fake home first:
+這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-user-claude`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-```bash
-bash scripts/install.sh --home /tmp/weihung-user-claude-smoke
-```
-
-Replace conflicting managed targets only when you mean it:
-
-```bash
-bash scripts/install.sh --force
-```
-
-Forward installer flags through bootstrap the same way:
-
-```bash
-bash scripts/bootstrap.sh --force
-```
-
-Uninstall managed assets and restore from the latest backup when available:
-
-```bash
-bash scripts/uninstall.sh
-```
-
-## Managed Surface
-
-The installer manages only these user-root surfaces.
-
-### Claude
-
-- `~/.claude/CLAUDE.md`
-- `~/.claude/shared/*.md`
-- `~/.claude/skills/*/`
-- `~/.claude/agents/*.md`
-- `~/.claude/rules/*.md`
-- `~/.claude/hooks/*.sh`
-- `~/.claude/statusline.sh`
-- merge into `~/.claude/settings.json` using `config/claude-hooks.json` (hooks + `statusLine` block)
-- merge into `~/.claude/settings.json` using `config/claude-settings.json` (model, auto-compact window, `env`, cross-session settings, empty commit/PR attribution)
-- drop any `~/.claude/hooks/*` registration whose script no longer exists, so a hook this repo
-  used to manage cannot survive its own removal and fail every event with exit 127
-
-### Codex
-
-- `~/.codex/AGENTS.md`
-- the keys of `config/codex-managed.toml` (top-level, `[tui]` status line, and explicitly disabled plugins) inside `~/.codex/config.toml`; every other line stays as written
-- `~/.agents/skills/*/` (Codex's personal skill location)
-- `~/.codex/agents/*.toml`
-- `~/.codex/rules/weihung.rules`; Codex keeps writing session approvals to its own `~/.codex/rules/default.rules`
-- `~/.codex/hooks/*.sh`
-- `~/.codex/hooks.json`
-
-### Antigravity
-
-- `~/.gemini/config/AGENTS.md`
-- `~/.gemini/config/GEMINI.md`
-- `~/.gemini/config/skills.json`
-- `~/.gemini/config/skills/*/`
-- `~/.gemini/config/rules/*.md`
-
-## Bridging Existing Claude Projects to Antigravity
-
-To use Antigravity with your existing Claude Code projects without manual migration:
-
-1. **Global Skills Auto-Discovery**: `~/.gemini/config/skills.json` automatically registers `.claude/skills` for any open workspace.
-2. **Batch Project Bridge**: Run `bash scripts/bridge-claude-projects.sh [DIR...]` (defaults to current directory) to scan projects and establish relative symlinks:
-   - `AGENTS.md -> CLAUDE.md`
-   - `.agents/skills -> ../.claude/skills`
-
-## Intentionally Not Managed
-
-These remain user-controlled on purpose:
-
-- `~/.claude/settings.local.json`
-- `~/.codex/config.toml`, apart from the keys in `config/codex-managed.toml`
-- `~/.gemini/config/config.json`
-- `~/.gemini/config/mcp_config.json`
-- `~/.gemini/settings.json`
-- `~/.gemini/antigravity-cli/settings.json`
-- shell startup files such as `~/.zshenv`
-- credentials and auth
-- MCP server definitions
-- plugin enablement, except the plugins explicitly disabled by `config/codex-managed.toml`
-- trust and approval state
-
-Plugin enablement stays yours apart from the explicit disabled list in `config/codex-managed.toml`. The installer also prints the Codex plugin install commands when `enabledPlugins` does not already carry `codex@openai-codex`, because the cross-model routing in `CLAUDE.md` has nothing to route to without it.
-
-This is especially important for Codex. `config.toml` often carries machine-local trust, MCP, plugin, and feature flags that should not be overwritten by a global prompt repo.
-
-派工模型由 [模型偏好 profile](skills/managing-model-preferences/model-preference-profile.md)
-集中管理。Claude 與 Codex 的根提示在 `boss-say` 派工前讀取它，明確傳入模型與 effort。
-每期調整可使用 `managing-model-preferences` skill，例如：「更新本期模型偏好，一般工作改用指定模型」。
-profile、具名策略與 skill 透過現有安裝腳本一起連結到兩個平台。
-目前啟用的策略以 [模型偏好 profile](skills/managing-model-preferences/model-preference-profile.md) 的 Active strategy 為準。Pi 的模型與 thinking 對照見 [model-profiles.json](pi/model-profiles.json)。
-既有策略保存為 `claude-drive-codex`、`codex-drive-claude`、`codex-first` 與 `claude-coding-codex-doc`。
-每套策略獨立存檔並以 Git 追蹤修訂，切換時更新 profile 的啟用連結。
-查看目前策略、切換策略或新增策略都可使用 `/managing-model-preferences` 指令，例如 `/managing-model-preferences`（查看）或 `/managing-model-preferences claude-drive-codex`（切換）。
-
-簡單工作可沿用直接完成的流程；主代理權限移交由 Straw Boss 的
-`handoff-orchestrator` 處理。主會話的 Opus 1M 設定及原生專用角色 TOML
-各自維持原用途；套用 profile 的派工明確指定其選定的模型與 effort。
-
-On upgrade, the installer removes the former repository-managed
-`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` and `advisorModel=opus` values. It
-preserves another worker-model or advisor value and every unrelated environment
-setting before installing the Opus 1M main model.
-
-## Conflict And Backup Behavior
-
-- Default behavior is fail-fast. If a managed target already exists, installation stops.
-- `--force` moves conflicting files into `~/.local/state/weihung-user-claude/backups/<timestamp>/` before replacing them.
-- Claude `settings.json` is merged, not symlinked, so existing non-hook settings remain intact.
-- Codex `config.toml` keeps every line except the keys in `config/codex-managed.toml`.
-
-## Uninstall Behavior
-
-- `scripts/uninstall.sh` looks for the latest backup under `~/.local/state/weihung-user-claude/backups/`.
-- If a backup exists for a managed path, that file is restored.
-- If no backup exists for a managed path, the managed symlink is removed.
-- Every `~/.claude/settings.json` entry pointing at a `claude/hooks/*.sh` script is removed, not
-  only the entries that still match `config/claude-hooks.json`, so an older release's
-  registration cannot outlive the script it names.
-- The managed `model` is removed only while it still holds the installed value;
-  user-edited model and advisor values survive.
-- Managed keys in `~/.codex/config.toml` are removed only while they still hold the installed value.
-- `~/.gemini/config/config.json` is left untouched, because it is not installer-managed.
-
-## Claude Notes
-
-Claude supports user memory and imports, so the Claude side is intentionally thin:
-
-- `CLAUDE.md` holds routing and Claude-only behavior
-- `@shared/...` imports pull in stable cross-product guidance
-- hooks are wired through `settings.json`, because that is Claude's official hook surface
-
-Current Claude hooks are deliberately minimal:
-
-- `Stop` logs to `~/.claude/state/weihung-user-claude/hooks.jsonl`
-
-The statusline (`claude/statusline.sh`) is also managed.
-Color and a `⚠` icon scale to the model's compact-recommendation threshold.
-1M-context models warn at 30% (≈300K tokens); 200K models warn at 70% (≈140K tokens).
-Detection keys off `display_name` containing `1M`/`1m`.
-
-![Claude Code statusline](docs/images/statusline.png)
-
-## Codex Notes
-
-Codex now has first-class support for:
-
-- global and project `AGENTS.md`
-- `rules/*.rules`
-- `hooks.json`
-- custom subagents in `agents/*.toml`
-
-This repo uses that split directly:
-
-- `AGENTS.md` stays focused on general working agreements
-- `codex/rules/weihung.rules` handles approval policy
-- `codex/hooks.json` and `codex/hooks/*.sh` handle automation
-- `codex/agents/*.toml` handle specialized delegation
-
-Hooks and multi-agent tools are stable and on by default, so no feature flag is needed.
-Agent role files apply only `developer_instructions`, model, reasoning, and a few
-related overrides; sandbox and MCP settings always come from the parent session.
-
-### Migration
-
-Earlier releases linked skills into `~/.codex/skills`, installed Claude commands into
-`~/.claude/commands`, and linked `~/.codex/rules/default.rules` to this repo.
-The installer prunes those repository links, and moves directory copies of repository
-skills found in `~/.agents/skills` to the backup before linking the current versions.
-
-## Experimental Jev Context Pruning
-
-Compaction for both harnesses is configured here: `config/claude-settings.json` sets
-`autoCompactWindow` to 300000, and that compaction event is what Jev pruning hooks.
-The pruning runtime itself is vendored in the [straw-boss](https://github.com/weihung/straw-boss)
-plugin; this repo owns the wiring that decides whether it can run at all.
-
-Jev prunes tool records VERBATIM instead of summarizing: each tool call and its result
-is scored, then kept, truncated, or dropped, while user and assistant text is always
-kept word for word. Governing sources -- dispatch contracts, `AGENTS.md`, `CLAUDE.md`,
-`GEMINI.md` and `SKILL.md` reads -- are kept by rule, never by score. Dropped content is
-stored so a wrong deletion stays recoverable.
-
-`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` is installed through `config/claude-settings.json`,
-which only allows plugin function hooks to load. It does not turn pruning on.
-
-### Shell environment
-
-Two exports belong in `~/.zshenv`. The installer never writes shell startup files, so
-add them by hand:
-
-```sh
-export TYPESAFE_API_KEY="<your TypeSafe key>"
-export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1
-```
-
-`TYPESAFE_API_KEY` is what Jev authenticates with. `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`
-is also installed into `~/.claude/settings.json` from `config/claude-settings.json`; the
-export carries the same flag to tooling launched from a shell rather than from that file.
-
-`STRAW_BOSS_JEV` stays out of `~/.zshenv` and out of global settings on purpose. Putting
-it there turns pruning on for every session at once, which is exactly what the renewal
-acceptance window below rules out.
-
-### Turning it on and off
-
-Pruning is off unless a session explicitly asks for it, and it needs `TYPESAFE_API_KEY`
-in the environment. Enable it for one newly launched Claude session:
-
-```sh
-STRAW_BOSS_JEV=1 claude
-```
-
-Start a session with the experiment explicitly off:
-
-```sh
-STRAW_BOSS_JEV=0 claude
-```
-
-An unset or empty `TYPESAFE_API_KEY` skips the path silently: no error, no benchmark
-record, and ordinary compaction behavior.
-
-### Codex
-
-Codex 0.155.1 exposes no replacement-history interface through its public `PreCompact`
-or `thread/compact/start`, so live pruning cannot run there. Codex shares the criteria,
-policy, gate and benchmark contract, and its pruning runs as an opt-in copy adapter
-rather than in a live session. Runtime parity with Claude is not currently achievable.
-
-### While the renewal acceptance window is open
-
-Keep pruning off for ordinary sessions through 2026-09-25. The context renewal
-seven-day acceptance measures token sinks against a baseline, and pruning every daily
-compaction makes that comparison unreadable.
-
-This is why `STRAW_BOSS_JEV` is set per session rather than exported from `~/.zshenv`.
-After 2026-09-25 the switch can move into the shell environment if the benchmark records
-justify it.
-
-## Why This Is Light
-
-- The global prompt files are short.
-- Every source-changing route uses the embedded Mini SDD lifecycle; low-reuse
-  local work stays inline and durable work leaves phased artifacts under
-  `docs/specs/`.
-- Approval policy is not mixed into prompt prose.
-- Automation is not mixed into prompt prose.
-- Product-specific capabilities live in product-specific directories.
-- The installer does not silently take over the full home config surface.
-
-## Verification
-
-The repo currently verifies:
-
-- installer behavior with `tests/install.sh`
-- Windows Codex Desktop installer behavior with `tests/install_codex_desktop_wsl.sh`
-- Claude hook scripts with `tests/hooks.sh`
-- Codex hook scripts with `tests/codex_hooks.sh`
-- bootstrap clone/update behavior with `tests/bootstrap.sh`
-- uninstall restore/remove behavior with `tests/uninstall.sh`
-- prompt routing rules and Mini Spec deletion guards with `tests/prompts.sh`
-- token spend accounting with `tests/token_sinks.sh`
-- Codex plugin cache version keeper with `tests/codex_plugin_cache_keeper.sh`
-
-`tests/` proves the rules are still written down. Whether an agent obeys them is
-a separate question, answered by `evals/mini-spec-3r.sh`: it installs this repo
-into a throwaway home, drives a headless agent against a throwaway project, and
-asserts what changed on disk — inline work executing directly, durable work
-stopping before any source edit, and approved durable work producing
-per-requirement evidence. It costs money and is not deterministic, so it runs on
-demand rather than with the test suite.
-
-```bash
-bash evals/mini-spec-3r.sh
-```
-
-Whether the agent system spends tokens well is a third question.
-`scripts/token-sinks.py` reads local Claude Code transcripts and reports cost composition, cost by context size, single-tool round-trips, subagent share, fixed prefix size, and the most expensive projects and sessions.
-Run the same length of window before and after a change to the agent system and compare the two reports.
-Claude Code deletes transcripts after 30 days by default, so save the before report outside this public repository.
-
-```bash
-python3 scripts/token-sinks.py --since 2026-09-03 --until 2026-09-18 \
-  > ~/.claude/state/weihung-user-claude/token-sinks/baseline-2026-09-03_2026-09-18.txt
-```
-
-## Not Tracked
-
-- personal values in `settings.json` / `settings.local.json`
-- generated state such as `todos/`, `projects/`, `statsig/`
-- machine-specific additions outside the managed surfaces above
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、footer 與主題、MCP）、aaaav、本 repo 的擴充（派工紀錄與復原、主代理移交、閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
+- 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
+- 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
+- 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。
+- 舊的 Claude Code、Codex、Gemini 多平台版本保存在 `legacy-claude-codex` tag。
