@@ -35,7 +35,6 @@ PACKAGES = [
     "npm:catppuccin-pi-theme",
     "npm:pi-web-access",
     "npm:pi-lens",
-    "npm:pi-notify",
     "npm:pi-usage",
     "npm:@moyai/pi-session-hoarder",
 ]
