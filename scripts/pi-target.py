@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@31891e9395e510f583def3bd0e01a663582d59a4"
+BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@de6b4d744d608e8d72af1483ade01bb98ec9fd07"
 LEGACY_BRIDGE = "npm:pi-claude-bridge"
 # Fork commit adding claude-bridge to /usage (upstream iefnaf/pi-usage#4).
 USAGE_SOURCE = "git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"

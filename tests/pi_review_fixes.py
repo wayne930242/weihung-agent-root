@@ -197,7 +197,7 @@ class PiReviewFixes(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
-                             ["git:github.com/wayne930242/pi-claude-bridge@31891e9395e510f583def3bd0e01a663582d59a4"])
+                             ["git:github.com/wayne930242/pi-claude-bridge@de6b4d744d608e8d72af1483ade01bb98ec9fd07"])
 
     def test_upgrade_retires_the_powerline_footer_and_notify(self):
         with tempfile.TemporaryDirectory() as directory:
