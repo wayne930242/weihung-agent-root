@@ -31,8 +31,8 @@ PACKAGES = [
     "npm:pi-intercom",
     "npm:pi-ask-user",
     "npm:@capdiem/pi-todo",
-    "npm:pi-powerline-footer",
     "npm:catppuccin-pi-theme",
+    "npm:pi-open-tui",
     "npm:pi-web-access",
     "npm:pi-lens",
     "npm:pi-usage",
@@ -44,7 +44,9 @@ AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel")
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True}
-POWERLINE_QUEUE = {"compactPromptMode": "native"}
+# Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
+# powerline footer, and pi-notify wrote escapes into `pi -p` output from every worker pane.
+RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify"]
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
 TTT_PREFIX = Path(".local/share/weihung-user-claude/team-toon-tack")
 # pi-skills ships bare skill directories without a pi manifest; its README installs it as a clone under the skills root.
@@ -312,6 +314,18 @@ def update_profile(home, state):
     state["strategy"] = strategy
 
 
+def retire_powerline(settings, state):
+    """Return the powerline queue setting an earlier install managed to its prior value."""
+    current = settings.get("powerline")
+    if isinstance(current, dict) and "installed_powerline" in state:
+        previous = state.get("previous_powerline") or {}
+        restore_managed_keys(current, "queue", (state.get("installed_powerline") or {}).get("queue"), previous.get("queue"), ("compactPromptMode",))
+        if not current:
+            settings.pop("powerline", None)
+    state.pop("installed_powerline", None)
+    state.pop("previous_powerline", None)
+
+
 def update_ui(home, state):
     agent_dir = home / ".pi/agent"
     settings_path = agent_dir / "settings.json"
@@ -322,19 +336,15 @@ def update_ui(home, state):
         state["previous_ui_settings"] = {key: deepcopy(settings.get(key)) for key in UI_SETTINGS}
         state["previous_ui_settings_present"] = [key for key in UI_SETTINGS if key in settings]
     state.setdefault("previous_terminal", deepcopy(settings.get("terminal")))
-    state.setdefault("previous_powerline", deepcopy(settings.get("powerline")))
     state.setdefault("previous_panes", deepcopy(config.get("panes")))
     settings.update(UI_SETTINGS)
     settings.setdefault("terminal", {})["showTerminalProgress"] = True
-    queue = settings.setdefault("powerline", {}).setdefault("queue", {})
-    for key, value in POWERLINE_QUEUE.items():
-        queue.setdefault(key, value)
+    retire_powerline(settings, state)
     config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
     write_json(settings_path, settings)
     write_json(config_path, config)
     state["installed_ui_settings"] = {key: deepcopy(settings[key]) for key in UI_SETTINGS}
     state["installed_terminal"] = deepcopy(settings["terminal"])
-    state["installed_powerline"] = deepcopy(settings["powerline"])
     state["installed_panes"] = deepcopy(config["panes"])
 
 
@@ -388,6 +398,9 @@ def install(home, skip_external, force):
                 write_json(settings_path, settings)
             else:
                 run(["pi", "remove", package], home)
+        for package in RETIRED_PACKAGES:
+            if package in read_json(settings_path).get("packages", []) and package not in state["previous_packages"]:
+                run(["pi", "remove", package], home)
         run(["pi", "install", state["aaaav"]], home)
         install_ported_resources(home, state, force)
         write_json(marker_path, state)
@@ -400,7 +413,9 @@ def install(home, skip_external, force):
     current = settings.get("packages", [])
     owned = PACKAGES + [state["aaaav"], LOCAL_PACKAGE]
     owned_ids = {package_id(value, agent_dir) for value in owned}
-    unmanaged = [value for value in current if package_id(value, agent_dir) not in owned_ids and not obsolete_bridge(value)]
+    retired = [package for package in RETIRED_PACKAGES if package not in state["previous_packages"]]
+    unmanaged = [value for value in current
+                 if package_id(value, agent_dir) not in owned_ids and not obsolete_bridge(value) and value not in retired]
     managed = [next((value for value in current if package_id(value, agent_dir) == package_id(source, agent_dir)), source) for source in owned]
     settings["packages"] = list(dict.fromkeys(unmanaged + managed))
     write_json(settings_path, settings)
@@ -465,12 +480,7 @@ def uninstall(home, skip_external):
             else:
                 settings.pop(key, None)
     restore_managed_keys(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
-    current_powerline = settings.get("powerline")
-    if isinstance(current_powerline, dict):
-        previous_powerline = state.get("previous_powerline") or {}
-        restore_managed_keys(current_powerline, "queue", (state.get("installed_powerline") or {}).get("queue"), previous_powerline.get("queue"), ("compactPromptMode",))
-        if not current_powerline:
-            settings.pop("powerline", None)
+    retire_powerline(settings, state)
     write_json(settings_path, settings)
     mcp = read_json(mcp_path)
     if mcp.get("settings", {}).get("hostConfigDiscovery") == "on":

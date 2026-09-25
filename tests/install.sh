@@ -94,7 +94,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["editorPaddingX"] == 1, settings
     assert settings["collapseChangelog"] is True, settings
     assert settings["terminal"]["showTerminalProgress"] is True, settings
-    assert settings["powerline"]["queue"]["compactPromptMode"] == "native", settings
+    assert "powerline" not in settings and "npm:pi-open-tui" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
     assert mcp["settings"]["hostConfigDiscovery"] == "on", mcp
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())

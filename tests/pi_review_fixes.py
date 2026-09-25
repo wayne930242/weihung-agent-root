@@ -199,6 +199,46 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
                              ["git:github.com/wayne930242/pi-claude-bridge@bbe46c7654cd1a4eb069cee9e9e52db088f9a704"])
 
+    def test_upgrade_retires_the_powerline_footer_and_notify(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            settings = agent / "settings.json"
+            settings.write_text(json.dumps({"packages": ["npm:user-package"], "powerline": {"welcome": False}}))
+            run_script("install.sh", home, "--skip-external")
+            marker = agent / ".weihung-user-claude.json"
+            # Reproduce what an install from before pi-open-tui left behind.
+            state = json.loads(marker.read_text())
+            state.update(previous_powerline={"welcome": False},
+                         installed_powerline={"welcome": False, "queue": {"compactPromptMode": "native"}})
+            marker.write_text(json.dumps(state))
+            current = json.loads(settings.read_text())
+            current["packages"] += ["npm:pi-powerline-footer", "npm:pi-notify"]
+            current["powerline"] = {"welcome": False, "queue": {"compactPromptMode": "native"}}
+            settings.write_text(json.dumps(current))
+            run_script("install.sh", home, "--skip-external")
+            upgraded = json.loads(settings.read_text())
+            self.assertNotIn("npm:pi-powerline-footer", upgraded["packages"])
+            self.assertNotIn("npm:pi-notify", upgraded["packages"])
+            self.assertIn("npm:pi-open-tui", upgraded["packages"])
+            self.assertIn("npm:user-package", upgraded["packages"])
+            self.assertEqual(upgraded["powerline"], {"welcome": False})
+            run_script("uninstall.sh", home, "--skip-external")
+            restored = json.loads(settings.read_text())
+            self.assertEqual(restored["packages"], ["npm:user-package"])
+            self.assertEqual(restored["powerline"], {"welcome": False})
+
+    def test_user_owned_powerline_survives_install(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            settings = agent / "settings.json"
+            settings.write_text(json.dumps({"packages": ["npm:pi-powerline-footer"]}))
+            run_script("install.sh", home, "--skip-external")
+            self.assertIn("npm:pi-powerline-footer", json.loads(settings.read_text())["packages"])
+
     def test_previous_git_bridge_revision_is_restored(self):
         old = "git:github.com/elidickinson/pi-claude-bridge@old-commit"
         with tempfile.TemporaryDirectory() as directory:
