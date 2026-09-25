@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, readFileSync, watch, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, watch, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,8 @@ type Dispatch = {
 
 const agentDir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
 const ledgerDir = join(agentDir, "dispatch-ledger");
+const forwardedDir = join(agentDir, "dispatch-forwarded");
+const deliveredDir = join(agentDir, "dispatch-delivered");
 const dispatchScript = fileURLToPath(new URL("../../scripts/pi-dispatch.py", import.meta.url));
 const processSessions = ((globalThis as any).__weihungDispatchSessions ??= new Set<string>());
 const watchers = new Map<string, ReturnType<typeof watch>>();
@@ -39,6 +41,23 @@ function writeLedger(sessionId: string, records: Dispatch[]): void {
   mkdirSync(ledgerDir, { recursive: true });
   writeFileSync(ledgerFile(sessionId), JSON.stringify(records, null, 2) + "\n");
   chmodSync(ledgerFile(sessionId), 0o600);
+}
+
+function forwardedFile(id: string): string {
+  return join(forwardedDir, `${id}.json`);
+}
+
+function deliveredFile(id: string): string {
+  return join(deliveredDir, id);
+}
+
+function writeForwarded(id: string, result: { status: "done" | "failed"; content: string }): void {
+  mkdirSync(forwardedDir, { recursive: true });
+  const path = forwardedFile(id);
+  const temporary = `${path}.${process.pid}.tmp`;
+  writeFileSync(temporary, JSON.stringify(result), { mode: 0o600 });
+  chmodSync(temporary, 0o600);
+  renameSync(temporary, path);
 }
 
 function sessionEntries(file: string): any[] {
@@ -79,14 +98,17 @@ function finalMessage(childFile: string): string {
 function observe(sessionId: string, parentFile: string, record: Dispatch, pi: ExtensionAPI): void {
   if (watchers.has(record.id) || record.status !== "running") return;
   const sidecar = `${record.sessionFile}.exit`;
+  const forwarded = forwardedFile(record.id);
   const settle = () => {
-    if (!existsSync(sidecar)) return;
+    if (!existsSync(sidecar) && !existsSync(forwarded)) return;
     const records = readLedger(sessionId);
     const current = records.find((item) => item.id === record.id);
     if (!current || current.status !== "running") return;
     let result: any = {};
-    try { result = JSON.parse(readFileSync(sidecar, "utf8")); } catch { result = { type: "error" }; }
-    current.status = result.type === "done" ? "done" : "failed";
+    try { result = JSON.parse(readFileSync(existsSync(forwarded) ? forwarded : sidecar, "utf8")); }
+    catch { result = { type: "error" }; }
+    current.status = result.status === "done" || result.status === "failed"
+      ? result.status : (result.type === "done" ? "done" : "failed");
     current.delivered = deliveredInParent(parentFile, current.sessionFile);
     writeLedger(sessionId, records);
     watchers.get(record.id)?.close();
@@ -96,13 +118,17 @@ function observe(sessionId: string, parentFile: string, record: Dispatch, pi: Ex
     if (!current.delivered) {
       pi.sendMessage({
         customType: "recovered_dispatch_result",
-        content: `Recovered dispatch ${current.name} (${current.status}). Session: ${current.sessionFile}\n\n${finalMessage(current.sessionFile)}`,
+        content: `Recovered dispatch ${current.name} (${current.status}). Session: ${current.sessionFile}\n\n${result.content || finalMessage(current.sessionFile)}`,
         display: true,
         details: { id: current.id, sessionFile: current.sessionFile, status: current.status },
       }, { triggerTurn: true, deliverAs: "steer" });
       current.delivered = true;
       writeLedger(sessionId, records);
     }
+    mkdirSync(deliveredDir, { recursive: true });
+    writeFileSync(deliveredFile(record.id), "");
+    chmodSync(deliveredFile(record.id), 0o600);
+    if (existsSync(forwarded)) unlinkSync(forwarded);
   };
   mkdirSync(dirname(sidecar), { recursive: true });
   watchers.set(record.id, watch(dirname(sidecar), (_event, name) => {
@@ -168,6 +194,28 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
       launchScriptFile: details.launchScriptFile, paneId, status: "running",
     });
     writeLedger(sessionId, records);
+  });
+
+  pi.on("message_end", (event, ctx) => {
+    const message = event.message as any;
+    if (message.role !== "custom" || message.customType !== "subagent_result") return;
+    const record = readLedger(ctx.sessionManager.getSessionId()).find((item) =>
+      item.status === "transferred" && item.sessionFile === message.details?.sessionFile
+    );
+    if (!record) return;
+    if (!existsSync(deliveredFile(record.id))) {
+      writeForwarded(record.id, {
+        status: message.details?.exitCode === 0 ? "done" : "failed",
+        content: String(message.details?.resultContent || finalMessage(record.sessionFile)),
+      });
+    }
+    return { message: {
+      ...message,
+      customType: "transferred_dispatch_notice",
+      content: `Dispatch ${record.name} was transferred. Its result is routed to the receiving main session.`,
+      display: false,
+      details: { id: record.id, sessionFile: record.sessionFile },
+    } };
   });
 
   pi.on("session_start", (event, ctx) => {

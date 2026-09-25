@@ -35,8 +35,13 @@ def read_ledger(owner):
 
 def write_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n")
-    path.chmod(0o600)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(json.dumps(data, indent=2) + "\n")
+        temporary.chmod(0o600)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def herdr(*args):
@@ -78,6 +83,17 @@ def pane_available(pane):
         return None
     processes = response["result"]["process_info"]["foreground_processes"]
     return not processes or all(item.get("name") in ("zsh", "bash", "fish", "sh") for item in processes)
+
+
+def start_receiving_agent(name, pane):
+    for attempt in range(25):
+        try:
+            herdr("agent", "start", name, "--kind", "pi", "--pane", pane, "--", "--name", name)
+            return
+        except RuntimeError as error:
+            if "agent_pane_busy" not in str(error) or attempt == 24:
+                raise
+            time.sleep(0.2)
 
 
 def roll_call(owner):
@@ -124,16 +140,33 @@ def handoff(owner, cwd, summary):
     transfer_id = uuid.uuid4().hex
     current = read_ledger(owner)
     records = [record.copy() for record in current if record["status"] == "running"]
-    write_json(HANDOFF_DIR / f"{transfer_id}.json", {"from": owner, "summary": summary, "dispatches": records})
     pane = new_pane(cwd, f"handoff-{transfer_id[:8]}", {"PI_HANDOFF_ID": transfer_id})
-    prompt = f"You are taking over a main-agent scope. Handoff ID: {transfer_id}. Summary: {summary} Use the dispatch_control tool with action roll-call to inspect active dispatches, then continue the work."
-    name = f"handoff-{transfer_id[:8]}"
-    herdr("agent", "start", name, "--kind", "pi", "--pane", pane, "--", "--name", name)
-    herdr("agent", "prompt", name, prompt)
+    handoff_file = HANDOFF_DIR / f"{transfer_id}.json"
+    write_json(handoff_file, {"from": owner, "summary": summary, "dispatches": records})
     for record in current:
         if record["status"] == "running":
             record["status"] = "transferred"
     write_json(ledger_path(owner), current)
+    prompt = f"You are taking over a main-agent scope. Handoff ID: {transfer_id}. Summary: {summary} Use the dispatch_control tool with action roll-call to inspect active dispatches, then continue the work."
+    name = f"handoff-{transfer_id[:8]}"
+    try:
+        start_receiving_agent(name, pane)
+    except RuntimeError as error:
+        if "agent_pane_busy" not in str(error):
+            raise RuntimeError(f"Handoff {transfer_id} may have started in pane {pane}; inspect it before retrying") from error
+        transferred_ids = {record["id"] for record in records}
+        current = read_ledger(owner)
+        for record in current:
+            if record["id"] in transferred_ids and record["status"] == "transferred":
+                record["status"] = "running"
+        write_json(ledger_path(owner), current)
+        handoff_file.unlink(missing_ok=True)
+        try:
+            herdr("pane", "close", pane)
+        except RuntimeError:
+            pass
+        raise
+    herdr("agent", "prompt", name, prompt)
     print(f"Handoff {transfer_id} started in pane {pane}; active dispatches: {len(records)}")
 
 

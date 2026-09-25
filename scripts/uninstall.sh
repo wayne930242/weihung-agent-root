@@ -390,7 +390,7 @@ if [[ "$TARGET_SPECIFIED" -eq 0 ]]; then add_targets claude,codex,gemini; fi
 [[ "${#TARGETS[@]}" -gt 0 ]] || fail "--target requires a value"
 
 REMOVE_SHARED=0
-if [[ "$TARGET_SPECIFIED" -eq 0 ]] || { selected codex && selected pi; }; then
+if selected codex && selected pi; then
   REMOVE_SHARED=1
 elif selected codex && [[ ! -f "$TARGET_HOME/.pi/agent/.weihung-user-claude.json" ]]; then
   REMOVE_SHARED=1

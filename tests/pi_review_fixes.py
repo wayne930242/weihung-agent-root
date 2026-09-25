@@ -1,0 +1,187 @@
+"""Regression checks for the Pi migration review findings."""
+
+import importlib.util
+import json
+import os
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+PI_TARGET = ROOT / "scripts/pi-target.py"
+
+
+def run_script(script, home, *args, env=None, check=True):
+    return subprocess.run(
+        ["bash", str(ROOT / "scripts" / script), "--home", str(home), *args],
+        env={**os.environ, "HOME": str(home), **(env or {})},
+        text=True, capture_output=True, check=check,
+    )
+
+
+class PiReviewFixes(unittest.TestCase):
+    def test_legacy_model_routing_remains_available(self):
+        strategies = ROOT / "skills/managing-model-preferences/strategies"
+        for path in strategies.glob("*.md"):
+            with self.subTest(strategy=path.name):
+                content = path.read_text()
+                self.assertIn("## Selection order", content)
+                self.assertIn("## Application", content)
+                if path.stem != "claude-coding-codex-doc":
+                    self.assertIn("agent-kind", content)
+                    self.assertIn("agent-model", content)
+                    self.assertIn("agent-effort", content)
+                    self.assertIn("environment is unpredictable", content)
+        skill = (ROOT / "skills/managing-model-preferences/SKILL.md").read_text()
+        self.assertIn("Claude and Codex", skill)
+        self.assertIn("Pi model profiles", skill)
+
+    def test_plain_uninstall_keeps_shared_skills_for_pi(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            run_script("install.sh", home, "--target", "full", "--skip-external")
+            run_script("uninstall.sh", home, "--skip-external")
+            self.assertTrue((home / ".pi/agent/.weihung-user-claude.json").exists())
+            self.assertTrue((home / ".agents/skills/managing-model-preferences").is_symlink())
+
+    def test_handoff_transfers_before_receiver_starts(self):
+        spec = importlib.util.spec_from_file_location("pi_dispatch", ROOT / "scripts/pi-dispatch.py")
+        dispatch = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(dispatch)
+        with tempfile.TemporaryDirectory() as directory:
+            agent = Path(directory) / ".pi/agent"
+            dispatch.LEDGER_DIR = agent / "dispatch-ledger"
+            dispatch.HANDOFF_DIR = agent / "handoffs"
+            dispatch.write_json(dispatch.ledger_path("owner"), [{
+                "id": "child-1", "name": "worker", "task": "Task", "cwd": directory,
+                "sessionFile": str(Path(directory) / "child.jsonl"), "status": "running",
+            }])
+            dispatch.new_pane = lambda *_args: "w1:p3"
+            calls = []
+            starts = 0
+
+            def herdr(*args):
+                nonlocal starts
+                calls.append(args)
+                if args[:2] == ("agent", "start"):
+                    self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "transferred")
+                    starts += 1
+                    if starts == 1:
+                        raise RuntimeError('agent_pane_busy: shell is not ready')
+                return {}
+
+            dispatch.herdr = herdr
+            dispatch.handoff("owner", directory, "Continue")
+            self.assertEqual(starts, 2)
+
+    def test_uncertain_receiver_start_keeps_transfer_record(self):
+        spec = importlib.util.spec_from_file_location("pi_dispatch_uncertain", ROOT / "scripts/pi-dispatch.py")
+        dispatch = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(dispatch)
+        with tempfile.TemporaryDirectory() as directory:
+            agent = Path(directory) / ".pi/agent"
+            dispatch.LEDGER_DIR = agent / "dispatch-ledger"
+            dispatch.HANDOFF_DIR = agent / "handoffs"
+            dispatch.write_json(dispatch.ledger_path("owner"), [{
+                "id": "child-uncertain", "name": "worker", "task": "Task", "cwd": directory,
+                "sessionFile": str(Path(directory) / "child.jsonl"), "status": "running",
+            }])
+            dispatch.new_pane = lambda *_args: "w1:p3"
+            dispatch.herdr = lambda *_args: (_ for _ in ()).throw(RuntimeError("timeout: startup may continue"))
+            with self.assertRaisesRegex(RuntimeError, "inspect it before retrying"):
+                dispatch.handoff("owner", directory, "Continue")
+            self.assertEqual(dispatch.read_ledger("owner")[0]["status"], "transferred")
+            self.assertEqual(len(list(dispatch.HANDOFF_DIR.glob("*.json"))), 1)
+
+    def test_all_tiers_have_distinct_task_fallbacks(self):
+        spec = importlib.util.spec_from_file_location("pi_target", PI_TARGET)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
+        for strategy, tiers in profiles.items():
+            with self.subTest(strategy=strategy):
+                target.active_strategy = lambda strategy=strategy: strategy
+                _, default, _, tasks = target.routing()
+                self.assertEqual(set(tasks), {"coding", "review", "recon", "qa", "architecture", "docs"})
+                for tier, candidates in tasks.items():
+                    self.assertEqual(candidates[0], tiers.get(tier, tiers["review"] if tier == "qa" else tiers["complex_unclear"])[0])
+                    self.assertEqual(len(candidates), len(set(candidates)))
+                self.assertEqual(len(target.default_candidates(default)), len(set(target.default_candidates(default))))
+                instructions = target.instructions()
+                for tier, (model, thinking) in tiers.items():
+                    expected = ", ".join(target.candidates(model, tier))
+                    self.assertIn(f"model `{expected}`; thinking `{thinking}`", instructions)
+
+    def test_previous_git_bridge_revision_is_restored(self):
+        old = "git:github.com/elidickinson/pi-claude-bridge@old-commit"
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            (agent / "settings.json").write_text(json.dumps({"packages": [old, "npm:user-package"]}))
+            run_script("install.sh", home, "--target", "pi", "--skip-external")
+            installed = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertNotIn(old, installed)
+            self.assertEqual(sum("pi-claude-bridge" in item for item in installed), 1)
+            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], [old, "npm:user-package"])
+
+    def test_external_git_switch_keeps_the_new_checkout(self):
+        spec = importlib.util.spec_from_file_location("pi_target_git", PI_TARGET)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        old = "git:github.com/elidickinson/pi-claude-bridge@old-commit"
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            settings = agent / "settings.json"
+            settings.write_text(json.dumps({"packages": [old]}))
+            removals = []
+
+            def fake_run(args, _home):
+                if args[:2] == ["pi", "install"]:
+                    current = json.loads(settings.read_text())
+                    current.setdefault("packages", []).append(args[2])
+                    settings.write_text(json.dumps(current))
+                if args[:2] == ["pi", "remove"]:
+                    removals.append(args[2])
+
+            target.run = fake_run
+            target.install(home, skip_external=False, force=False)
+            self.assertNotIn(old, json.loads(settings.read_text())["packages"])
+            self.assertNotIn(old, removals)
+
+    def test_failed_external_install_can_retry_and_uninstall(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            bin_dir = home / "bin"
+            bin_dir.mkdir()
+            for name in ("npm", "herdr", "pi"):
+                script = bin_dir / name
+                script.write_text("#!/bin/sh\n[ -e \"$HOME/fail-once\" ] && { rm \"$HOME/fail-once\"; exit 4; }\nexit 0\n")
+                script.chmod(0o755)
+            (home / "fail-once").write_text("")
+            env = {"PATH": str(bin_dir) + os.pathsep + os.environ["PATH"]}
+            command = ["python3", str(PI_TARGET), "install", "--home", str(home)]
+            failed = subprocess.run(command, env={**os.environ, "HOME": str(home), **env},
+                                    text=True, capture_output=True)
+            self.assertNotEqual(failed.returncode, 0)
+            marker = home / ".pi/agent/.weihung-user-claude.json"
+            self.assertTrue(marker.exists())
+            self.assertFalse(json.loads(marker.read_text())["integration_installed"])
+            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            self.assertFalse(marker.exists())
+            (home / "fail-once").write_text("")
+            failed = subprocess.run(command, env={**os.environ, "HOME": str(home), **env},
+                                    text=True, capture_output=True)
+            self.assertNotEqual(failed.returncode, 0)
+            subprocess.run(command, env={**os.environ, "HOME": str(home), **env}, check=True)
+            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            self.assertFalse(marker.exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

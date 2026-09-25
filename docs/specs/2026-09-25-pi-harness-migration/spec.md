@@ -40,7 +40,7 @@ Amended at: 2026-09-25；使用者改定 bridge 來源為上游 commit `227f5eb4
 7. **shipping-task**：每個任務依目標 app 的慣例，走完 branch 或 worktree → commit → PR → merge。
 8. **model profile**：
    - `managing-model-preferences` 切換策略時，把該策略的設定套用到 `pi-herdr-agents` 和 pi 預設 model。
-   - 策略檔只用 prose 記錄 tier 對照的理由，不再有 agent kind 這個維度。
+   - Pi 的 tier 設定放在 JSON，沒有 agent kind 維度；策略檔保留 Claude Code／Codex 既有的 agent-kind、model、effort 表格、選擇順序與套用規則，並記錄 Pi tier 對照的理由。
 9. **aaaav**：aaaav 的 skill 在 pi 裡可以使用。write／edit 工具執行後，由一個 pi extension 跑 `validate_tool_use` 的檢查，並把建議回饋給模型。
 
 ## 邊界情況

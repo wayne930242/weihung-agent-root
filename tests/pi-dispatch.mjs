@@ -75,6 +75,40 @@ try {
   assert.equal(JSON.parse(readFileSync(ledger2))[0].delivered, true);
   assert.equal(reconciled.messages.length, 0);
   await reconciled.handlers.get("session_shutdown")();
+
+  const transferredChild = join(home, "transferred-child.jsonl");
+  writeFileSync(transferredChild, "");
+  const oldParent = join(home, "old-parent.jsonl");
+  const newParent = join(home, "new-parent.jsonl");
+  writeFileSync(oldParent, "");
+  writeFileSync(newParent, "");
+  const transferred = { id: "transferred-1", name: "worker3", task: "Wait", cwd: home,
+    sessionFile: transferredChild, status: "transferred" };
+  writeFileSync(join(process.env.PI_CODING_AGENT_DIR, "dispatch-ledger/old-parent.json"), JSON.stringify([transferred]));
+  const old = session("old-parent", oldParent);
+  (await import(`${extension.href}?transfer=old`)).default(old.api);
+  const native = { role: "custom", customType: "subagent_result", content: "NATIVE_RESULT",
+    details: { sessionFile: transferredChild, exitCode: 0, resultContent: "NATIVE_RESULT" } };
+  const replacement = await old.handlers.get("message_end")({ type: "message_end", message: native }, old.ctx);
+  assert.equal(replacement.message.customType, "transferred_dispatch_notice");
+  assert.doesNotMatch(replacement.message.content, /NATIVE_RESULT/);
+
+  const handoffDir = join(process.env.PI_CODING_AGENT_DIR, "handoffs");
+  const { mkdirSync } = await import("node:fs");
+  mkdirSync(handoffDir, { recursive: true });
+  writeFileSync(join(handoffDir, "transfer-1.json"), JSON.stringify({ from: "old-parent", dispatches: [{ ...transferred, status: "running" }] }));
+  process.env.PI_HANDOFF_ID = "transfer-1";
+  const receiving = session("new-parent", newParent);
+  (await import(`${extension.href}?transfer=new`)).default(receiving.api);
+  await receiving.handlers.get("session_start")({ type: "session_start", reason: "startup" }, receiving.ctx);
+  for (let attempt = 0; attempt < 20 && receiving.messages.length === 0; attempt++) {
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  assert.equal(receiving.messages.length, 1);
+  assert.match(receiving.messages[0].message.content, /NATIVE_RESULT/);
+  assert.equal(JSON.parse(readFileSync(join(process.env.PI_CODING_AGENT_DIR, "dispatch-ledger/new-parent.json")))[0].delivered, true);
+  await receiving.handlers.get("session_shutdown")();
+  delete process.env.PI_HANDOFF_ID;
 } finally {
   rmSync(home, { recursive: true, force: true });
 }

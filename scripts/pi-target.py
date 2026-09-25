@@ -34,8 +34,15 @@ def package_id(value, agent_dir):
     if value.startswith("npm:"):
         return value
     if value.startswith("git:"):
-        return value.rsplit("@", 1)[0]
+        return value
     return str((agent_dir / value).resolve())
+
+
+def obsolete_bridge(value):
+    return value == LEGACY_BRIDGE or (
+        value.startswith("git:github.com/elidickinson/pi-claude-bridge@")
+        and value != BRIDGE_SOURCE
+    )
 
 
 def read_json(path):
@@ -70,21 +77,27 @@ def routing():
         raise ValueError(f"no Pi profile for strategy {strategy}")
     tiers = profiles[strategy]
     default = tiers["main"]
-    categories = {
-        "coding": tiers["coding"],
-        "review": tiers["review"],
-        "recon": tiers["recon"],
-        "qa": tiers["review"],
-        "architecture": tiers["complex_unclear"],
-        "docs": tiers["docs"],
-    }
-
-    def fallback(model):
-        other = "openai-codex/gpt-6-sol" if model.startswith("claude-bridge/") else "claude-bridge/claude-opus-5-5"
-        return other if other != model else None
-
-    tasks = {name: [model, fallback(model)] for name, (model, _) in categories.items()}
+    categories = {name: tiers[name] for name in ("coding", "review", "recon", "docs")}
+    categories.update(qa=tiers["review"], architecture=tiers["complex_unclear"])
+    tasks = {name: candidates(model, name) for name, (model, _) in categories.items()}
     return strategy, default, tiers, tasks
+
+
+def candidates(model, tier):
+    codex_fallback = {
+        "docs": "openai-codex/gpt-6-luna",
+        "recon": "openai-codex/gpt-6-luna",
+        "simple": "openai-codex/gpt-6-luna",
+        "complex_unclear": "openai-codex/gpt-6-astra",
+        "architecture": "openai-codex/gpt-6-astra",
+        "academic": "openai-codex/gpt-6-astra",
+    }.get(tier, "openai-codex/gpt-6-sol")
+    other = codex_fallback if model.startswith("claude-bridge/") else "claude-bridge/claude-opus-5-5"
+    return list(dict.fromkeys((model, other)))
+
+
+def default_candidates(default):
+    return candidates(default[0], "main")
 
 
 def instructions():
@@ -100,13 +113,13 @@ def instructions():
     if "@shared/" in body:
         raise ValueError("unexpanded shared instruction import")
     strategy, default, profile_tiers, tasks = routing()
-    tier_lines = [f"- Main: `{default[0]}` at `{default[1]}` thinking."]
+    tier_lines = [f"- Main: model `{', '.join(default_candidates(default))}`; thinking `{default[1]}`."]
     for name, (model, thinking) in profile_tiers.items():
         if name == "main":
             continue
-        fallback = "openai-codex/gpt-6-sol" if model.startswith("claude-bridge/") else "claude-bridge/claude-opus-5-5"
-        tier_lines.append(f"- {name}: `{model}` at `{thinking}` thinking; fallback `{fallback}`.")
-    return head.strip() + "\n\n" + body.rstrip() + f"\n\n## Active model strategy: {strategy}\n\n" + "\n".join(tier_lines) + "\n"
+        tier_lines.append(f"- {name}: model `{', '.join(candidates(model, name))}`; thinking `{thinking}`.")
+    guidance = "For subagent dispatch, pass the selected tier's full comma-separated list as the `model` value and its thinking level as `thinking`. The `task:<category>` shorthand is available only for coding, review, recon, qa, architecture, and docs."
+    return head.strip() + "\n\n" + body.rstrip() + f"\n\n## Active model strategy: {strategy}\n\n" + guidance + "\n\n" + "\n".join(tier_lines) + "\n"
 
 
 def update_profile(home, state):
@@ -122,7 +135,7 @@ def update_profile(home, state):
     provider, model = default[0].split("/", 1)
     settings.update(defaultProvider=provider, defaultModel=model, defaultThinkingLevel=default[1])
     models = config.setdefault("models", {})
-    models["default"] = ", ".join([default[0], "openai-codex/gpt-6-sol"])
+    models["default"] = ", ".join(default_candidates(default))
     models.setdefault("agents", {})
     models["tasks"] = tasks
     config.setdefault("status", {"enabled": True})
@@ -145,7 +158,8 @@ def install(home, skip_external, force):
     settings = read_json(settings_path)
     previous_packages = state.get("previous_packages", list(settings.get("packages", [])))
     state["previous_packages"] = previous_packages
-    state.setdefault("retired_packages", [package for package in settings.get("packages", []) if package_id(package, agent_dir) == LEGACY_BRIDGE])
+    state.setdefault("retired_packages", [package for package in settings.get("packages", []) if obsolete_bridge(package)])
+    state.setdefault("integration_installed", not first_install)
     content = instructions()
     current_hash = hashlib.sha256(instructions_path.read_bytes()).hexdigest() if instructions_path.exists() else None
     if current_hash and (first_install or current_hash != state.get("instructions_hash")):
@@ -164,20 +178,30 @@ def install(home, skip_external, force):
     mcp.setdefault("settings", {})["hostConfigDiscovery"] = "on"
     write_json(mcp_path, mcp)
     update_profile(home, state)
+    write_json(marker_path, state)
     if not skip_external:
         run(["npm", "install", "-g", "@earendil-works/pi-coding-agent@latest"], home)
         run(["herdr", "integration", "install", "pi"], home)
+        state["integration_installed"] = True
+        write_json(marker_path, state)
         for package in PACKAGES:
             run(["pi", "install", package], home)
-        if any(package_id(package, agent_dir) == LEGACY_BRIDGE for package in read_json(settings_path).get("packages", [])):
-            run(["pi", "remove", LEGACY_BRIDGE], home)
+        for package in state["retired_packages"]:
+            settings = read_json(settings_path)
+            if package not in settings.get("packages", []):
+                continue
+            if package.startswith("git:"):
+                settings["packages"] = [value for value in settings["packages"] if value != package]
+                write_json(settings_path, settings)
+            else:
+                run(["pi", "remove", package], home)
         if not AAAAV.exists():
             raise ValueError(f"aaaav package is missing: {AAAAV}")
         run(["pi", "install", str(AAAAV)], home)
         run(["pi", "install", LOCAL_PACKAGE], home)
     else:
         settings = read_json(settings_path)
-        settings["packages"] = [package for package in dict.fromkeys(settings.get("packages", []) + PACKAGES + [str(AAAAV), LOCAL_PACKAGE]) if package_id(package, agent_dir) != LEGACY_BRIDGE]
+        settings["packages"] = [package for package in dict.fromkeys(settings.get("packages", []) + PACKAGES + [str(AAAAV), LOCAL_PACKAGE]) if not obsolete_bridge(package)]
         write_json(settings_path, settings)
     write_json(marker_path, state)
 
@@ -205,7 +229,8 @@ def uninstall(home, skip_external):
             identity = package_id(package, agent_dir)
             if identity in owned and identity in installed_ids:
                 run(["pi", "remove", package], home)
-        run(["herdr", "integration", "uninstall", "pi"], home)
+        if state.get("integration_installed", True):
+            run(["herdr", "integration", "uninstall", "pi"], home)
     settings = read_json(settings_path)
     settings["packages"] = [package for package in settings.get("packages", []) if package_id(package, agent_dir) not in owned]
     for package in state.get("retired_packages", []):
