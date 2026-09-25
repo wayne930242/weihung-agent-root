@@ -13,6 +13,8 @@ Rationale: Codex quota has been reset, so Codex returns to its tiers while agy s
 
 Before running `boss-say` or selecting a delegated model, read this entrypoint and the complete active strategy. Follow its model and effort selection rules. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatch instructions retain their settings.
 
+Pi reads exact `provider/model-id` and thinking tiers from [pi/model-profiles.json](../../pi/model-profiles.json). Run `python3 scripts/pi-target.py apply-profile --home "$HOME"` from the repository after switching the active strategy; it updates the Pi default model and `pi-herdr-agents` task candidates. Pi dispatches pass the selected thinking level explicitly. The Pi mapping has no agent-kind dimension.
+
 ## Strategies
 
 | Strategy | Purpose |

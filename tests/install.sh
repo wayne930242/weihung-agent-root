@@ -789,6 +789,94 @@ run_all_tests() {
   install_prunes_obsolete_and_broken_managed_skills
   install_migrates_retired_codex_and_command_targets
   install_keeps_one_codebase_memory_skill_for_codex
+  target_matrix_preserves_each_surface
+}
+
+target_matrix_preserves_each_surface() {
+  python3 - "$INSTALL_SCRIPT" "$REPO_ROOT/scripts/uninstall.sh" <<'PY'
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+install, uninstall = sys.argv[1:]
+
+def run(script, home, *args):
+    env = {**os.environ, "HOME": str(home)}
+    subprocess.run(["bash", script, "--home", str(home), "--skip-external", *args], env=env, check=True, stdout=subprocess.DEVNULL)
+
+def snapshot(home):
+    return {str(path.relative_to(home)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in home.rglob("*") if path.is_file() and not path.is_symlink()}
+
+for target in ("claude", "codex", "gemini", "pi"):
+    with tempfile.TemporaryDirectory() as directory:
+        home = Path(directory)
+        run(install, home, "--target", target)
+        assert (home / {"claude": ".claude/CLAUDE.md", "codex": ".codex/AGENTS.md", "gemini": ".gemini/config/AGENTS.md", "pi": ".pi/agent/AGENTS.md"}[target]).exists(), target
+        for other, path in {"claude": ".claude/CLAUDE.md", "codex": ".codex/AGENTS.md", "gemini": ".gemini/config/AGENTS.md", "pi": ".pi/agent/AGENTS.md"}.items():
+            if other != target:
+                assert not (home / path).exists(), (target, other)
+        first = snapshot(home)
+        run(install, home, "--target", target)
+        assert snapshot(home) == first, target
+        if target == "pi":
+            text = (home / ".pi/agent/AGENTS.md").read_text()
+            assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
+            settings = json.loads((home / ".pi/agent/settings.json").read_text())
+            assert len(settings["packages"]) == 8, settings
+            assert settings["defaultProvider"] == "claude-bridge", settings
+            mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
+            assert mcp["settings"]["hostConfigDiscovery"] == "on", mcp
+            config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
+            assert config["status"] == {"enabled": True}, config
+        run(uninstall, home, "--target", target)
+        assert not (home / {"claude": ".claude/CLAUDE.md", "codex": ".codex/AGENTS.md", "gemini": ".gemini/config/AGENTS.md", "pi": ".pi/agent/AGENTS.md"}[target]).exists(), target
+
+with tempfile.TemporaryDirectory() as directory:
+    home = Path(directory)
+    run(install, home)
+    assert not (home / ".pi/agent/AGENTS.md").exists()
+    run(install, home, "--target", "pi")
+    run(uninstall, home, "--target", "claude,codex,gemini")
+    assert (home / ".pi/agent/AGENTS.md").exists()
+    assert (home / ".agents/skills/managing-model-preferences").is_symlink()
+    run(uninstall, home, "--target", "pi")
+    assert not (home / ".agents/skills/managing-model-preferences").exists()
+
+with tempfile.TemporaryDirectory() as directory:
+    home = Path(directory)
+    run(install, home, "--target", "full")
+    assert all((home / path).exists() for path in (".claude/CLAUDE.md", ".codex/AGENTS.md", ".gemini/config/AGENTS.md", ".pi/agent/AGENTS.md"))
+    run(uninstall, home, "--target", "pi")
+    assert (home / ".agents/skills/managing-model-preferences").is_symlink()
+    run(uninstall, home, "--target", "claude", "--target", "codex,gemini")
+    assert not (home / ".agents/skills/managing-model-preferences").exists()
+
+with tempfile.TemporaryDirectory() as directory:
+    home = Path(directory)
+    agent = home / ".pi/agent"
+    agent.mkdir(parents=True)
+    (agent / "AGENTS.md").write_text("user instructions\n")
+    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package"], "theme": "light"}))
+    config = agent / "herdr-agents/config.json"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    original_models = {"default": "user/model", "agents": {"scout": "user/scout"}}
+    config.write_text(json.dumps({"models": original_models, "other": True}))
+    run(install, home, "--target", "pi", "--force")
+    applied = json.loads(config.read_text())
+    assert applied["models"]["agents"] == original_models["agents"], applied
+    subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
+    run(uninstall, home, "--target", "pi")
+    assert (agent / "AGENTS.md").read_text() == "user instructions\n"
+    settings = json.loads((agent / "settings.json").read_text())
+    assert settings["packages"] == ["npm:pi-claude-bridge", "npm:user-package"], settings
+    assert settings["theme"] == "light", settings
+    assert json.loads(config.read_text()) == {"models": original_models, "other": True}
+PY
 }
 
 if [[ "${1:-}" == "" ]]; then

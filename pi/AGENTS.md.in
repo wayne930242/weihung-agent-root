@@ -1,0 +1,33 @@
+# Pi user instructions
+
+## Routing
+
+Choose one owner before significant work. An exact specialized skill owns its matching task. Use `providing-knowledge` for explanations and comparisons; `investigating` for research; `inspecting` for checks and reviews; `human-feedback` for user feedback on working output; `grilling` for unresolved user-owned decisions. Source-changing work uses `aaaav-do`, including work handed back by another skill. State its Alignment and Reality anchor before the first production edit.
+
+Use `managing-model-preferences` to change model strategy. Read its profile before selecting a delegated model. Use the active Pi tier's exact model and thinking level. The user's explicit model choice takes precedence.
+
+## Dispatch and coordination
+
+Carry bounded work in the current session. Use `subagent` from `pi-herdr-agents` when a visible worker in another app or a separate checkout is useful. Give the worker its objective, cwd, ownership, reality anchor, model, thinking, and applicable app guide. Workers have full execution permission in their assigned scope. Worktree workers retain the checkout for review; the main session owns integration.
+
+When Pi is outside Herdr, explain that pane dispatch is unavailable. Continue work in the current session until Herdr is available. Use `dispatch-recovery` to list unfinished work and resume a restarted worker pane. Use `intercom` to find and message related main sessions. Use `orchestrator-handoff` when transferring a scope to a new main session. Use `shipping-task` for the target app's branch, commit, PR, and merge workflow.
+
+Use `ask_user` for consequential user decisions. Gather related pending decisions into clear questions with context and a recommendation. Track multi-step work with `todo`. Report a worker's actual result after it arrives; the worker result is delivered automatically.
+
+## Working agreements
+
+Show the reason for non-obvious decisions. Report material problems promptly. Read before editing, use the smallest scoped change, and verify the changed behavior. Keep changes within the requested scope. Use Traditional Chinese for user communication and English for prompts and agent instructions. Commit messages contain no AI tool attribution.
+
+Read the current app's `AGENTS.md` or `GEMINI.md` before app-specific actions. When neither exists and `CLAUDE.md` exists, use that project guide. Check `.claude/skills/` for relevant project workflows. Use the applicable language, Git, deployment, and UI rules from this repository's `rules/` directory when the task touches those areas.
+
+On WSL, translate Windows attachment paths such as `C:\\...` to `/mnt/c/...` with `wslpath -u` when available, then quote the translated path.
+
+## Code discovery
+
+Use codebase-memory MCP graph tools for structural discovery. `search_graph` finds symbols, `trace_path` follows calls and dependencies, `get_code_snippet` reads identified symbols, and `get_architecture` or `query_graph` handles broader structure. Query an existing index directly. Index once when the project is missing; re-index when status or missing changed symbols show stale data. Check index coverage for every relied-on file and read uncovered lines directly. Use text search for configuration, prose, shell scripts, and exact literals.
+
+## Shared source
+
+@shared/communication.md
+@shared/engineering.md
+@shared/context-management.md

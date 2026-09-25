@@ -1,0 +1,86 @@
+{
+  "claude-drive-codex": {
+    "main": ["claude-bridge/claude-opus-5-5", "high"],
+    "docs": ["openai-codex/gpt-6-luna", "high"],
+    "recon": ["openai-codex/gpt-6-luna", "medium"],
+    "ui": ["openai-codex/gpt-6-sol", "medium"],
+    "review": ["openai-codex/gpt-6-sol", "low"],
+    "simple": ["claude-bridge/claude-opus-5-5", "low"],
+    "coding": ["claude-bridge/claude-opus-5-5", "medium"],
+    "complex_clear": ["openai-codex/gpt-6-sol", "high"],
+    "complex_unclear": ["openai-codex/gpt-6-astra", "low"],
+    "academic": ["openai-codex/gpt-6-astra", "high"]
+  },
+  "codex-drive-claude": {
+    "main": ["openai-codex/gpt-6-sol", "high"],
+    "docs": ["openai-codex/gpt-6-luna", "high"],
+    "recon": ["openai-codex/gpt-6-luna", "medium"],
+    "ui": ["openai-codex/gpt-6-sol", "medium"],
+    "review": ["openai-codex/gpt-6-sol", "low"],
+    "simple": ["claude-bridge/claude-opus-5-5", "low"],
+    "coding": ["claude-bridge/claude-opus-5-5", "medium"],
+    "complex_clear": ["openai-codex/gpt-6-sol", "high"],
+    "complex_unclear": ["openai-codex/gpt-6-astra", "low"],
+    "academic": ["openai-codex/gpt-6-astra", "high"]
+  },
+  "codex-first": {
+    "main": ["openai-codex/gpt-6-sol", "high"],
+    "docs": ["openai-codex/gpt-6-luna", "high"],
+    "recon": ["openai-codex/gpt-6-luna", "medium"],
+    "ui": ["openai-codex/gpt-6-sol", "medium"],
+    "review": ["openai-codex/gpt-6-sol", "low"],
+    "simple": ["claude-bridge/claude-opus-5-5", "low"],
+    "coding": ["claude-bridge/claude-opus-5-5", "medium"],
+    "complex_clear": ["openai-codex/gpt-6-sol", "high"],
+    "complex_unclear": ["openai-codex/gpt-6-astra", "low"],
+    "academic": ["openai-codex/gpt-6-astra", "high"]
+  },
+  "drive-all": {
+    "main": ["claude-bridge/claude-opus-5-5", "high"],
+    "docs": ["openai-codex/gpt-6-luna", "medium"],
+    "recon": ["openai-codex/gpt-6-luna", "medium"],
+    "ui": ["openai-codex/gpt-6-sol", "medium"],
+    "review": ["openai-codex/gpt-6-sol", "low"],
+    "simple": ["claude-bridge/claude-opus-5-5", "low"],
+    "coding": ["claude-bridge/claude-opus-5-5", "medium"],
+    "complex_clear": ["openai-codex/gpt-6-sol", "high"],
+    "complex_unclear": ["openai-codex/gpt-6-astra", "low"],
+    "academic": ["openai-codex/gpt-6-astra", "high"]
+  },
+  "claude-with-agy": {
+    "main": ["claude-bridge/claude-opus-5-5", "high"],
+    "docs": ["openai-codex/gpt-6-luna", "medium"],
+    "recon": ["openai-codex/gpt-6-luna", "medium"],
+    "ui": ["openai-codex/gpt-6-luna", "medium"],
+    "review": ["openai-codex/gpt-6-luna", "medium"],
+    "simple": ["claude-bridge/claude-opus-5-5", "low"],
+    "coding": ["claude-bridge/claude-opus-5-5", "medium"],
+    "complex_clear": ["claude-bridge/claude-opus-5-5", "low"],
+    "complex_unclear": ["claude-bridge/claude-opus-5-5", "xhigh"],
+    "academic": ["claude-bridge/claude-opus-5-5", "xhigh"]
+  },
+  "claude-only": {
+    "main": ["claude-bridge/claude-opus-5-5", "high"],
+    "docs": ["claude-bridge/claude-opus-5-5", "medium"],
+    "recon": ["claude-bridge/claude-opus-5-5", "low"],
+    "ui": ["claude-bridge/claude-opus-5-5", "low"],
+    "review": ["claude-bridge/claude-opus-5-5", "medium"],
+    "simple": ["claude-bridge/claude-opus-5-5", "low"],
+    "coding": ["claude-bridge/claude-opus-5-5", "medium"],
+    "complex_clear": ["claude-bridge/claude-opus-5-5", "low"],
+    "complex_unclear": ["claude-bridge/claude-opus-5-5", "xhigh"],
+    "academic": ["claude-bridge/claude-opus-5-5", "xhigh"]
+  },
+  "claude-coding-codex-doc": {
+    "main": ["claude-bridge/claude-opus-5-5", "high"],
+    "docs": ["openai-codex/gpt-6-luna", "high"],
+    "recon": ["claude-bridge/claude-opus-5-5", "medium"],
+    "ui": ["openai-codex/gpt-6-sol", "medium"],
+    "review": ["claude-bridge/claude-opus-5-5", "medium"],
+    "simple": ["claude-bridge/claude-opus-5-5", "medium"],
+    "coding": ["claude-bridge/claude-opus-5-5", "medium"],
+    "complex_clear": ["claude-bridge/claude-opus-5-5", "xhigh"],
+    "complex_unclear": ["claude-bridge/claude-opus-5-5", "xhigh"],
+    "academic": ["claude-bridge/claude-opus-5-5", "xhigh"]
+  }
+}

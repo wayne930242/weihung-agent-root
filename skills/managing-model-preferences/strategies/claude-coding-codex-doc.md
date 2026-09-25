@@ -1,31 +1,11 @@
 # claude-coding-codex-doc
 
-保存日期：2026-09-07。
-更新日期：2026-09-24：使用者停用 Sonnet，程式撰寫、調查與查詢改用 Opus 5.5 medium。
-來源：本次改版前的 CLAUDE.md 模型分工，包含工作區既有的 UI/UX 明確模型選擇修正。
+Saved: 2026-09-07.
+Updated: 2026-09-24. The user retired Sonnet and moved coding, investigation, and queries to Opus 5.5 medium.
+Source: the model split in CLAUDE.md before this migration, including the workspace's explicit UI/UX model choice.
 
-## 選擇順序
+## Pi tier rationale
 
-使用者本次明確指定優先。其餘依原有順序：
+Opus remains the coding and investigation model. Codex Luna handles documentation, and Sol handles UI review. This preserves the original division while giving Pi exact model and thinking values.
 
-1. 最複雜的委派工作沿用主代理當前模型。
-2. 文件撰寫委派給 `codex`。
-3. 程式撰寫、調查與查詢使用 Claude `claude-opus-5-5`，effort `medium`。
-4. 其餘工作沿用主代理當前模型。
-
-直接指示的簡單工作由主代理完成。需要獨立工作環境的任務走 Straw Boss，其餘自足片段可使用 subagent。
-
-## 原有專用選擇
-
-| 情境 | 選擇 |
-|---|---|
-| 撰寫或大幅改寫文章 | Codex `gpt-6-sol`；effort 沿用設定 |
-| 翻譯、格式整理、資料擷取等機械工作 | Codex `gpt-6-luna`，effort `low` |
-| 新 UI/UX 設計的審查與修訂 | 明確指定 Codex 模型，至少 `gpt-6-sol`；effort 沿用設定 |
-| 其他 Codex 文件工作 | 沿用 Codex 設定的模型與 effort |
-
-原有策略在 Opus 主代理遇到極端複雜工作時，建議移交至 `claude-opus-5-5[1m]`、effort `xhigh`。實際權限移交流程依 Straw Boss 的 `handoff-orchestrator` 與 `i-am-orchestrator` 辦理。
-
-## 套用
-
-本策略保存原有模型分工。重新啟用前，以目前環境確認上述模型及繼承設定可用，解析出實際模型與 effort 後明確帶入派工參數。遇到不可用的模型，回報限制並由使用者決定替代選擇。
+The executable model, thinking, and fallback choices are in [Pi model profiles](../../../pi/model-profiles.json). Select the tier by the main deliverable and the task's uncertainty; an explicit user choice takes precedence. Pass the selected model and thinking level to each Pi dispatch.

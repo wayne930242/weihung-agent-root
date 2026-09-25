@@ -1,6 +1,6 @@
 # weihung-user-claude
 
-Personal user-root light agent system for Claude Code, Codex, and Antigravity.
+Personal user-root light agent system for Claude Code, Codex, Antigravity, and Pi.
 
 The repo keeps global behavior in version control, but deliberately separates:
 
@@ -18,6 +18,7 @@ This repo follows a light split:
 - `shared/`: cross-product principles that are stable across tools
 - `claude/`: assets that only make sense for Claude Code
 - `codex/`: assets that only make sense for Codex
+- `pi/`: Pi instructions, model tiers, dispatch recovery, handoff, and shipping skills
 
 That split matters because the products do not expose the same primitives:
 
@@ -141,6 +142,17 @@ Install into your real user root:
 bash scripts/install.sh
 ```
 
+The default still installs Claude Code, Codex, and Gemini. Select individual targets or combine them with repeated or comma-separated `--target` values:
+
+```bash
+bash scripts/install.sh --target pi
+bash scripts/install.sh --target claude,codex
+bash scripts/install.sh --target full
+bash scripts/uninstall.sh --target claude,codex,gemini
+```
+
+The Pi target installs Pi, its Herdr integration, the selected community packages, local aaaav, and this repository's Pi package. It generates `~/.pi/agent/AGENTS.md`, MCP discovery settings, and model routing from the active profile. `--skip-external` prepares local configuration without running npm, Pi package installation, or Herdr integration commands. `uninstall.sh --target pi` removes this repository's Pi configuration and package registrations while retaining the Pi binary and login state. The decision to remove the old targets belongs to the user.
+
 Bootstrap a new machine by cloning or updating the repo into the standard location and then running the installer:
 
 ```bash
@@ -263,7 +275,7 @@ This is especially important for Codex. `config.toml` often carries machine-loca
 集中管理。Claude 與 Codex 的根提示在 `boss-say` 派工前讀取它，明確傳入模型與 effort。
 每期調整可使用 `managing-model-preferences` skill，例如：「更新本期模型偏好，一般工作改用指定模型」。
 profile、具名策略與 skill 透過現有安裝腳本一起連結到兩個平台。
-目前最佳策略為 `claude-only`：例行派工全部留在 Claude，Opus 5.5 high 協調，Opus 5.5 low 承接明確小修改與查找整理，Opus 5.5 medium 一般實作與文件，Opus 5.5 1M low 承接 UI/UX 審查與指示清楚的複雜工作，Opus 5.5 1M xhigh 承接指示不清的複雜工作。
+目前啟用的策略以 [模型偏好 profile](skills/managing-model-preferences/model-preference-profile.md) 的 Active strategy 為準。Pi 的模型與 thinking 對照見 [model-profiles.json](pi/model-profiles.json)。
 既有策略保存為 `claude-drive-codex`、`codex-drive-claude`、`codex-first` 與 `claude-coding-codex-doc`。
 每套策略獨立存檔並以 Git 追蹤修訂，切換時更新 profile 的啟用連結。
 查看目前策略、切換策略或新增策略都可使用 `/managing-model-preferences` 指令，例如 `/managing-model-preferences`（查看）或 `/managing-model-preferences claude-drive-codex`（切換）。

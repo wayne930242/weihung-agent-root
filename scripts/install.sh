@@ -25,7 +25,7 @@ BACKUP_ROOT=""
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/install.sh [--home PATH] [--force] [--skip-external]
+Usage: bash scripts/install.sh [--home PATH] [--force] [--skip-external] [--target claude,codex,gemini,pi,full]
 
 Installs this repository as the source of truth for:
   - ~/.claude/CLAUDE.md
@@ -619,6 +619,24 @@ Install it from a Claude Code session:
 EOF
 }
 
+TARGETS=()
+TARGET_SPECIFIED=0
+add_targets() {
+  local value="$1" target
+  local parts=()
+  IFS=, read -r -a parts <<< "$value"
+  for target in "${parts[@]}"; do
+    case "$target" in
+      full) add_targets claude,codex,gemini,pi ;;
+      claude|codex|gemini|pi)
+        if ! is_in_list "$target" "${TARGETS[@]}"; then TARGETS+=("$target"); fi ;;
+      *) fail "invalid target: $target" ;;
+    esac
+  done
+}
+
+selected() { is_in_list "$1" "${TARGETS[@]}"; }
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home)
@@ -634,6 +652,12 @@ while [[ $# -gt 0 ]]; do
       SKIP_EXTERNAL=1
       shift
       ;;
+    --target)
+      [[ $# -ge 2 ]] || fail "--target requires a value"
+      TARGET_SPECIFIED=1
+      add_targets "$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -644,33 +668,58 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.codex"
-mkdir -p "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills" "$TARGET_HOME/.claude/rules"
-mkdir -p "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks" "$TARGET_HOME/.agents/skills"
-mkdir -p "$TARGET_HOME/.gemini/config/skills" "$TARGET_HOME/.gemini/config/rules"
+if [[ "$TARGET_SPECIFIED" -eq 0 ]]; then
+  add_targets claude,codex,gemini
+fi
+[[ "${#TARGETS[@]}" -gt 0 ]] || fail "--target requires a value"
 
+if selected claude; then
+  mkdir -p "$TARGET_HOME/.claude/agents" "$TARGET_HOME/.claude/hooks" "$TARGET_HOME/.claude/shared" "$TARGET_HOME/.claude/skills" "$TARGET_HOME/.claude/rules"
+fi
+if selected codex; then
+  mkdir -p "$TARGET_HOME/.codex" "$TARGET_HOME/.codex/agents" "$TARGET_HOME/.codex/rules" "$TARGET_HOME/.codex/hooks"
+fi
+if selected gemini; then
+  mkdir -p "$TARGET_HOME/.gemini/config/skills" "$TARGET_HOME/.gemini/config/rules"
+fi
+if selected codex || selected pi; then mkdir -p "$TARGET_HOME/.agents/skills"; fi
+
+if selected codex; then
 remove_retired_repo_link \
   "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
   "$REPO_ROOT/codex/agents/safety-reviewer.toml"
+fi
 
+if selected claude; then
 remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
+fi
+if selected gemini; then
 remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/tdd" \
   "$REPO_ROOT/skills/tdd"
+fi
+if selected claude; then
 remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
+fi
+if selected gemini; then
 remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/refining-from-complaints" \
   "$REPO_ROOT/skills/refining-from-complaints"
+fi
+if selected claude; then
 remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/leveraging-tasks" \
   "$REPO_ROOT/skills/leveraging-tasks"
+fi
+if selected gemini; then
 remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/leveraging-tasks" \
   "$REPO_ROOT/skills/leveraging-tasks"
+fi
 
 root_skills=()
 while IFS= read -r skill_dir; do
@@ -712,83 +761,103 @@ while IFS= read -r hook_file; do
   codex_hooks+=("$(basename "$hook_file")")
 done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
-prune_managed_entries "$TARGET_HOME/.claude/skills" "${root_skills[@]}"
-prune_managed_entries "$TARGET_HOME/.gemini/config/skills" "${root_skills[@]}"
-prune_managed_entries "$TARGET_HOME/.agents/skills" "${root_skills[@]}"
+if selected claude; then prune_managed_entries "$TARGET_HOME/.claude/skills" "${root_skills[@]}"; fi
+if selected gemini; then prune_managed_entries "$TARGET_HOME/.gemini/config/skills" "${root_skills[@]}"; fi
+if selected codex || selected pi; then prune_managed_entries "$TARGET_HOME/.agents/skills" "${root_skills[@]}"; fi
 # Retired install targets: every repository link there is pruned.
-prune_managed_entries "$TARGET_HOME/.codex/skills"
-prune_managed_entries "$TARGET_HOME/.claude/commands"
-rmdir "$TARGET_HOME/.claude/commands" 2>/dev/null || true
-retire_skill_copies "$TARGET_HOME/.agents/skills" "${root_skills[@]}" tdd refining-from-complaints leveraging-tasks
-prune_managed_entries "$TARGET_HOME/.claude/agents" "${claude_agents[@]}"
-prune_managed_entries "$TARGET_HOME/.claude/hooks" "${claude_hooks[@]}"
-prune_managed_entries "$TARGET_HOME/.claude/shared" "${shared_docs[@]}"
-prune_managed_entries "$TARGET_HOME/.codex/agents" "${codex_agents[@]}"
-prune_managed_entries "$TARGET_HOME/.codex/rules" "${codex_rules[@]}"
-prune_managed_entries "$TARGET_HOME/.claude/rules" "${rule_docs[@]}"
-prune_managed_entries "$TARGET_HOME/.gemini/config/rules" "${rule_docs[@]}"
-prune_managed_entries "$TARGET_HOME/.codex/hooks" "${codex_hooks[@]}"
+if selected codex; then prune_managed_entries "$TARGET_HOME/.codex/skills"; fi
+if selected claude; then
+  prune_managed_entries "$TARGET_HOME/.claude/commands"
+  rmdir "$TARGET_HOME/.claude/commands" 2>/dev/null || true
+fi
+if selected codex || selected pi; then retire_skill_copies "$TARGET_HOME/.agents/skills" "${root_skills[@]}" tdd refining-from-complaints leveraging-tasks; fi
+if selected claude; then
+  prune_managed_entries "$TARGET_HOME/.claude/agents" "${claude_agents[@]}"
+  prune_managed_entries "$TARGET_HOME/.claude/hooks" "${claude_hooks[@]}"
+  prune_managed_entries "$TARGET_HOME/.claude/shared" "${shared_docs[@]}"
+  prune_managed_entries "$TARGET_HOME/.claude/rules" "${rule_docs[@]}"
+fi
+if selected codex; then
+  prune_managed_entries "$TARGET_HOME/.codex/agents" "${codex_agents[@]}"
+  prune_managed_entries "$TARGET_HOME/.codex/rules" "${codex_rules[@]}"
+  prune_managed_entries "$TARGET_HOME/.codex/hooks" "${codex_hooks[@]}"
+fi
+if selected gemini; then prune_managed_entries "$TARGET_HOME/.gemini/config/rules" "${rule_docs[@]}"; fi
 
-install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
-install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
-install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
-install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
-install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/AGENTS.md"
-install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/GEMINI.md"
-install_link "$GEMINI_SKILLS_CONFIG" "$TARGET_HOME/.gemini/config/skills.json"
+if selected claude; then
+  install_link "$REPO_ROOT/CLAUDE.md" "$TARGET_HOME/.claude/CLAUDE.md"
+  install_link "$REPO_ROOT/claude/statusline.sh" "$TARGET_HOME/.claude/statusline.sh"
+fi
+if selected codex; then
+  install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.codex/AGENTS.md"
+  install_link "$REPO_ROOT/codex/hooks.json" "$TARGET_HOME/.codex/hooks.json"
+fi
+if selected gemini; then
+  install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/AGENTS.md"
+  install_link "$REPO_ROOT/AGENTS.md" "$TARGET_HOME/.gemini/config/GEMINI.md"
+  install_link "$GEMINI_SKILLS_CONFIG" "$TARGET_HOME/.gemini/config/skills.json"
+fi
 
 for agent_name in "${claude_agents[@]}"; do
-  install_link "$CLAUDE_AGENTS_DIR/$agent_name" "$TARGET_HOME/.claude/agents/$agent_name"
+  if selected claude; then install_link "$CLAUDE_AGENTS_DIR/$agent_name" "$TARGET_HOME/.claude/agents/$agent_name"; fi
 done
 
 for hook_name in "${claude_hooks[@]}"; do
-  install_link "$CLAUDE_HOOKS_DIR/$hook_name" "$TARGET_HOME/.claude/hooks/$hook_name"
+  if selected claude; then install_link "$CLAUDE_HOOKS_DIR/$hook_name" "$TARGET_HOME/.claude/hooks/$hook_name"; fi
 done
 
 for shared_name in "${shared_docs[@]}"; do
-  install_link "$SHARED_DIR/$shared_name" "$TARGET_HOME/.claude/shared/$shared_name"
+  if selected claude; then install_link "$SHARED_DIR/$shared_name" "$TARGET_HOME/.claude/shared/$shared_name"; fi
 done
 
 for skill_name in "${root_skills[@]}"; do
-  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.claude/skills/$skill_name"
-  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.agents/skills/$skill_name"
-  install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.gemini/config/skills/$skill_name"
+  if selected claude; then install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.claude/skills/$skill_name"; fi
+  if selected codex || selected pi; then install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.agents/skills/$skill_name"; fi
+  if selected gemini; then install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.gemini/config/skills/$skill_name"; fi
 done
 
 for agent_name in "${codex_agents[@]}"; do
-  install_link "$CODEX_AGENTS_DIR/$agent_name" "$TARGET_HOME/.codex/agents/$agent_name"
+  if selected codex; then install_link "$CODEX_AGENTS_DIR/$agent_name" "$TARGET_HOME/.codex/agents/$agent_name"; fi
 done
 
 for rule_name in "${codex_rules[@]}"; do
-  install_link "$CODEX_RULES_DIR/$rule_name" "$TARGET_HOME/.codex/rules/$rule_name"
+  if selected codex; then install_link "$CODEX_RULES_DIR/$rule_name" "$TARGET_HOME/.codex/rules/$rule_name"; fi
 done
 
 for rule_name in "${rule_docs[@]}"; do
-  install_link "$RULES_DIR/$rule_name" "$TARGET_HOME/.claude/rules/$rule_name"
-  install_link "$RULES_DIR/$rule_name" "$TARGET_HOME/.gemini/config/rules/$rule_name"
+  if selected claude; then install_link "$RULES_DIR/$rule_name" "$TARGET_HOME/.claude/rules/$rule_name"; fi
+  if selected gemini; then install_link "$RULES_DIR/$rule_name" "$TARGET_HOME/.gemini/config/rules/$rule_name"; fi
 done
 
 for hook_name in "${codex_hooks[@]}"; do
-  install_link "$CODEX_HOOKS_DIR/$hook_name" "$TARGET_HOME/.codex/hooks/$hook_name"
+  if selected codex; then install_link "$CODEX_HOOKS_DIR/$hook_name" "$TARGET_HOME/.codex/hooks/$hook_name"; fi
 done
 
 
 # Merge last: a hook entry in settings.json must never outlive a missing script,
 # or every matching event fails with exit 127.
-migrate_legacy_model_settings "$TARGET_HOME/.claude/settings.json"
-merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
-merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
-merge_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"
+if selected claude; then
+  migrate_legacy_model_settings "$TARGET_HOME/.claude/settings.json"
+  merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$HOOKS_CONFIG"
+  merge_claude_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
+fi
+if selected codex; then merge_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"; fi
 
 # The merge is additive, so a hook this repo used to manage stays registered after
 # it leaves config/claude-hooks.json. Drop any ~/.claude/hooks entry whose script is
 # gone; otherwise every matching event fails with exit 127.
-prune_orphan_hooks "$TARGET_HOME/.claude/settings.json" "$TARGET_HOME"
+if selected claude; then prune_orphan_hooks "$TARGET_HOME/.claude/settings.json" "$TARGET_HOME"; fi
 
-install_codebase_memory_mcp
-consolidate_codex_skill codebase-memory
-install_agent_browser
-install_codex_plugin_cache_keeper
+if selected codex || selected pi; then install_codebase_memory_mcp; fi
+if selected codex; then consolidate_codex_skill codebase-memory; fi
+if selected claude || selected codex; then install_agent_browser; fi
+if selected codex; then install_codex_plugin_cache_keeper; fi
+if selected pi; then
+  pi_args=(install --home "$TARGET_HOME")
+  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then pi_args+=(--skip-external); fi
+  if [[ "$FORCE" -eq 1 ]]; then pi_args+=(--force); fi
+  python3 "$REPO_ROOT/scripts/pi-target.py" "${pi_args[@]}"
+fi
 
 log "Install complete."
-report_optional_plugins
+if selected claude; then report_optional_plugins; fi

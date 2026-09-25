@@ -18,10 +18,11 @@ RULES_DIR="$REPO_ROOT/rules"
 
 TARGET_HOME="${HOME}"
 BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
+SKIP_EXTERNAL=0
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/uninstall.sh [--home PATH]
+Usage: bash scripts/uninstall.sh [--home PATH] [--target claude,codex,gemini,pi,full] [--skip-external]
 
 Uninstall flow:
   - restore managed files from the latest backup directory when a backup exists
@@ -333,6 +334,30 @@ PY
   log "Cleaned managed Codex settings from $config_path"
 }
 
+TARGETS=()
+TARGET_SPECIFIED=0
+add_targets() {
+  local value="$1" target item found
+  local parts=()
+  IFS=, read -r -a parts <<< "$value"
+  for target in "${parts[@]}"; do
+    case "$target" in
+      full) add_targets claude,codex,gemini,pi ;;
+      claude|codex|gemini|pi)
+        found=0
+        for item in "${TARGETS[@]}"; do [[ "$item" == "$target" ]] && found=1; done
+        if [[ "$found" -eq 0 ]]; then TARGETS+=("$target"); fi ;;
+      *) fail "invalid target: $target" ;;
+    esac
+  done
+}
+
+selected() {
+  local item
+  for item in "${TARGETS[@]}"; do [[ "$item" == "$1" ]] && return 0; done
+  return 1
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home)
@@ -340,6 +365,16 @@ while [[ $# -gt 0 ]]; do
       TARGET_HOME="$2"
       BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
       shift 2
+      ;;
+    --target)
+      [[ $# -ge 2 ]] || fail "--target requires a value"
+      TARGET_SPECIFIED=1
+      add_targets "$2"
+      shift 2
+      ;;
+    --skip-external)
+      SKIP_EXTERNAL=1
+      shift
       ;;
     -h|--help)
       usage
@@ -351,105 +386,137 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ "$TARGET_SPECIFIED" -eq 0 ]]; then add_targets claude,codex,gemini; fi
+[[ "${#TARGETS[@]}" -gt 0 ]] || fail "--target requires a value"
+
+REMOVE_SHARED=0
+if [[ "$TARGET_SPECIFIED" -eq 0 ]] || { selected codex && selected pi; }; then
+  REMOVE_SHARED=1
+elif selected codex && [[ ! -f "$TARGET_HOME/.pi/agent/.weihung-user-claude.json" ]]; then
+  REMOVE_SHARED=1
+elif selected pi && [[ ! -L "$TARGET_HOME/.codex/AGENTS.md" ]]; then
+  REMOVE_SHARED=1
+fi
+
 LATEST_BACKUP_DIR="$(latest_backup_dir || true)"
 if [[ -n "$LATEST_BACKUP_DIR" ]]; then
   log "Using latest backup directory: $LATEST_BACKUP_DIR"
 fi
 
-remove_retired_repo_link \
+if selected codex; then remove_retired_repo_link \
   "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
-  "$REPO_ROOT/codex/agents/safety-reviewer.toml"
+  "$REPO_ROOT/codex/agents/safety-reviewer.toml"; fi
 
-remove_retired_repo_link \
+if selected claude; then remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/tdd" \
-  "$REPO_ROOT/skills/tdd"
-remove_retired_repo_link \
+  "$REPO_ROOT/skills/tdd"; fi
+if selected codex; then remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/tdd" \
-  "$REPO_ROOT/skills/tdd"
-remove_retired_repo_link \
+  "$REPO_ROOT/skills/tdd"; fi
+if selected gemini; then remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/tdd" \
-  "$REPO_ROOT/skills/tdd"
-remove_retired_repo_link \
+  "$REPO_ROOT/skills/tdd"; fi
+if selected claude; then remove_retired_repo_link \
   "$TARGET_HOME/.claude/skills/refining-from-complaints" \
-  "$REPO_ROOT/skills/refining-from-complaints"
-remove_retired_repo_link \
+  "$REPO_ROOT/skills/refining-from-complaints"; fi
+if selected codex; then remove_retired_repo_link \
   "$TARGET_HOME/.codex/skills/refining-from-complaints" \
-  "$REPO_ROOT/skills/refining-from-complaints"
-remove_retired_repo_link \
+  "$REPO_ROOT/skills/refining-from-complaints"; fi
+if selected gemini; then remove_retired_repo_link \
   "$TARGET_HOME/.gemini/config/skills/refining-from-complaints" \
-  "$REPO_ROOT/skills/refining-from-complaints"
+  "$REPO_ROOT/skills/refining-from-complaints"; fi
 
 # Clean first: a hook entry in settings.json must never outlive a removed script,
 # or every matching event fails with exit 127.
-clean_managed_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
-clean_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"
-clean_claude_settings "$TARGET_HOME/.claude/settings.json"
+if selected claude; then
+  clean_managed_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
+  clean_claude_settings "$TARGET_HOME/.claude/settings.json"
+fi
+if selected codex; then clean_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"; fi
 
-restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"
-restore_or_remove "$TARGET_HOME/.claude/statusline.sh"
-restore_or_remove "$TARGET_HOME/.codex/AGENTS.md"
-restore_or_remove "$TARGET_HOME/.codex/hooks.json"
-restore_or_remove "$TARGET_HOME/.gemini/config/AGENTS.md"
-restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
-restore_or_remove "$TARGET_HOME/.gemini/config/skills.json"
+if selected claude; then
+  restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"
+  restore_or_remove "$TARGET_HOME/.claude/statusline.sh"
+fi
+if selected codex; then
+  restore_or_remove "$TARGET_HOME/.codex/AGENTS.md"
+  restore_or_remove "$TARGET_HOME/.codex/hooks.json"
+fi
+if selected gemini; then
+  restore_or_remove "$TARGET_HOME/.gemini/config/AGENTS.md"
+  restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
+  restore_or_remove "$TARGET_HOME/.gemini/config/skills.json"
+fi
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"
+  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"; fi
 done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.claude/hooks/$(basename "$file")"
+  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/hooks/$(basename "$file")"; fi
 done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.claude/shared/$(basename "$file")"
+  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/shared/$(basename "$file")"; fi
 done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r skill_dir; do
-  restore_or_remove "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"
-  restore_or_remove "$TARGET_HOME/.agents/skills/$(basename "$skill_dir")"
-  restore_or_remove "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"
+  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"; fi
+  if [[ "$REMOVE_SHARED" -eq 1 ]]; then restore_or_remove "$TARGET_HOME/.agents/skills/$(basename "$skill_dir")"; fi
+  if selected gemini; then restore_or_remove "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"; fi
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.codex/agents/$(basename "$file")"
+  if selected codex; then restore_or_remove "$TARGET_HOME/.codex/agents/$(basename "$file")"; fi
 done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.codex/rules/$(basename "$file")"
+  if selected codex; then restore_or_remove "$TARGET_HOME/.codex/rules/$(basename "$file")"; fi
 done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.claude/rules/$(basename "$file")"
-  restore_or_remove "$TARGET_HOME/.gemini/config/rules/$(basename "$file")"
+  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/rules/$(basename "$file")"; fi
+  if selected gemini; then restore_or_remove "$TARGET_HOME/.gemini/config/rules/$(basename "$file")"; fi
 done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
 
 while IFS= read -r file; do
-  restore_or_remove "$TARGET_HOME/.codex/hooks/$(basename "$file")"
+  if selected codex; then restore_or_remove "$TARGET_HOME/.codex/hooks/$(basename "$file")"; fi
 done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
 
-prune_managed_links "$TARGET_HOME/.claude/skills"
-prune_managed_links "$TARGET_HOME/.gemini/config/skills"
-prune_managed_links "$TARGET_HOME/.agents/skills"
-prune_managed_links "$TARGET_HOME/.codex/skills"
-prune_managed_links "$TARGET_HOME/.claude/agents"
-prune_managed_links "$TARGET_HOME/.claude/commands"
-prune_managed_links "$TARGET_HOME/.claude/hooks"
-prune_managed_links "$TARGET_HOME/.claude/shared"
-prune_managed_links "$TARGET_HOME/.codex/agents"
-prune_managed_links "$TARGET_HOME/.codex/rules"
-prune_managed_links "$TARGET_HOME/.claude/rules"
-prune_managed_links "$TARGET_HOME/.gemini/config/rules"
-prune_managed_links "$TARGET_HOME/.codex/hooks"
+if selected claude; then
+  prune_managed_links "$TARGET_HOME/.claude/skills"
+  prune_managed_links "$TARGET_HOME/.claude/agents"
+  prune_managed_links "$TARGET_HOME/.claude/commands"
+  prune_managed_links "$TARGET_HOME/.claude/hooks"
+  prune_managed_links "$TARGET_HOME/.claude/shared"
+  prune_managed_links "$TARGET_HOME/.claude/rules"
+fi
+if selected gemini; then
+  prune_managed_links "$TARGET_HOME/.gemini/config/skills"
+  prune_managed_links "$TARGET_HOME/.gemini/config/rules"
+fi
+if [[ "$REMOVE_SHARED" -eq 1 ]]; then prune_managed_links "$TARGET_HOME/.agents/skills"; fi
+if selected codex; then
+  prune_managed_links "$TARGET_HOME/.codex/skills"
+  prune_managed_links "$TARGET_HOME/.codex/agents"
+  prune_managed_links "$TARGET_HOME/.codex/rules"
+  prune_managed_links "$TARGET_HOME/.codex/hooks"
+fi
 
 codex_keeper_plist="$TARGET_HOME/Library/LaunchAgents/com.weihung.codex-plugin-cache-keeper.plist"
-if [[ -f "$codex_keeper_plist" ]]; then
+if selected codex && [[ -f "$codex_keeper_plist" ]]; then
   launchctl bootout "gui/$(id -u)/com.weihung.codex-plugin-cache-keeper" 2>/dev/null || true
   rm -f "$codex_keeper_plist"
   log "Removed launch agent com.weihung.codex-plugin-cache-keeper"
 fi
 
 
-cleanup_empty_dirs
+if selected pi; then
+  pi_args=(uninstall --home "$TARGET_HOME")
+  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then pi_args+=(--skip-external); fi
+  python3 "$REPO_ROOT/scripts/pi-target.py" "${pi_args[@]}"
+fi
+
+if [[ "$TARGET_SPECIFIED" -eq 0 ]]; then cleanup_empty_dirs; fi
 
 log "Uninstall complete."
