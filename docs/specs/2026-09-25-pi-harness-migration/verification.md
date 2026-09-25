@@ -2,6 +2,18 @@
 
 Status: real HOME Pi target installed after user authorization; the core Herdr paths below were verified. Legacy targets remain installed until the user chooses to remove them.
 
+## Pi interface and idle compaction follow-up (2026-09-25)
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| Workers open in a right split beside the parent | A real Herdr Pi session launched a `subagent` with `openai-codex/gpt-6-luna`; the result returned to the parent as `package.json`. A second run captured `herdr pane layout --pane wZ:p5M` while its worker was active: two panes in tab `wZ:t1Z`, at x=0 and x=92, with `direction: right`. [Layout capture](/Users/weihung/.straw-boss/plans/pi-migration/artifacts/t3-pi-layout.json). | pass |
+| Pi theme, footer, and extension load render in Herdr | The real pane loaded `catppuccin-mocha`, `pi-powerline-footer`, and `idle-compaction.ts` without a startup extension error. The ANSI pane capture shows Catppuccin RGB colors and the Powerline model, path, context, subagent, and MCP segments. [Pane capture](/Users/weihung/.straw-boss/plans/pi-migration/artifacts/t3-pi-ui-pane.ansi.txt). Visual taste remains for the user to judge. | pass for rendering; human verdict pending |
+| Compaction requests occur only while idle and above 300,000 tokens | `node --experimental-strip-types tests/pi-idle-compaction.mjs` passed active-turn, exact-threshold, pending-message, above-threshold, in-flight, and unknown-usage checks. A live 300,000-token session was not constructed. | local test pass; live threshold unknown |
+| Pi install is repeatable and uninstall restores prior settings | `bash tests/install.sh target_matrix_preserves_each_surface` passed a repeated temporary-HOME install, package and UI assertions, and uninstall restoration. On the real HOME, two consecutive full `bash scripts/install.sh --target pi` runs left `settings.json`, `herdr-agents/config.json`, `AGENTS.md`, and the install marker byte identical. `moshi-hooks.ts` remained present. | pass |
+| Default and legacy targets retain their behavior | `bash tests/install.sh`, `bash tests/uninstall.sh`, and `python3 -m unittest tests.pi_review_fixes -q` passed after the target change. | local test pass |
+
+Reflexive: The npm search one-liner error was a tool-use slip (`gap`), resolved by a corrected query. Pi's first reinstall changed package order (`gap`), resolved in `scripts/pi-target.py` and verified with real-HOME hashes. An initial layout file was captured after the worker closed (`gap`); the second live run replaced it with an active-worker capture. The `solid-loop` no-op check found no standing instruction to change.
+
 | Spec | Evidence | Result |
 |---|---|---|
 | 1. Install targets | `bash tests/install.sh`; the target matrix exercised default, each target, repeated Pi install, `full`, and generated settings under temporary HOME. `bash scripts/install.sh --target pi` exited 0 on the real HOME after the user checkpoint; Pi remains 0.87.1 and its Herdr integration reports current v9. A repeat install changed the bridge to `git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941`, retired the npm bridge declaration, and the checkout HEAD matched the requested commit. A second repeat preserved `settings.json`, `config.json`, `AGENTS.md`, and the install marker byte for byte. | Local and real install pass, including stable repeat run after the git migration. |

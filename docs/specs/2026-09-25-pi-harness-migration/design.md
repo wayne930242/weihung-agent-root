@@ -30,7 +30,23 @@ The active strategy is read from `skills/managing-model-preferences/model-prefer
 
 Shell tests run with an isolated HOME, stub external commands, and inspect per-target files, preservation of other targets, uninstall behavior, and a repeated run. Runtime verification occurs after the user's real-HOME checkpoint. The Herdr session checks package loading, MCP access, dispatch, restart recovery, intercom, handoff, shipping, strategy switching, and aaaav hook feedback. Each claim is recorded separately in `verification.md`.
 
+## Pi interface and idle compaction follow-up
+
+The Pi target writes `panes.mode: split` and `panes.direction: right` to the existing `pi-herdr-agents` config. It records prior values in the install marker so uninstall restores them. It installs `pi-powerline-footer` and `catppuccin-pi-theme`, selects `catppuccin-mocha`, and sets Powerline's compact prompt mode to `native`. The terminal and Powerline settings are restored at their managed leaf keys, preserving other user settings. Package declarations are placed in a stable order after each install.
+
+The repository Pi package loads `idle-compaction.ts`. Its `agent_end` and `session_start` checks run after a short settlement delay, then require idle state, no pending messages, and more than 300,000 estimated tokens. An in-flight guard prevents a second request until the compaction callback completes. The extension calls Pi's own compaction API, retaining the bridge and native auto-compaction paths.
+
 ## Friction Notes
+
+- Tried: filtering `npm search --json` with a Python one-liner containing escaped quote characters.
+  Found: the extra escaping produced a Python syntax error; a plain JSON parser returned the theme package list.
+  Led by: none.
+- Tried: reapplying the real-HOME Pi target and comparing managed file hashes immediately after the first update.
+  Found: Pi's package installer reordered `settings.json` once; canonicalizing managed package order at the end of install makes the next run byte stable.
+  Led by: aaaav-do's idempotent install reality anchor.
+- Tried: saving the Herdr pane layout after a short worker completed.
+  Found: automatic pane cleanup had reduced the tab to one pane; the active-worker layout was captured during a second run.
+  Led by: aaaav-do's human pane-capture anchor.
 
 - Tried: an isolated-HOME smoke test that removed its temporary directory with `rm -rf`.
   Found: command review rejected the cleanup command; a Python `TemporaryDirectory` scope provides bounded cleanup.

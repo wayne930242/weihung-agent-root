@@ -828,13 +828,20 @@ for target in ("claude", "codex", "gemini", "pi"):
             text = (home / ".pi/agent/AGENTS.md").read_text()
             assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
             settings = json.loads((home / ".pi/agent/settings.json").read_text())
-            assert len(settings["packages"]) == 8, settings
+            assert len(settings["packages"]) == 10, settings
             assert settings["packages"][0] == "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941", settings
             assert settings["defaultProvider"] == "claude-bridge", settings
+            assert settings["theme"] == "catppuccin-mocha", settings
+            assert settings["editorPaddingX"] == 1, settings
+            assert settings["collapseChangelog"] is True, settings
+            assert settings["terminal"]["showTerminalProgress"] is True, settings
+            assert settings["powerline"]["queue"]["compactPromptMode"] == "native", settings
             mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
             assert mcp["settings"]["hostConfigDiscovery"] == "on", mcp
             config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
             assert config["status"] == {"enabled": True}, config
+            assert config["panes"]["mode"] == "split", config
+            assert config["panes"]["direction"] == "right", config
         run(uninstall, home, "--target", target)
         assert not (home / {"claude": ".claude/CLAUDE.md", "codex": ".codex/AGENTS.md", "gemini": ".gemini/config/AGENTS.md", "pi": ".pi/agent/AGENTS.md"}[target]).exists(), target
 
@@ -863,11 +870,11 @@ with tempfile.TemporaryDirectory() as directory:
     agent = home / ".pi/agent"
     agent.mkdir(parents=True)
     (agent / "AGENTS.md").write_text("user instructions\n")
-    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package"], "theme": "light"}))
+    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package"], "theme": "light", "terminal": {"showImages": False}, "powerline": {"welcome": False}}))
     config = agent / "herdr-agents/config.json"
     config.parent.mkdir(parents=True, exist_ok=True)
     original_models = {"default": "user/model", "agents": {"scout": "user/scout"}}
-    config.write_text(json.dumps({"models": original_models, "other": True}))
+    config.write_text(json.dumps({"models": original_models, "panes": {"mode": "tab"}, "other": True}))
     run(install, home, "--target", "pi", "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
@@ -880,7 +887,9 @@ with tempfile.TemporaryDirectory() as directory:
     settings = json.loads((agent / "settings.json").read_text())
     assert settings["packages"] == ["npm:pi-claude-bridge", "npm:user-package"], settings
     assert settings["theme"] == "light", settings
-    assert json.loads(config.read_text()) == {"models": original_models, "other": True}
+    assert settings["terminal"] == {"showImages": False}, settings
+    assert settings["powerline"] == {"welcome": False}, settings
+    assert json.loads(config.read_text()) == {"models": original_models, "panes": {"mode": "tab"}, "other": True}
 
 with tempfile.TemporaryDirectory() as directory:
     temporary = Path(directory)

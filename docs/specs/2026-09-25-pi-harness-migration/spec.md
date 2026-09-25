@@ -70,3 +70,14 @@ Amended at: 2026-09-25；使用者改定 bridge 來源為上游 commit `227f5eb4
 - **自動化**：擴充 `tests/install.sh`，在暫時的 `HOME` 裡跑一遍完整安裝與移除，斷言不帶 `--target` 時行為不變、各個目標的檔案結果，以及重複執行後結果不變。
 - **Checkpoint**：自動化測試通過後，才在真正的 `HOME` 上執行切換。
 - **真機驗證**：切換後在 Herdr 裡逐項實際操作第 3 到第 9 項，並記錄觀察到的輸出。
+
+## 2026-09-25 Pi interface and compaction supplement
+
+The delegated choices are recorded in [t3-decisions.md](/Users/weihung/.straw-boss/plans/pi-migration/artifacts/t3-decisions.md).
+
+- Ordinary Pi workers open in a right split beside their parent pane in the same Herdr tab.
+- The Pi target installs `pi-powerline-footer` and a JSON-only Catppuccin theme package, selects `catppuccin-mocha`, sets editor padding to 1, collapses the changelog, and shows terminal progress. Powerline passes `/compact` prompts to native Pi compaction.
+- A repository extension requests compaction after a turn only when Pi is idle, has no queued message, and estimated context exceeds 300,000 tokens. Pi's native automatic compaction remains enabled.
+- Reinstalling the Pi target yields stable managed files; uninstall restores prior user settings and removes the two packages and the repository extension. The default and legacy install targets retain their existing behavior.
+
+Reality anchor: temporary-HOME install/uninstall and idle-compaction tests, followed by a real-HOME install and a Herdr pane capture of worker placement, theme, footer, and extension load. The user judges the visual appearance on return.

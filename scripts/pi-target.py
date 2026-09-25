@@ -23,11 +23,15 @@ PACKAGES = [
     "npm:pi-intercom",
     "npm:pi-ask-user",
     "npm:@capdiem/pi-todo",
+    "npm:pi-powerline-footer",
+    "npm:catppuccin-pi-theme",
 ]
 LOCAL_PACKAGE = str(ROOT)
 AAAAV = ROOT.parent / "aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel")
+UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True}
+POWERLINE_QUEUE = {"compactPromptMode": "native"}
 
 
 def package_id(value, agent_dir):
@@ -54,6 +58,25 @@ def write_json(path, value):
     content = json.dumps(value, indent=2, ensure_ascii=False) + "\n"
     if not path.exists() or path.read_text() != content:
         path.write_text(content)
+
+
+def restore_managed_keys(container, key, installed, previous, managed_keys):
+    current = container.get(key)
+    if not isinstance(current, dict) or not isinstance(installed, dict):
+        return
+    restored = deepcopy(current)
+    prior = previous if isinstance(previous, dict) else {}
+    for name in managed_keys:
+        if current.get(name) != installed.get(name):
+            continue
+        if name in prior:
+            restored[name] = deepcopy(prior[name])
+        else:
+            restored.pop(name, None)
+    if restored:
+        container[key] = restored
+    else:
+        container.pop(key, None)
 
 
 def run(args, home):
@@ -147,6 +170,28 @@ def update_profile(home, state):
     state["strategy"] = strategy
 
 
+def update_ui(home, state):
+    agent_dir = home / ".pi/agent"
+    settings_path = agent_dir / "settings.json"
+    config_path = agent_dir / "herdr-agents/config.json"
+    settings = read_json(settings_path)
+    config = read_json(config_path)
+    state.setdefault("previous_ui_settings", {key: deepcopy(settings.get(key)) for key in UI_SETTINGS})
+    state.setdefault("previous_terminal", deepcopy(settings.get("terminal")))
+    state.setdefault("previous_powerline", deepcopy(settings.get("powerline")))
+    state.setdefault("previous_panes", deepcopy(config.get("panes")))
+    settings.update(UI_SETTINGS)
+    settings.setdefault("terminal", {})["showTerminalProgress"] = True
+    settings.setdefault("powerline", {}).setdefault("queue", {})["compactPromptMode"] = "native"
+    config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
+    write_json(settings_path, settings)
+    write_json(config_path, config)
+    state["installed_ui_settings"] = {key: deepcopy(settings[key]) for key in UI_SETTINGS}
+    state["installed_terminal"] = deepcopy(settings["terminal"])
+    state["installed_powerline"] = deepcopy(settings["powerline"])
+    state["installed_panes"] = deepcopy(config["panes"])
+
+
 def install(home, skip_external, force):
     agent_dir = home / ".pi/agent"
     marker_path = agent_dir / ".weihung-user-claude.json"
@@ -178,6 +223,7 @@ def install(home, skip_external, force):
     mcp.setdefault("settings", {})["hostConfigDiscovery"] = "on"
     write_json(mcp_path, mcp)
     update_profile(home, state)
+    update_ui(home, state)
     write_json(marker_path, state)
     if not skip_external:
         run(["npm", "install", "-g", "@earendil-works/pi-coding-agent@latest"], home)
@@ -203,6 +249,14 @@ def install(home, skip_external, force):
         settings = read_json(settings_path)
         settings["packages"] = [package for package in dict.fromkeys(settings.get("packages", []) + PACKAGES + [str(AAAAV), LOCAL_PACKAGE]) if not obsolete_bridge(package)]
         write_json(settings_path, settings)
+    settings = read_json(settings_path)
+    current = settings.get("packages", [])
+    owned = PACKAGES + [str(AAAAV), LOCAL_PACKAGE]
+    owned_ids = {package_id(value, agent_dir) for value in owned}
+    unmanaged = [value for value in current if package_id(value, agent_dir) not in owned_ids and not obsolete_bridge(value)]
+    managed = [next((value for value in current if package_id(value, agent_dir) == package_id(source, agent_dir)), source) for source in owned]
+    settings["packages"] = list(dict.fromkeys(unmanaged + managed))
+    write_json(settings_path, settings)
     write_json(marker_path, state)
 
 
@@ -250,6 +304,20 @@ def uninstall(home, skip_external):
                 settings.pop(key, None)
             else:
                 settings[key] = previous
+    for key in UI_SETTINGS:
+        if settings.get(key) == state.get("installed_ui_settings", {}).get(key):
+            previous = state.get("previous_ui_settings", {}).get(key)
+            if previous is None:
+                settings.pop(key, None)
+            else:
+                settings[key] = previous
+    restore_managed_keys(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
+    current_powerline = settings.get("powerline")
+    if isinstance(current_powerline, dict):
+        previous_powerline = state.get("previous_powerline") or {}
+        restore_managed_keys(current_powerline, "queue", (state.get("installed_powerline") or {}).get("queue"), previous_powerline.get("queue"), ("compactPromptMode",))
+        if not current_powerline:
+            settings.pop("powerline", None)
     write_json(settings_path, settings)
     mcp = read_json(mcp_path)
     if mcp.get("settings", {}).get("hostConfigDiscovery") == "on":
@@ -278,6 +346,7 @@ def uninstall(home, skip_external):
             config.pop("status", None)
         else:
             config["status"] = previous
+    restore_managed_keys(config, "panes", state.get("installed_panes"), state.get("previous_panes"), ("mode", "direction"))
     if config:
         write_json(config_path, config)
     elif config_path.exists():

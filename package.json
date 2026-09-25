@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "pi": {
-    "extensions": ["./pi/extensions/dispatch-recovery.ts"],
+    "extensions": ["./pi/extensions/dispatch-recovery.ts", "./pi/extensions/idle-compaction.ts"],
     "skills": ["./pi/skills"]
   }
 }
