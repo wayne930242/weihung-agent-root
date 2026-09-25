@@ -1,6 +1,3 @@
----
----
-
 # Clean Architecture
 
 ## Refactoring Triggers

@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.sh"
----
-
 # Shell
 
 - Always start with `#!/usr/bin/env bash` and `set -euo pipefail`.

@@ -1,14 +1,7 @@
----
-paths:
-  - "**/SKILL.md"
-  - "**/skills/**"
-  - "**/agents/**/*.md"
----
-
 # Skill Writing Vocabulary
 
 When writing or editing skills, agents, or agent-system docs, use the `writing-great-skills` vocabulary.
-Full definitions live in `~/.claude/skills/writing-great-skills/GLOSSARY.md` — consult it before coining a new term.
+Full definitions live in `~/.agents/skills/writing-great-skills/GLOSSARY.md` — consult it before coining a new term.
 
 ## Canonical terms
 

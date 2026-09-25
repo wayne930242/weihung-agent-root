@@ -16,6 +16,10 @@ Use the current app's `AGENTS.md` or `GEMINI.md` before app-specific work. If ne
 
 On WSL, translate Windows attachment paths with `wslpath -u` when available and quote the translated path.
 
+## User rules
+
+Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` (git), `deployment.md` (deploys), `dependencies.md` (packages and libraries), `clean-architecture.md` (design and refactoring), `ui-design.md` (UI), `skill-writing.md` (skills and agent instructions), `chinese-writing.md` (Chinese prose), and the language files `go.md`, `python.md`, `shell.md`, `typescript.md`, and `markdown.md`.
+
 ## Model and dispatch
 
 Use `managing-model-preferences` to change model strategy. Read its profile before selecting a delegated model. Use the active Pi tier's full model list and thinking level; the user's explicit model choice takes precedence.

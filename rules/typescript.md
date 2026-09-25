@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.{ts,tsx}"
----
-
 # TypeScript
 
 - Prefer `interface` over `type` for object shapes. Use `type` for unions and intersections.

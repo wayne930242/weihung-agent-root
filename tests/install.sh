@@ -4,6 +4,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_SCRIPT="$REPO_ROOT/scripts/install.sh"
+UNINSTALL_SCRIPT="$REPO_ROOT/scripts/uninstall.sh"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -20,6 +21,10 @@ assert_symlink_target() {
   [[ "$actual" == "$expected" ]] || fail "expected $path -> $expected, got $actual"
 }
 
+assert_absent() {
+  [[ ! -e "$1" && ! -L "$1" ]] || fail "expected $1 to be absent"
+}
+
 run_install() {
   local fake_home="$1"
   shift
@@ -27,139 +32,84 @@ run_install() {
   HOME="$fake_home" bash "$INSTALL_SCRIPT" --home "$fake_home" --skip-external "$@"
 }
 
-assert_registered_hooks_runnable() {
-  local fake_home="$1"
+fresh_install_creates_expected_links() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  local fake_home="$temp_dir/home"
 
-  python3 - "$fake_home" <<'PY'
+  run_install "$fake_home" >/dev/null
+
+  local skill_dir
+  for skill_dir in "$REPO_ROOT"/skills/*/; do
+    local name
+    name="$(basename "$skill_dir")"
+    assert_symlink_target "$fake_home/.agents/skills/$name" "$REPO_ROOT/skills/$name"
+  done
+  assert_symlink_target "$fake_home/.pi/agent/rules" "$REPO_ROOT/rules"
+  [[ -f "$fake_home/.pi/agent/AGENTS.md" ]] || fail "expected generated pi instructions"
+  grep -q '~/.pi/agent/rules/' "$fake_home/.pi/agent/AGENTS.md" || fail "expected pi instructions to point to the rules"
+  assert_absent "$fake_home/.claude"
+  assert_absent "$fake_home/.codex"
+  assert_absent "$fake_home/.gemini"
+
+  rm -rf "$temp_dir"
+}
+
+install_is_idempotent_and_writes_pi_settings() {
+  python3 - "$INSTALL_SCRIPT" <<'PY'
+import hashlib
 import json
 import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
-fake_home = sys.argv[1]
-settings_path = Path(fake_home) / ".claude/settings.json"
-if not settings_path.exists():
-    raise SystemExit(0)
+install = sys.argv[1]
 
-settings = json.loads(settings_path.read_text(encoding="utf-8"))
-missing = []
-for entries in settings.get("hooks", {}).values():
-    for entry in entries:
-        for hook in entry.get("hooks", []):
-            command = hook.get("command", "").strip('"')
-            if not command.startswith("$HOME/"):
-                continue
-            script = command.replace("$HOME", fake_home, 1)
-            if not os.access(script, os.X_OK):
-                missing.append(script)
 
-if missing:
-    raise SystemExit("settings.json registers unrunnable hook commands: %s" % missing)
+def run(home, *args):
+    env = {**os.environ, "HOME": str(home)}
+    subprocess.run(["bash", install, "--home", str(home), "--skip-external", *args], env=env, check=True, stdout=subprocess.DEVNULL)
+
+
+def snapshot(home):
+    return {str(path.relative_to(home)): (os.readlink(path) if path.is_symlink() else hashlib.sha256(path.read_bytes()).hexdigest())
+            for path in home.rglob("*") if path.is_symlink() or path.is_file()}
+
+
+with tempfile.TemporaryDirectory() as directory:
+    home = Path(directory)
+    run(home)
+    first = snapshot(home)
+    run(home)
+    assert snapshot(home) == first
+    text = (home / ".pi/agent/AGENTS.md").read_text()
+    assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
+    settings = json.loads((home / ".pi/agent/settings.json").read_text())
+    assert len(settings["packages"]) == 10, settings
+    assert settings["packages"][0] == "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941", settings
+    assert settings["defaultProvider"] == "claude-bridge", settings
+    assert settings["theme"] == "catppuccin-mocha", settings
+    assert settings["editorPaddingX"] == 1, settings
+    assert settings["collapseChangelog"] is True, settings
+    assert settings["terminal"]["showTerminalProgress"] is True, settings
+    assert settings["powerline"]["queue"]["compactPromptMode"] == "native", settings
+    mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
+    assert mcp["settings"]["hostConfigDiscovery"] == "on", mcp
+    config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
+    assert config["status"] == {"enabled": True}, config
+    assert config["panes"] == {"mode": "split", "direction": "right"}, config
 PY
 }
 
-fresh_install_creates_expected_symlinks() {
+target_option_is_rejected() {
   local temp_dir
   temp_dir="$(mktemp -d)"
 
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home"
-
-  run_install "$fake_home"
-
-  assert_symlink_target "$fake_home/.claude/CLAUDE.md" "$REPO_ROOT/CLAUDE.md"
-  assert_symlink_target "$fake_home/.codex/AGENTS.md" "$REPO_ROOT/AGENTS.md"
-  assert_symlink_target "$fake_home/.gemini/config/AGENTS.md" "$REPO_ROOT/AGENTS.md"
-  assert_symlink_target "$fake_home/.gemini/config/GEMINI.md" "$REPO_ROOT/AGENTS.md"
-  assert_symlink_target "$fake_home/.gemini/config/skills.json" "$REPO_ROOT/config/gemini-skills.json"
-  assert_symlink_target "$fake_home/.claude/shared/communication.md" "$REPO_ROOT/shared/communication.md"
-  assert_symlink_target "$fake_home/.claude/shared/engineering.md" "$REPO_ROOT/shared/engineering.md"
-  assert_symlink_target "$fake_home/.claude/shared/context-management.md" "$REPO_ROOT/shared/context-management.md"
-  assert_symlink_target "$fake_home/.claude/hooks/log-notification.sh" "$REPO_ROOT/claude/hooks/log-notification.sh"
-  assert_symlink_target "$fake_home/.claude/hooks/log-stop.sh" "$REPO_ROOT/claude/hooks/log-stop.sh"
-  [[ ! -e "$fake_home/.claude/commands" ]] || fail "did not expect a Claude commands directory"
-  assert_symlink_target "$fake_home/.claude/agents/security-reviewer.md" "$REPO_ROOT/claude/agents/security-reviewer.md"
-  assert_symlink_target "$fake_home/.claude/agents/silent-failure-hunter.md" "$REPO_ROOT/claude/agents/silent-failure-hunter.md"
-  for skill_name in managing-model-preferences providing-knowledge reflecting-to-root writing-great-skills; do
-    for skill_path in \
-      "$fake_home/.claude/skills/$skill_name" \
-      "$fake_home/.agents/skills/$skill_name" \
-      "$fake_home/.gemini/config/skills/$skill_name"; do
-      assert_symlink_target "$skill_path" "$REPO_ROOT/skills/$skill_name"
-    done
-  done
-  cmp "$fake_home/.claude/skills/managing-model-preferences/model-preference-profile.md" "$REPO_ROOT/skills/managing-model-preferences/model-preference-profile.md"
-  for strategy_path in "$REPO_ROOT"/skills/managing-model-preferences/strategies/*.md; do
-    cmp "$fake_home/.claude/skills/managing-model-preferences/strategies/$(basename "$strategy_path")" "$strategy_path"
-  done
-  [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "did not expect retired tdd skill in Claude root"
-  [[ ! -e "$fake_home/.codex/skills" ]] || fail "did not expect the retired Codex skills directory"
-  [[ ! -e "$fake_home/.gemini/config/skills/tdd" && ! -L "$fake_home/.gemini/config/skills/tdd" ]] || fail "did not expect retired tdd skill in Gemini config"
-  [[ ! -e "$fake_home/.gemini/config/skills/refining-from-complaints" && ! -L "$fake_home/.gemini/config/skills/refining-from-complaints" ]] || fail "did not expect retired complaint skill in Gemini config"
-  assert_symlink_target "$fake_home/.codex/agents/docs-researcher.toml" "$REPO_ROOT/codex/agents/docs-researcher.toml"
-  assert_symlink_target "$fake_home/.codex/agents/article-writer.toml" "$REPO_ROOT/codex/agents/article-writer.toml"
-  assert_symlink_target "$fake_home/.codex/agents/security-reviewer.toml" "$REPO_ROOT/codex/agents/security-reviewer.toml"
-  assert_symlink_target "$fake_home/.codex/agents/silent-failure-hunter.toml" "$REPO_ROOT/codex/agents/silent-failure-hunter.toml"
-  [[ ! -e "$fake_home/.codex/agents/safety-reviewer.toml" && ! -L "$fake_home/.codex/agents/safety-reviewer.toml" ]] || fail "did not expect retired safety reviewer"
-  assert_symlink_target "$fake_home/.codex/rules/weihung.rules" "$REPO_ROOT/codex/rules/weihung.rules"
-  [[ ! -e "$fake_home/.codex/rules/default.rules" ]] || fail "expected default.rules to stay Codex-owned"
-  assert_symlink_target "$fake_home/.codex/hooks/log-session-start.sh" "$REPO_ROOT/codex/hooks/log-session-start.sh"
-  assert_symlink_target "$fake_home/.codex/hooks/log-stop.sh" "$REPO_ROOT/codex/hooks/log-stop.sh"
-  assert_symlink_target "$fake_home/.codex/hooks.json" "$REPO_ROOT/codex/hooks.json"
-  for rule_file in "$REPO_ROOT"/rules/*.md; do
-    assert_symlink_target "$fake_home/.claude/rules/$(basename "$rule_file")" "$rule_file"
-  done
-  assert_symlink_target "$fake_home/.gemini/config/rules/clean-architecture.md" "$REPO_ROOT/rules/clean-architecture.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/go.md" "$REPO_ROOT/rules/go.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/typescript.md" "$REPO_ROOT/rules/typescript.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/python.md" "$REPO_ROOT/rules/python.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/shell.md" "$REPO_ROOT/rules/shell.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/markdown.md" "$REPO_ROOT/rules/markdown.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/deployment.md" "$REPO_ROOT/rules/deployment.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/chinese-writing.md" "$REPO_ROOT/rules/chinese-writing.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/dependencies.md" "$REPO_ROOT/rules/dependencies.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/git-safety.md" "$REPO_ROOT/rules/git-safety.md"
-  assert_symlink_target "$fake_home/.gemini/config/rules/skill-writing.md" "$REPO_ROOT/rules/skill-writing.md"
-  [[ ! -e "$fake_home/.agents/skills/agent-browser" ]] || fail "did not expect agent-browser skill under --skip-external"
-
-  python3 - <<PY
-from pathlib import Path
-
-expected_models = {
-    "docs-researcher.toml": "gpt-5.6-luna",
-    "article-writer.toml": "gpt-5.6-sol",
-}
-for name, expected_model in expected_models.items():
-    lines = (
-        Path("$fake_home") / ".codex/agents" / name
-    ).read_text(encoding="utf-8").splitlines()
-    assert f'model = "{expected_model}"' in lines, (name, lines)
-PY
-
-  rg -Fq 'Writing or substantially rewriting an article' "$fake_home/.claude/CLAUDE.md"
-  rg -Fq 'model-preference-profile.md' "$fake_home/.claude/CLAUDE.md"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert "hooks" in settings, settings
-assert "Stop" in settings["hooks"], settings
-assert "Notification" not in settings["hooks"], settings
-assert settings["crossSessionInbound"] == "accept", settings
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert "advisorModel" not in settings, settings
-PY
-
-  python3 - <<PY || fail "expected ~/.codex/config.toml to hold only the managed Codex keys"
-import tomllib
-from pathlib import Path
-config = tomllib.loads(Path("$fake_home/.codex/config.toml").read_text())
-managed = tomllib.loads(Path("$REPO_ROOT/config/codex-managed.toml").read_text())
-assert config == managed, config
-assert "status_line" in config["tui"], config
-PY
-  [[ ! -e "$fake_home/.gemini/config/config.json" ]] || fail "did not expect installer to write ~/.gemini/config/config.json in the light layout"
+  if run_install "$temp_dir/home" --target pi >/dev/null 2>&1; then
+    fail "expected --target to be rejected"
+  fi
 
   rm -rf "$temp_dir"
 }
@@ -167,13 +117,12 @@ PY
 conflict_without_force_fails() {
   local temp_dir
   temp_dir="$(mktemp -d)"
-
   local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  printf 'existing\n' > "$fake_home/.claude/CLAUDE.md"
+  mkdir -p "$fake_home/.pi/agent/rules"
+  printf 'mine\n' > "$fake_home/.pi/agent/rules/own.md"
 
-  if run_install "$fake_home"; then
-    fail "expected install to fail when CLAUDE.md already exists without --force"
+  if run_install "$fake_home" >/dev/null 2>&1; then
+    fail "expected install to fail when ~/.pi/agent/rules already exists without --force"
   fi
 
   rm -rf "$temp_dir"
@@ -182,688 +131,61 @@ conflict_without_force_fails() {
 force_replaces_and_backs_up_conflicts() {
   local temp_dir
   temp_dir="$(mktemp -d)"
-
   local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  printf 'existing\n' > "$fake_home/.claude/CLAUDE.md"
+  mkdir -p "$fake_home/.pi/agent/rules"
+  printf 'mine\n' > "$fake_home/.pi/agent/rules/own.md"
+  printf 'user instructions\n' > "$fake_home/.pi/agent/AGENTS.md"
 
-  run_install "$fake_home" --force
+  run_install "$fake_home" --force >/dev/null
 
-  assert_symlink_target "$fake_home/.claude/CLAUDE.md" "$REPO_ROOT/CLAUDE.md"
-
+  assert_symlink_target "$fake_home/.pi/agent/rules" "$REPO_ROOT/rules"
   local backup_base="$fake_home/.local/state/weihung-user-claude/backups"
-  [[ -d "$backup_base" ]] || fail "expected backup directory at $backup_base"
-
   local backup_file
-  backup_file="$(find "$backup_base" -type f -path '*/.claude/CLAUDE.md' | head -n 1)"
-  [[ -n "$backup_file" ]] || fail "expected backed up CLAUDE.md"
-  [[ "$(cat "$backup_file")" == "existing" ]] || fail "expected backup to preserve previous content"
+  backup_file="$(find "$backup_base" -type f -path '*/.pi/agent/rules/own.md' | head -n 1)"
+  [[ -n "$backup_file" && "$(cat "$backup_file")" == "mine" ]] || fail "expected backed up rules directory"
+  backup_file="$(find "$backup_base" -type f -path '*/.pi/agent/AGENTS.md' | head -n 1)"
+  [[ -n "$backup_file" && "$(cat "$backup_file")" == "user instructions" ]] || fail "expected backed up pi instructions"
 
   rm -rf "$temp_dir"
 }
 
-existing_settings_are_merged_not_replaced() {
+install_prunes_retired_links_and_retires_skill_copies() {
   local temp_dir
   temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "customSetting": true,
-  "effortLevel": "xhigh"
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["customSetting"] is True, settings
-assert settings["effortLevel"] == "high", settings
-assert "Stop" in settings["hooks"], settings
-assert "Notification" not in settings["hooks"], settings
-assert settings["crossSessionInbound"] == "accept", settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-fresh_install_manages_explicit_model_settings() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home"
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert settings["autoCompactWindow"] == 300000, settings
-assert "advisorModel" not in settings, settings
-assert settings["env"]["CLAUDE_CODE_ENABLE_FUNCTION_HOOKS"] == "1", settings
-assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
-assert settings["crossSessionInbound"] == "accept", settings
-assert settings["attribution"] == {"commit": "", "pr": ""}, settings
-assert "Stop" in settings["hooks"], settings
-assert "statusLine" in settings, settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-former_managed_opus_advisor_is_removed_on_upgrade() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "model": "sonnet",
-  "advisorModel": "opus",
-  "customSetting": true
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert "advisorModel" not in settings, settings
-assert settings["customSetting"] is True, settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-user_selected_advisor_survives_install() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "advisorModel": "user-advisor-model"
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert settings["advisorModel"] == "user-advisor-model", settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-legacy_worker_pin_is_replaced_by_opus_main() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "model": "user-main-model",
-  "advisorModel": "user-advisor-model",
-  "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-    "USER_ENV": "keep-me"
-  }
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert settings["advisorModel"] == "user-advisor-model", settings
-assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
-assert settings["env"]["USER_ENV"] == "keep-me", settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-legacy_only_worker_pin_removes_empty_env() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
-  }
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert "CLAUDE_CODE_SUBAGENT_MODEL" not in settings["env"], settings
-assert settings["env"]["CLAUDE_CODE_ENABLE_FUNCTION_HOOKS"] == "1", settings
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert "advisorModel" not in settings, settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-user_selected_worker_model_survives_install() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "user-worker-model"
-  }
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "user-worker-model", settings
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert "advisorModel" not in settings, settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-non_object_env_does_not_break_install() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "env": "user-value"
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert settings["env"] == "user-value", settings
-assert settings["model"] == "claude-opus-5-5[1m]", settings
-assert "advisorModel" not in settings, settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-install_removes_only_repository_managed_retired_safety_reviewer() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.codex/agents"
-  ln -s "$REPO_ROOT/codex/agents/safety-reviewer.toml" "$fake_home/.codex/agents/safety-reviewer.toml"
-
-  run_install "$fake_home"
-
-  [[ ! -e "$fake_home/.codex/agents/safety-reviewer.toml" && ! -L "$fake_home/.codex/agents/safety-reviewer.toml" ]] || fail "expected retired repository safety reviewer to be removed"
-
-  rm -rf "$temp_dir"
-}
-
-install_preserves_user_owned_safety_reviewer() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  local user_agent="$temp_dir/user-safety-reviewer.toml"
-  mkdir -p "$fake_home/.codex/agents"
-  printf 'name = "user_safety_reviewer"\n' > "$user_agent"
-  ln -s "$user_agent" "$fake_home/.codex/agents/safety-reviewer.toml"
-
-  run_install "$fake_home"
-
-  assert_symlink_target "$fake_home/.codex/agents/safety-reviewer.toml" "$user_agent"
-
-  rm -rf "$temp_dir"
-}
-
-install_removes_only_repository_managed_retired_tdd_skills() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills"
-  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.claude/skills/tdd"
-  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.codex/skills/tdd"
-  ln -s "$REPO_ROOT/skills/tdd" "$fake_home/.gemini/config/skills/tdd"
-
-  run_install "$fake_home"
-
-  [[ ! -e "$fake_home/.claude/skills/tdd" && ! -L "$fake_home/.claude/skills/tdd" ]] || fail "expected retired Claude tdd skill to be removed"
-  [[ ! -e "$fake_home/.codex/skills/tdd" && ! -L "$fake_home/.codex/skills/tdd" ]] || fail "expected retired Codex tdd skill to be removed"
-  [[ ! -e "$fake_home/.gemini/config/skills/tdd" && ! -L "$fake_home/.gemini/config/skills/tdd" ]] || fail "expected retired Gemini tdd skill to be removed"
-
-  rm -rf "$temp_dir"
-}
-
-install_removes_only_repository_managed_retired_complaint_skills() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills"
-  ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.claude/skills/refining-from-complaints"
-  ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.codex/skills/refining-from-complaints"
-  ln -s "$REPO_ROOT/skills/refining-from-complaints" "$fake_home/.gemini/config/skills/refining-from-complaints"
-
-  run_install "$fake_home"
-
-  [[ ! -e "$fake_home/.claude/skills/refining-from-complaints" && ! -L "$fake_home/.claude/skills/refining-from-complaints" ]] || fail "expected retired Claude complaint skill to be removed"
-  [[ ! -e "$fake_home/.codex/skills/refining-from-complaints" && ! -L "$fake_home/.codex/skills/refining-from-complaints" ]] || fail "expected retired Codex complaint skill to be removed"
-  [[ ! -e "$fake_home/.gemini/config/skills/refining-from-complaints" && ! -L "$fake_home/.gemini/config/skills/refining-from-complaints" ]] || fail "expected retired Gemini complaint skill to be removed"
-
-  rm -rf "$temp_dir"
-}
-
-install_preserves_user_owned_tdd_skills() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  local user_skill="$temp_dir/user-tdd"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills" "$user_skill"
-  ln -s "$user_skill" "$fake_home/.claude/skills/tdd"
-  ln -s "$user_skill" "$fake_home/.codex/skills/tdd"
-  ln -s "$user_skill" "$fake_home/.gemini/config/skills/tdd"
-
-  run_install "$fake_home"
-
-  assert_symlink_target "$fake_home/.claude/skills/tdd" "$user_skill"
-  assert_symlink_target "$fake_home/.codex/skills/tdd" "$user_skill"
-  assert_symlink_target "$fake_home/.gemini/config/skills/tdd" "$user_skill"
-
-  rm -rf "$temp_dir"
-}
-
-install_prunes_obsolete_and_broken_managed_skills() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
   local fake_home="$temp_dir/home"
   local user_skill="$temp_dir/my-custom-skill"
-  mkdir -p "$fake_home/.claude/skills" "$fake_home/.codex/skills" "$fake_home/.gemini/config/skills" "$user_skill"
+  mkdir -p "$fake_home/.agents/skills/providing-knowledge" "$user_skill"
+  printf 'stale copy\n' > "$fake_home/.agents/skills/providing-knowledge/SKILL.md"
+  ln -s "$REPO_ROOT/skills/leveraging-tasks" "$fake_home/.agents/skills/leveraging-tasks"
+  ln -s "$user_skill" "$fake_home/.agents/skills/my-custom-skill"
 
-  # Obsolete broken link in Claude and Gemini
-  ln -s "$REPO_ROOT/skills/assuring-quality" "$fake_home/.claude/skills/assuring-quality"
-  ln -s "$REPO_ROOT/skills/codebase-design" "$fake_home/.gemini/config/skills/codebase-design"
+  run_install "$fake_home" >/dev/null
 
-  # User-owned custom skill
-  ln -s "$user_skill" "$fake_home/.claude/skills/my-custom-skill"
-
-  # Obsolete broken link in Codex
-  ln -s "$REPO_ROOT/skills/leveraging-tasks" "$fake_home/.codex/skills/leveraging-tasks"
-  ln -s "$REPO_ROOT/skills/streamlining-skills" "$fake_home/.codex/skills/streamlining-skills"
-
-  # Broken managed link that will be updated to point to user-root
-  ln -s "$REPO_ROOT/retired/reflecting-to-root" "$fake_home/.codex/skills/reflecting-to-root"
-
-  run_install "$fake_home"
-
-  [[ ! -e "$fake_home/.claude/skills/assuring-quality" && ! -L "$fake_home/.claude/skills/assuring-quality" ]] || fail "expected obsolete Claude skill link to be pruned"
-  [[ ! -e "$fake_home/.gemini/config/skills/codebase-design" && ! -L "$fake_home/.gemini/config/skills/codebase-design" ]] || fail "expected obsolete Gemini skill link to be pruned"
-  [[ ! -e "$fake_home/.codex/skills/leveraging-tasks" && ! -L "$fake_home/.codex/skills/leveraging-tasks" ]] || fail "expected obsolete Codex leveraging-tasks to be pruned"
-  [[ ! -e "$fake_home/.codex/skills/streamlining-skills" && ! -L "$fake_home/.codex/skills/streamlining-skills" ]] || fail "expected obsolete Codex streamlining-skills to be pruned"
-
-  assert_symlink_target "$fake_home/.claude/skills/my-custom-skill" "$user_skill"
-  [[ ! -e "$fake_home/.codex/skills/reflecting-to-root" && ! -L "$fake_home/.codex/skills/reflecting-to-root" ]] || fail "expected broken Codex reflecting-to-root to be pruned"
-  assert_symlink_target "$fake_home/.agents/skills/reflecting-to-root" "$REPO_ROOT/skills/reflecting-to-root"
-
-  rm -rf "$temp_dir"
-}
-
-install_migrates_retired_codex_and_command_targets() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  local user_skill="$temp_dir/user-skill"
-  mkdir -p "$fake_home/.codex/skills" "$fake_home/.codex/rules" "$fake_home/.claude/commands" "$user_skill"
-  mkdir -p "$fake_home/.agents/skills/providing-knowledge" "$fake_home/.agents/skills/leveraging-tasks" "$fake_home/.agents/skills/foreign-skill"
-  printf 'stale\n' > "$fake_home/.agents/skills/providing-knowledge/SKILL.md"
-  ln -s "$REPO_ROOT/skills/providing-knowledge" "$fake_home/.codex/skills/providing-knowledge"
-  ln -s "$user_skill" "$fake_home/.codex/skills/user-skill"
-  ln -s "$REPO_ROOT/claude/commands/model-profile.md" "$fake_home/.claude/commands/model-profile.md"
-  ln -s "$REPO_ROOT/codex/rules/default.rules" "$fake_home/.codex/rules/default.rules"
-
-  run_install "$fake_home"
-
-  [[ ! -L "$fake_home/.codex/skills/providing-knowledge" ]] || fail "expected the retired Codex skill link to be pruned"
-  assert_symlink_target "$fake_home/.codex/skills/user-skill" "$user_skill"
-  [[ ! -e "$fake_home/.claude/commands" ]] || fail "expected the emptied Claude commands directory to be removed"
-  [[ ! -L "$fake_home/.codex/rules/default.rules" ]] || fail "expected the former managed default.rules link to be pruned"
+  assert_absent "$fake_home/.agents/skills/leveraging-tasks"
+  assert_symlink_target "$fake_home/.agents/skills/my-custom-skill" "$user_skill"
   assert_symlink_target "$fake_home/.agents/skills/providing-knowledge" "$REPO_ROOT/skills/providing-knowledge"
-  [[ ! -e "$fake_home/.agents/skills/leveraging-tasks" ]] || fail "expected the retired leveraging-tasks copy to move to the backup"
-  [[ -d "$fake_home/.agents/skills/foreign-skill" ]] || fail "expected an unrelated skill copy to remain"
-  local backup_dir
-  backup_dir="$(find "$fake_home/.local/state/weihung-user-claude/backups" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-  [[ "$(cat "$backup_dir/.agents/skills/providing-knowledge/SKILL.md")" == "stale" ]] || fail "expected the stale skill copy in the backup"
-  [[ -d "$backup_dir/.agents/skills/leveraging-tasks" ]] || fail "expected the retired skill copy in the backup"
+  [[ -n "$(find "$fake_home/.local/state/weihung-user-claude/backups" -path '*/providing-knowledge/SKILL.md')" ]] \
+    || fail "expected the stale skill copy in the backup"
 
   rm -rf "$temp_dir"
 }
 
-install_keeps_one_codebase_memory_skill_for_codex() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local both_home="$temp_dir/both"
-  mkdir -p "$both_home/.codex/skills/codebase-memory" "$both_home/.agents/skills/codebase-memory"
-  printf 'legacy\n' > "$both_home/.codex/skills/codebase-memory/SKILL.md"
-  printf 'current\n' > "$both_home/.agents/skills/codebase-memory/SKILL.md"
-
-  run_install "$both_home"
-
-  [[ ! -e "$both_home/.codex/skills/codebase-memory" ]] || fail "expected the ~/.codex/skills copy to leave"
-  [[ "$(cat "$both_home/.agents/skills/codebase-memory/SKILL.md")" == "current" ]] || fail "expected the ~/.agents/skills copy to stay"
-  local backup_dir
-  backup_dir="$(find "$both_home/.local/state/weihung-user-claude/backups" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-  [[ "$(cat "$backup_dir/.codex/skills/codebase-memory/SKILL.md")" == "legacy" ]] || fail "expected the duplicate in the backup"
-
-  local legacy_home="$temp_dir/legacy-only"
-  mkdir -p "$legacy_home/.codex/skills/codebase-memory"
-  printf 'legacy\n' > "$legacy_home/.codex/skills/codebase-memory/SKILL.md"
-
-  run_install "$legacy_home"
-
-  [[ ! -e "$legacy_home/.codex/skills/codebase-memory" ]] || fail "expected the only copy to leave ~/.codex/skills"
-  [[ "$(cat "$legacy_home/.agents/skills/codebase-memory/SKILL.md")" == "legacy" ]] || fail "expected the only copy to move to ~/.agents/skills"
-
-  rm -rf "$temp_dir"
-}
-
-aborted_install_never_registers_missing_hooks() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude/agents"
-  printf 'existing\n' > "$fake_home/.claude/agents/security-reviewer.md"
-
-  if run_install "$fake_home"; then
-    fail "expected install to fail when a managed agent already exists without --force"
-  fi
-
-  assert_registered_hooks_runnable "$fake_home"
-
-  rm -rf "$temp_dir"
-}
-
-install_drops_registration_left_by_an_older_fragment() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "hooks": {
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$HOME/.claude/hooks/log-legacy.sh\"",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF
-
-  run_install "$fake_home"
-
-  assert_registered_hooks_runnable "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-assert "Notification" not in settings["hooks"], settings
-assert "Stop" in settings["hooks"], settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-install_keeps_unmanaged_hook_registrations() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.claude/hooks"
-  printf '#!/usr/bin/env bash\nexit 0\n' > "$fake_home/.claude/hooks/third-party.sh"
-  chmod +x "$fake_home/.claude/hooks/third-party.sh"
-  cat > "$fake_home/.claude/settings.json" <<'EOF'
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$HOME/.claude/hooks/third-party.sh\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF
-
-  run_install "$fake_home"
-
-  python3 - <<PY
-import json
-from pathlib import Path
-settings = json.loads(Path("$fake_home/.claude/settings.json").read_text())
-entry = settings["hooks"]["SessionStart"][0]
-assert entry["matcher"] == "*", settings
-assert entry["hooks"][0]["command"] == '"\$HOME/.claude/hooks/third-party.sh"', settings
-PY
-
-  rm -rf "$temp_dir"
-}
-
-install_sets_only_managed_codex_keys() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  local fake_home="$temp_dir/home"
-  mkdir -p "$fake_home/.codex"
-  cat > "$fake_home/.codex/config.toml" <<'EOF'
-model = "gpt-5.6"
-model_auto_compact_token_limit = 500000
-# user comment
-
-[profiles.deep]
-model_auto_compact_token_limit = 900000
-
-[mcp_servers.docs]
-command = "docs-mcp"
-
-[plugins."custom@example"]
-enabled = true
-
-[tui]
-status_line = ["model"]
-theme = "user-theme"
-
-[tui.model_availability_nux]
-"gpt-5.5" = 2
-EOF
-
-  run_install "$fake_home"
-  run_install "$fake_home"
-
-  python3 - <<PY
-import tomllib
-from pathlib import Path
-text = Path("$fake_home/.codex/config.toml").read_text()
-config = tomllib.loads(text)
-managed = tomllib.loads(Path("$REPO_ROOT/config/codex-managed.toml").read_text())
-assert config["model_auto_compact_token_limit"] == 300000, text
-assert config["model"] == "gpt-5.6", text
-assert config["profiles"]["deep"]["model_auto_compact_token_limit"] == 900000, text
-assert config["mcp_servers"]["docs"]["command"] == "docs-mcp", text
-assert config["plugins"]["custom@example"]["enabled"] is True, text
-for plugin, values in managed["plugins"].items():
-    assert values["enabled"] is False, (plugin, text)
-    assert config["plugins"][plugin]["enabled"] is False, (plugin, text)
-assert "# user comment" in text, text
-assert text.count("model_auto_compact_token_limit = 300000") == 1, text
-assert config["tui"]["status_line"] == managed["tui"]["status_line"], text
-assert config["tui"]["theme"] == "user-theme", text
-assert config["tui"]["model_availability_nux"]["gpt-5.5"] == 2, text
-assert text.count("status_line =") == 1, text
-PY
-
-  rm -rf "$temp_dir"
-}
-
-run_all_tests() {
-  install_sets_only_managed_codex_keys
-  fresh_install_creates_expected_symlinks
-  aborted_install_never_registers_missing_hooks
-  install_drops_registration_left_by_an_older_fragment
-  install_keeps_unmanaged_hook_registrations
-  conflict_without_force_fails
-  force_replaces_and_backs_up_conflicts
-  existing_settings_are_merged_not_replaced
-  fresh_install_manages_explicit_model_settings
-  former_managed_opus_advisor_is_removed_on_upgrade
-  user_selected_advisor_survives_install
-  legacy_worker_pin_is_replaced_by_opus_main
-  legacy_only_worker_pin_removes_empty_env
-  user_selected_worker_model_survives_install
-  non_object_env_does_not_break_install
-  install_removes_only_repository_managed_retired_safety_reviewer
-  install_preserves_user_owned_safety_reviewer
-  install_removes_only_repository_managed_retired_tdd_skills
-  install_removes_only_repository_managed_retired_complaint_skills
-  install_preserves_user_owned_tdd_skills
-  install_prunes_obsolete_and_broken_managed_skills
-  install_migrates_retired_codex_and_command_targets
-  install_keeps_one_codebase_memory_skill_for_codex
-  target_matrix_preserves_each_surface
-}
-
-target_matrix_preserves_each_surface() {
-  python3 - "$INSTALL_SCRIPT" "$REPO_ROOT/scripts/uninstall.sh" <<'PY'
-import hashlib
+install_preserves_user_pi_state() {
+  python3 - "$INSTALL_SCRIPT" "$UNINSTALL_SCRIPT" <<'PY'
 import json
 import os
-from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 install, uninstall = sys.argv[1:]
+
 
 def run(script, home, *args):
     env = {**os.environ, "HOME": str(home)}
     subprocess.run(["bash", script, "--home", str(home), "--skip-external", *args], env=env, check=True, stdout=subprocess.DEVNULL)
 
-def snapshot(home):
-    return {str(path.relative_to(home)): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in home.rglob("*") if path.is_file() and not path.is_symlink()}
-
-for target in ("claude", "codex", "gemini", "pi"):
-    with tempfile.TemporaryDirectory() as directory:
-        home = Path(directory)
-        run(install, home, "--target", target)
-        assert (home / {"claude": ".claude/CLAUDE.md", "codex": ".codex/AGENTS.md", "gemini": ".gemini/config/AGENTS.md", "pi": ".pi/agent/AGENTS.md"}[target]).exists(), target
-        for other, path in {"claude": ".claude/CLAUDE.md", "codex": ".codex/AGENTS.md", "gemini": ".gemini/config/AGENTS.md", "pi": ".pi/agent/AGENTS.md"}.items():
-            if other != target:
-                assert not (home / path).exists(), (target, other)
-        first = snapshot(home)
-        run(install, home, "--target", target)
-        assert snapshot(home) == first, target
-        if target == "pi":
-            text = (home / ".pi/agent/AGENTS.md").read_text()
-            assert all(word not in text for word in ("@shared/", "boss-say", "straw-boss", "/codex:rescue"))
-            settings = json.loads((home / ".pi/agent/settings.json").read_text())
-            assert len(settings["packages"]) == 10, settings
-            assert settings["packages"][0] == "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941", settings
-            assert settings["defaultProvider"] == "claude-bridge", settings
-            assert settings["theme"] == "catppuccin-mocha", settings
-            assert settings["editorPaddingX"] == 1, settings
-            assert settings["collapseChangelog"] is True, settings
-            assert settings["terminal"]["showTerminalProgress"] is True, settings
-            assert settings["powerline"]["queue"]["compactPromptMode"] == "native", settings
-            mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
-            assert mcp["settings"]["hostConfigDiscovery"] == "on", mcp
-            config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
-            assert config["status"] == {"enabled": True}, config
-            assert config["panes"]["mode"] == "split", config
-            assert config["panes"]["direction"] == "right", config
-        run(uninstall, home, "--target", target)
-        assert not (home / {"claude": ".claude/CLAUDE.md", "codex": ".codex/AGENTS.md", "gemini": ".gemini/config/AGENTS.md", "pi": ".pi/agent/AGENTS.md"}[target]).exists(), target
-
-with tempfile.TemporaryDirectory() as directory:
-    home = Path(directory)
-    run(install, home)
-    assert not (home / ".pi/agent/AGENTS.md").exists()
-    run(install, home, "--target", "pi")
-    run(uninstall, home, "--target", "claude,codex,gemini")
-    assert (home / ".pi/agent/AGENTS.md").exists()
-    assert (home / ".agents/skills/managing-model-preferences").is_symlink()
-    run(uninstall, home, "--target", "pi")
-    assert not (home / ".agents/skills/managing-model-preferences").exists()
-
-with tempfile.TemporaryDirectory() as directory:
-    home = Path(directory)
-    run(install, home, "--target", "full")
-    assert all((home / path).exists() for path in (".claude/CLAUDE.md", ".codex/AGENTS.md", ".gemini/config/AGENTS.md", ".pi/agent/AGENTS.md"))
-    run(uninstall, home, "--target", "pi")
-    assert (home / ".agents/skills/managing-model-preferences").is_symlink()
-    run(uninstall, home, "--target", "claude", "--target", "codex,gemini")
-    assert not (home / ".agents/skills/managing-model-preferences").exists()
 
 with tempfile.TemporaryDirectory() as directory:
     home = Path(directory)
@@ -875,14 +197,13 @@ with tempfile.TemporaryDirectory() as directory:
     config.parent.mkdir(parents=True, exist_ok=True)
     original_models = {"default": "user/model", "agents": {"scout": "user/scout"}}
     config.write_text(json.dumps({"models": original_models, "panes": {"mode": "tab"}, "other": True}))
-    run(install, home, "--target", "pi", "--force")
+    run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
     assert any(package.startswith("git:github.com/elidickinson/pi-claude-bridge@227f5eb") for package in installed_packages), installed_packages
-    applied = json.loads(config.read_text())
-    assert applied["models"]["agents"] == original_models["agents"], applied
+    assert json.loads(config.read_text())["models"]["agents"] == original_models["agents"]
     subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
-    run(uninstall, home, "--target", "pi")
+    run(uninstall, home)
     assert (agent / "AGENTS.md").read_text() == "user instructions\n"
     settings = json.loads((agent / "settings.json").read_text())
     assert settings["packages"] == ["npm:pi-claude-bridge", "npm:user-package"], settings
@@ -890,17 +211,27 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["terminal"] == {"showImages": False}, settings
     assert settings["powerline"] == {"welcome": False}, settings
     assert json.loads(config.read_text()) == {"models": original_models, "panes": {"mode": "tab"}, "other": True}
+PY
+}
 
+apply_profile_follows_the_active_strategy() {
+  python3 - "$REPO_ROOT" <<'PY'
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+source = Path(sys.argv[1])
 with tempfile.TemporaryDirectory() as directory:
     temporary = Path(directory)
-    source = Path(install).resolve().parent.parent
     clone = temporary / "repo"
-    for relative in ("CLAUDE.md", "pi/AGENTS.md.in", "pi/model-profiles.json",
-                     "scripts/pi-target.py", "skills/managing-model-preferences/model-preference-profile.md"):
+    for relative in ("pi/AGENTS.md.in", "pi/model-profiles.json", "scripts/pi-target.py",
+                     "skills/managing-model-preferences/model-preference-profile.md"):
         destination = clone / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / relative, destination)
-    shutil.copytree(source / "shared", clone / "shared")
     home = temporary / "home"
     script = clone / "scripts/pi-target.py"
     subprocess.run(["python3", str(script), "install", "--home", str(home), "--skip-external"], check=True)
@@ -918,8 +249,20 @@ with tempfile.TemporaryDirectory() as directory:
 PY
 }
 
+run_all_tests() {
+  fresh_install_creates_expected_links
+  install_is_idempotent_and_writes_pi_settings
+  target_option_is_rejected
+  conflict_without_force_fails
+  force_replaces_and_backs_up_conflicts
+  install_prunes_retired_links_and_retires_skill_copies
+  install_preserves_user_pi_state
+  apply_profile_follows_the_active_strategy
+}
+
 if [[ "${1:-}" == "" ]]; then
   run_all_tests
+  printf 'install: pass\n'
 else
   "$1"
 fi

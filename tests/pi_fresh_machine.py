@@ -19,7 +19,7 @@ def write(path, content, executable=False):
 
 
 def run(script, home, env):
-    return subprocess.run(["bash", str(ROOT / "scripts" / script), "--home", str(home), "--target", "pi"],
+    return subprocess.run(["bash", str(ROOT / "scripts" / script), "--home", str(home)],
                           env=env, check=True, capture_output=True, text=True)
 
 

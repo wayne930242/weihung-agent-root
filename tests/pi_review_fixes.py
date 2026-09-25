@@ -60,9 +60,9 @@ class PiReviewFixes(unittest.TestCase):
             agent.mkdir(parents=True)
             settings_path = agent / "settings.json"
             settings_path.write_text(json.dumps({"defaultProvider": None, "theme": None}))
-            run_script("install.sh", home, "--target", "pi", "--skip-external")
-            run_script("install.sh", home, "--target", "pi", "--skip-external")
-            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            run_script("install.sh", home, "--skip-external")
+            run_script("install.sh", home, "--skip-external")
+            run_script("uninstall.sh", home, "--skip-external")
             restored = json.loads(settings_path.read_text())
             self.assertIn("defaultProvider", restored)
             self.assertIsNone(restored["defaultProvider"])
@@ -84,13 +84,20 @@ class PiReviewFixes(unittest.TestCase):
                 self.assertIn(f"[{name}](strategies/{name}.md)", catalog)
                 self.assertNotIn("agent-kind", content)
 
-    def test_plain_uninstall_keeps_shared_skills_for_pi(self):
+    def test_install_links_skills_and_rules_then_uninstall_removes_them(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
-            run_script("install.sh", home, "--target", "full", "--skip-external")
+            run_script("install.sh", home, "--skip-external")
+            self.assertEqual((home / ".pi/agent/rules").readlink(), ROOT / "rules")
+            self.assertEqual((home / ".agents/skills/managing-model-preferences").readlink(), ROOT / "skills/managing-model-preferences")
+            instructions = (home / ".pi/agent/AGENTS.md").read_text()
+            for rule in (ROOT / "rules").glob("*.md"):
+                self.assertIn(f"`{rule.name}`", instructions)
+                self.assertFalse(rule.read_text().startswith("---"), rule.name)
             run_script("uninstall.sh", home, "--skip-external")
-            self.assertTrue((home / ".pi/agent/.weihung-user-claude.json").exists())
-            self.assertTrue((home / ".agents/skills/managing-model-preferences").is_symlink())
+            self.assertFalse((home / ".pi/agent/rules").exists())
+            self.assertFalse((home / ".agents").exists())
+            self.assertFalse((home / ".pi/agent/.weihung-user-claude.json").exists())
 
     def test_handoff_commits_after_receiver_starts(self):
         spec = importlib.util.spec_from_file_location("pi_dispatch", ROOT / "scripts/pi-dispatch.py")
@@ -170,11 +177,11 @@ class PiReviewFixes(unittest.TestCase):
             agent = home / ".pi/agent"
             agent.mkdir(parents=True)
             (agent / "settings.json").write_text(json.dumps({"packages": [old, "npm:user-package"]}))
-            run_script("install.sh", home, "--target", "pi", "--skip-external")
+            run_script("install.sh", home, "--skip-external")
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertNotIn(old, installed)
             self.assertEqual(sum("pi-claude-bridge" in item for item in installed), 1)
-            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            run_script("uninstall.sh", home, "--skip-external")
             self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], [old, "npm:user-package"])
 
     def test_external_git_switch_keeps_the_new_checkout(self):
@@ -227,14 +234,14 @@ class PiReviewFixes(unittest.TestCase):
             marker = home / ".pi/agent/.weihung-user-claude.json"
             self.assertTrue(marker.exists())
             self.assertFalse(json.loads(marker.read_text())["integration_installed"])
-            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            run_script("uninstall.sh", home, "--skip-external")
             self.assertFalse(marker.exists())
             (home / "fail-once").write_text("")
             failed = subprocess.run(command, env={**os.environ, "HOME": str(home), **env},
                                     text=True, capture_output=True)
             self.assertNotEqual(failed.returncode, 0)
             subprocess.run(command, env={**os.environ, "HOME": str(home), **env}, check=True)
-            run_script("uninstall.sh", home, "--target", "pi", "--skip-external")
+            run_script("uninstall.sh", home, "--skip-external")
             self.assertFalse(marker.exists())
 
 

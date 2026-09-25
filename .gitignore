@@ -1,69 +1,9 @@
-# Sensitive / local-only
-settings.json
-settings.local.json
-CLAUDE.local.md
-.claude/
-
-# Auto-generated
-todos/
-statsig/
-shell-snapshots/
-config/
-!config/
-!config/*.json
-!config/*.toml
-projects/
-cache/
-chrome/
-debug/
-history.jsonl
-hooks/
-!hooks/
-!hooks/*.sh
-paste-cache/
-plans/
-!docs/
-!docs/plans/
-!docs/plans/*.md
-sessions/
-stats-cache.json
-statusline.sh
-!claude/statusline.sh
-tasks/
-telemetry/
-usage-data/
-
-# Plugins managed separately
-plugins/
-
-# Backups
-backups/
-
 # Local tooling scratch
-.superpowers/
 scratch/
+__pycache__/
 
 # OS
 .DS_Store
-
-# skills/open-gui: Node.js sidecar + Next.js frontend build artifacts
-skills/open-gui/server/sidecar/node_modules/
-skills/open-gui/web/node_modules/
-skills/open-gui/web/.next/
-skills/open-gui/web/out/
-
-# Legacy (SuperClaude)
-_CLAUDE.md
-PRINCIPLES.md
-RULES.md
-FLAGS.md
-RESEARCH_CONFIG.md
-BUSINESS_PANEL_EXAMPLES.md
-BUSINESS_SYMBOLS.md
-commands/sc/
-# Existing user skills (not part of this system)
-skills/agent-browser/
-skills/find-skills
 
 # Vercel model-profile console
 web/node_modules/

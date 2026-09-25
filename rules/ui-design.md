@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.{vue,tsx,jsx,svelte,html,css,scss,sass}"
----
-
 # UI Design
 
 - Cards and panels carry a uniform border on all four sides, or no border at all.

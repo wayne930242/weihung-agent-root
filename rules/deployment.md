@@ -1,6 +1,3 @@
----
----
-
 # Deployment
 
 - Never `rsync --delete` without verifying exclusion of runtime files (.token-override, state files, .env).

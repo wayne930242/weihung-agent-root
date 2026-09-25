@@ -21,7 +21,7 @@ def write(path, content, executable=False):
 
 
 def run(script, home, env, *args):
-    subprocess.run(["bash", str(ROOT / "scripts" / script), "--home", str(home), "--target", "pi", *args],
+    subprocess.run(["bash", str(ROOT / "scripts" / script), "--home", str(home), *args],
                    env=env, check=True, capture_output=True, text=True)
 
 
@@ -77,13 +77,13 @@ if '--prefix' in args:
     write(agent / "prompts/ttt-status.md", "user prompt\n")
     write(agent / "skills/infra-owner/SKILL.md", "user skill\n")
     write(agent / "extensions/moshi-hooks.ts", "user extension\n")
-    failed = subprocess.run(["bash", str(ROOT / "scripts/install.sh"), "--home", str(home), "--target", "pi", "--force"],
+    failed = subprocess.run(["bash", str(ROOT / "scripts/install.sh"), "--home", str(home), "--force"],
                             env={**env, "TEST_NO_TTT_CLI": "1"}, capture_output=True, text=True)
     assert failed.returncode != 0 and "CLI is missing" in failed.stderr
     assert json.loads((agent / ".weihung-user-claude.json").read_text())["ported_resources"]
     run("install.sh", home, env)
     instructions = (agent / "AGENTS.md").read_text()
-    assert 500 <= len(instructions.split()) <= 700
+    assert 500 <= len(instructions.split()) <= 750
     assert instructions.count("## Code discovery") == 1
     assert instructions.count("Commit messages contain no AI tool attribution.") == 1
     assert "@shared/" not in instructions

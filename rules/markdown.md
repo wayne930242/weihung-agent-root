@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.md"
----
-
 # Markdown
 
 - One sentence per line for clean diffs.

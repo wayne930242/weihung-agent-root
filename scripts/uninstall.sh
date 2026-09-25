@@ -4,17 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
-HOOKS_CONFIG="$REPO_ROOT/config/claude-hooks.json"
-SETTINGS_CONFIG="$REPO_ROOT/config/claude-settings.json"
-CODEX_CONFIG="$REPO_ROOT/config/codex-managed.toml"
-CLAUDE_AGENTS_DIR="$REPO_ROOT/claude/agents"
-CLAUDE_HOOKS_DIR="$REPO_ROOT/claude/hooks"
-CODEX_AGENTS_DIR="$REPO_ROOT/codex/agents"
-CODEX_RULES_DIR="$REPO_ROOT/codex/rules"
-CODEX_HOOKS_DIR="$REPO_ROOT/codex/hooks"
-SHARED_DIR="$REPO_ROOT/shared"
 SKILLS_DIR="$REPO_ROOT/skills"
-RULES_DIR="$REPO_ROOT/rules"
 
 TARGET_HOME="${HOME}"
 BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
@@ -22,16 +12,15 @@ SKIP_EXTERNAL=0
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/uninstall.sh [--home PATH] [--target claude,codex,gemini,pi,full] [--skip-external]
+Usage: bash scripts/uninstall.sh [--home PATH] [--skip-external]
 
 Uninstall flow:
-  - restore managed files from the latest backup directory when a backup exists
-  - otherwise remove repo-managed symlinks
-  - remove repo-managed Claude hook entries from ~/.claude/settings.json
-  - drop current managed Claude settings when they still hold the installed value
-  - drop managed top-level keys from ~/.codex/config.toml when they still hold the installed value
+  - restore each managed link from the latest backup directory when a backup exists
+  - otherwise remove the repository links in ~/.agents/skills and ~/.pi/agent/rules
+  - run scripts/pi-target.py uninstall, which removes this repository's pi
+    packages and resources and restores the pi settings it changed
 
-This script does not modify ~/.gemini/config/config.json.
+The pi binary, its login state, and codebase-memory-mcp stay installed.
 EOF
 }
 
@@ -82,16 +71,6 @@ restore_or_remove() {
   fi
 }
 
-remove_retired_repo_link() {
-  local dest="$1"
-  local former_src="$2"
-
-  if [[ -L "$dest" ]] && [[ "$(readlink "$dest")" == "$former_src" ]]; then
-    rm "$dest"
-    log "Removed retired repository link $dest"
-  fi
-}
-
 prune_managed_links() {
   local target_dir="$1"
   [[ -d "$target_dir" ]] || return 0
@@ -106,270 +85,12 @@ prune_managed_links() {
   done < <(find "$target_dir" -maxdepth 1 -mindepth 1 -type l | sort)
 }
 
-cleanup_empty_dirs() {
-  local dirs=(
-    "$TARGET_HOME/.claude/agents"
-    "$TARGET_HOME/.claude/commands"
-    "$TARGET_HOME/.claude/hooks"
-    "$TARGET_HOME/.claude/shared"
-    "$TARGET_HOME/.claude/skills"
-    "$TARGET_HOME/.claude/rules"
-    "$TARGET_HOME/.claude/plugins"
-    "$TARGET_HOME/.codex/agents"
-    "$TARGET_HOME/.codex/rules"
-    "$TARGET_HOME/.codex/hooks"
-    "$TARGET_HOME/.codex/skills"
-    "$TARGET_HOME/.agents/skills"
-    "$TARGET_HOME/.agents"
-    "$TARGET_HOME/.gemini/config/skills"
-    "$TARGET_HOME/.gemini/config/rules"
-    "$TARGET_HOME/.gemini/config/plugins"
-    "$TARGET_HOME/.gemini/config"
-    "$TARGET_HOME/.gemini"
-  )
-
-  for dir in "${dirs[@]}"; do
-    rmdir "$dir" 2>/dev/null || true
-  done
-}
-
-clean_claude_settings() {
-  local settings_path="$1"
-
-  if [[ ! -f "$settings_path" ]]; then
-    return
-  fi
-
-  python3 - "$settings_path" "$HOOKS_CONFIG" "$CLAUDE_HOOKS_DIR" "$TARGET_HOME" <<'PY'
-import json
-import re
-import sys
-from pathlib import Path
-
-settings_path = Path(sys.argv[1])
-fragment_path = Path(sys.argv[2])
-managed_hooks_dir = Path(sys.argv[3])
-target_home = sys.argv[4]
-
-settings = json.loads(settings_path.read_text(encoding="utf-8"))
-fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
-
-# Every script under claude/hooks/ is about to be removed, so its registration has
-# to go too - even when the entry no longer matches the current fragment because an
-# older release registered it. A surviving entry fails with exit 127 on every event.
-managed_names = {path.name for path in managed_hooks_dir.glob("*.sh")}
-managed_pattern = re.compile(
-    r"(?:\$HOME|%s)/\.claude/hooks/([A-Za-z0-9._-]+)" % re.escape(target_home)
-)
-
-
-def is_managed(command):
-    return any(name in managed_names for name in managed_pattern.findall(command))
-
-
-fragment_hooks = fragment.get("hooks", {})
-current_hooks = settings.get("hooks")
-if isinstance(current_hooks, dict):
-    for event_name in list(current_hooks):
-        current_entries = current_hooks.get(event_name)
-        if not isinstance(current_entries, list):
-            continue
-
-        fragment_serialized = {
-            json.dumps(entry, sort_keys=True)
-            for entry in fragment_hooks.get(event_name, [])
-        }
-
-        filtered_entries = []
-        for entry in current_entries:
-            if json.dumps(entry, sort_keys=True) in fragment_serialized:
-                continue
-            kept = [h for h in entry.get("hooks", []) if not is_managed(h.get("command", ""))]
-            if kept:
-                filtered_entries.append({**entry, "hooks": kept})
-
-        if filtered_entries:
-            current_hooks[event_name] = filtered_entries
-        else:
-            current_hooks.pop(event_name, None)
-
-    if not current_hooks:
-        settings.pop("hooks", None)
-
-fragment_status = fragment.get("statusLine")
-if fragment_status is not None and settings.get("statusLine") == fragment_status:
-    settings.pop("statusLine", None)
-
-if settings:
-    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-else:
-    settings_path.unlink()
-PY
-
-  log "Cleaned managed Claude hooks from $settings_path"
-}
-
-clean_managed_settings() {
-  local settings_path="$1"
-  local fragment_path="$2"
-
-  if [[ ! -f "$settings_path" || ! -f "$fragment_path" ]]; then
-    return
-  fi
-
-  python3 - "$settings_path" "$fragment_path" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-settings_path = Path(sys.argv[1])
-fragment_path = Path(sys.argv[2])
-
-settings = json.loads(settings_path.read_text(encoding="utf-8"))
-fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
-
-for key, value in fragment.items():
-    if settings.get(key) == value:
-        settings.pop(key, None)
-
-if settings:
-    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-else:
-    settings_path.unlink()
-PY
-
-  log "Cleaned managed Claude settings from $settings_path"
-}
-
-clean_codex_config() {
-  local config_path="$1"
-  local fragment_path="$2"
-
-  if [[ ! -f "$config_path" || ! -f "$fragment_path" ]]; then
-    return
-  fi
-
-  python3 - "$config_path" "$fragment_path" <<'PY'
-import re
-import sys
-import tomllib
-from pathlib import Path
-
-config_path = Path(sys.argv[1])
-fragment = tomllib.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-lines = config_path.read_text(encoding="utf-8").splitlines()
-
-
-def holds_installed_value(line, values):
-    try:
-        parsed = tomllib.loads(line)
-    except tomllib.TOMLDecodeError:
-        return False
-    return len(parsed) == 1 and any(parsed.get(key) == value for key, value in values.items())
-
-
-def header_path(line):
-    """A table header's key path, e.g. `[plugins."a@b"]` -> ["plugins", "a@b"].
-
-    tomllib nests a dotted header, so the fragment has to be walked segment by
-    segment; matching the raw header text against the fragment's top-level keys
-    leaves every `[plugins."<id>"]` table the installer wrote behind.
-    """
-    match = re.match(r"^\s*\[\s*([^\[\]]+?)\s*\]\s*(#.*)?$", line)
-    if not match:
-        return None
-    path, segment, quote = [], "", None
-    for char in match.group(1):
-        if quote is not None:
-            if char == quote:
-                quote = None
-            else:
-                segment += char
-        elif char in "\"'":
-            quote = char
-        elif char == ".":
-            path.append(segment.strip())
-            segment = ""
-        else:
-            segment += char
-    path.append(segment.strip())
-    return path
-
-
-def fragment_table(path):
-    values = fragment
-    for segment in path:
-        if not isinstance(values, dict):
-            return None
-        values = values.get(segment)
-    return values
-
-
-# Split into sections: the top-level lines, then each header with its body.
-sections = [[None, []]]
-for line in lines:
-    if line.lstrip().startswith("["):
-        sections.append([line, []])
-    else:
-        sections[-1][1].append(line)
-
-kept = []
-for header, body in sections:
-    path = None if header is None else header_path(header)
-    values = fragment if header is None else (fragment_table(path) if path else None)
-    if isinstance(values, dict):
-        body = [line for line in body if not holds_installed_value(line, values)]
-        # Drop a managed table that the cleanup left empty.
-        if header is not None and not any(line.strip() for line in body):
-            continue
-    kept += ([header] if header is not None else []) + body
-while kept and not kept[-1].strip():
-    kept.pop()
-if any(line.strip() for line in kept):
-    config_path.write_text("\n".join(kept) + "\n", encoding="utf-8")
-else:
-    config_path.unlink()
-PY
-
-  log "Cleaned managed Codex settings from $config_path"
-}
-
-TARGETS=()
-TARGET_SPECIFIED=0
-add_targets() {
-  local value="$1" target item found
-  local parts=()
-  IFS=, read -r -a parts <<< "$value"
-  for target in "${parts[@]}"; do
-    case "$target" in
-      full) add_targets claude,codex,gemini,pi ;;
-      claude|codex|gemini|pi)
-        found=0
-        for item in "${TARGETS[@]}"; do [[ "$item" == "$target" ]] && found=1; done
-        if [[ "$found" -eq 0 ]]; then TARGETS+=("$target"); fi ;;
-      *) fail "invalid target: $target" ;;
-    esac
-  done
-}
-
-selected() {
-  local item
-  for item in "${TARGETS[@]}"; do [[ "$item" == "$1" ]] && return 0; done
-  return 1
-}
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home)
       [[ $# -ge 2 ]] || fail "--home requires a path"
       TARGET_HOME="$2"
       BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
-      shift 2
-      ;;
-    --target)
-      [[ $# -ge 2 ]] || fail "--target requires a value"
-      TARGET_SPECIFIED=1
-      add_targets "$2"
       shift 2
       ;;
     --skip-external)
@@ -386,137 +107,23 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$TARGET_SPECIFIED" -eq 0 ]]; then add_targets claude,codex,gemini; fi
-[[ "${#TARGETS[@]}" -gt 0 ]] || fail "--target requires a value"
-
-REMOVE_SHARED=0
-if selected codex && selected pi; then
-  REMOVE_SHARED=1
-elif selected codex && [[ ! -f "$TARGET_HOME/.pi/agent/.weihung-user-claude.json" ]]; then
-  REMOVE_SHARED=1
-elif selected pi && [[ ! -L "$TARGET_HOME/.codex/AGENTS.md" ]]; then
-  REMOVE_SHARED=1
-fi
-
 LATEST_BACKUP_DIR="$(latest_backup_dir || true)"
 if [[ -n "$LATEST_BACKUP_DIR" ]]; then
   log "Using latest backup directory: $LATEST_BACKUP_DIR"
 fi
 
-if selected codex; then remove_retired_repo_link \
-  "$TARGET_HOME/.codex/agents/safety-reviewer.toml" \
-  "$REPO_ROOT/codex/agents/safety-reviewer.toml"; fi
-
-if selected claude; then remove_retired_repo_link \
-  "$TARGET_HOME/.claude/skills/tdd" \
-  "$REPO_ROOT/skills/tdd"; fi
-if selected codex; then remove_retired_repo_link \
-  "$TARGET_HOME/.codex/skills/tdd" \
-  "$REPO_ROOT/skills/tdd"; fi
-if selected gemini; then remove_retired_repo_link \
-  "$TARGET_HOME/.gemini/config/skills/tdd" \
-  "$REPO_ROOT/skills/tdd"; fi
-if selected claude; then remove_retired_repo_link \
-  "$TARGET_HOME/.claude/skills/refining-from-complaints" \
-  "$REPO_ROOT/skills/refining-from-complaints"; fi
-if selected codex; then remove_retired_repo_link \
-  "$TARGET_HOME/.codex/skills/refining-from-complaints" \
-  "$REPO_ROOT/skills/refining-from-complaints"; fi
-if selected gemini; then remove_retired_repo_link \
-  "$TARGET_HOME/.gemini/config/skills/refining-from-complaints" \
-  "$REPO_ROOT/skills/refining-from-complaints"; fi
-
-# Clean first: a hook entry in settings.json must never outlive a removed script,
-# or every matching event fails with exit 127.
-if selected claude; then
-  clean_managed_settings "$TARGET_HOME/.claude/settings.json" "$SETTINGS_CONFIG"
-  clean_claude_settings "$TARGET_HOME/.claude/settings.json"
-fi
-if selected codex; then clean_codex_config "$TARGET_HOME/.codex/config.toml" "$CODEX_CONFIG"; fi
-
-if selected claude; then
-  restore_or_remove "$TARGET_HOME/.claude/CLAUDE.md"
-  restore_or_remove "$TARGET_HOME/.claude/statusline.sh"
-fi
-if selected codex; then
-  restore_or_remove "$TARGET_HOME/.codex/AGENTS.md"
-  restore_or_remove "$TARGET_HOME/.codex/hooks.json"
-fi
-if selected gemini; then
-  restore_or_remove "$TARGET_HOME/.gemini/config/AGENTS.md"
-  restore_or_remove "$TARGET_HOME/.gemini/config/GEMINI.md"
-  restore_or_remove "$TARGET_HOME/.gemini/config/skills.json"
-fi
-
-while IFS= read -r file; do
-  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/agents/$(basename "$file")"; fi
-done < <(find "$CLAUDE_AGENTS_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
-while IFS= read -r file; do
-  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/hooks/$(basename "$file")"; fi
-done < <(find "$CLAUDE_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
-
-while IFS= read -r file; do
-  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/shared/$(basename "$file")"; fi
-done < <(find "$SHARED_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
 while IFS= read -r skill_dir; do
-  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/skills/$(basename "$skill_dir")"; fi
-  if [[ "$REMOVE_SHARED" -eq 1 ]]; then restore_or_remove "$TARGET_HOME/.agents/skills/$(basename "$skill_dir")"; fi
-  if selected gemini; then restore_or_remove "$TARGET_HOME/.gemini/config/skills/$(basename "$skill_dir")"; fi
+  restore_or_remove "$TARGET_HOME/.agents/skills/$(basename "$skill_dir")"
 done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
-
-while IFS= read -r file; do
-  if selected codex; then restore_or_remove "$TARGET_HOME/.codex/agents/$(basename "$file")"; fi
-done < <(find "$CODEX_AGENTS_DIR" -maxdepth 1 -type f -name '*.toml' | sort)
-
-while IFS= read -r file; do
-  if selected codex; then restore_or_remove "$TARGET_HOME/.codex/rules/$(basename "$file")"; fi
-done < <(find "$CODEX_RULES_DIR" -maxdepth 1 -type f -name '*.rules' | sort)
-
-while IFS= read -r file; do
-  if selected claude; then restore_or_remove "$TARGET_HOME/.claude/rules/$(basename "$file")"; fi
-  if selected gemini; then restore_or_remove "$TARGET_HOME/.gemini/config/rules/$(basename "$file")"; fi
-done < <(find "$RULES_DIR" -maxdepth 1 -type f -name '*.md' | sort)
-
-while IFS= read -r file; do
-  if selected codex; then restore_or_remove "$TARGET_HOME/.codex/hooks/$(basename "$file")"; fi
-done < <(find "$CODEX_HOOKS_DIR" -maxdepth 1 -type f -name '*.sh' | sort)
-
-if selected claude; then
-  prune_managed_links "$TARGET_HOME/.claude/skills"
-  prune_managed_links "$TARGET_HOME/.claude/agents"
-  prune_managed_links "$TARGET_HOME/.claude/commands"
-  prune_managed_links "$TARGET_HOME/.claude/hooks"
-  prune_managed_links "$TARGET_HOME/.claude/shared"
-  prune_managed_links "$TARGET_HOME/.claude/rules"
-fi
-if selected gemini; then
-  prune_managed_links "$TARGET_HOME/.gemini/config/skills"
-  prune_managed_links "$TARGET_HOME/.gemini/config/rules"
-fi
-if [[ "$REMOVE_SHARED" -eq 1 ]]; then prune_managed_links "$TARGET_HOME/.agents/skills"; fi
-if selected codex; then
-  prune_managed_links "$TARGET_HOME/.codex/skills"
-  prune_managed_links "$TARGET_HOME/.codex/agents"
-  prune_managed_links "$TARGET_HOME/.codex/rules"
-  prune_managed_links "$TARGET_HOME/.codex/hooks"
+prune_managed_links "$TARGET_HOME/.agents/skills"
+if [[ -L "$TARGET_HOME/.pi/agent/rules" && "$(readlink "$TARGET_HOME/.pi/agent/rules")" == "$REPO_ROOT/rules" ]]; then
+  restore_or_remove "$TARGET_HOME/.pi/agent/rules"
 fi
 
-codex_keeper_plist="$TARGET_HOME/Library/LaunchAgents/com.weihung.codex-plugin-cache-keeper.plist"
-if selected codex && [[ -f "$codex_keeper_plist" ]]; then
-  launchctl bootout "gui/$(id -u)/com.weihung.codex-plugin-cache-keeper" 2>/dev/null || true
-  rm -f "$codex_keeper_plist"
-  log "Removed launch agent com.weihung.codex-plugin-cache-keeper"
-fi
+pi_args=(uninstall --home "$TARGET_HOME")
+if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then pi_args+=(--skip-external); fi
+python3 "$REPO_ROOT/scripts/pi-target.py" "${pi_args[@]}"
 
-
-if selected pi; then
-  pi_args=(uninstall --home "$TARGET_HOME")
-  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then pi_args+=(--skip-external); fi
-  python3 "$REPO_ROOT/scripts/pi-target.py" "${pi_args[@]}"
-fi
-
-if [[ "$TARGET_SPECIFIED" -eq 0 ]]; then cleanup_empty_dirs; fi
+rmdir "$TARGET_HOME/.agents/skills" "$TARGET_HOME/.agents" 2>/dev/null || true
 
 log "Uninstall complete."

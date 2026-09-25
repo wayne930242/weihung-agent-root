@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.py"
----
-
 # Python
 
 - Use type hints on all function signatures. Return type required.

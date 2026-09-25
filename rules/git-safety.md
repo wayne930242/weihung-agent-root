@@ -1,6 +1,3 @@
----
----
-
 # Git Safety
 
 - Force push to any remote branch requires explicit user confirmation before executing — state the exact command and target and wait for approval before running.

@@ -1,6 +1,3 @@
----
----
-
 # Chinese Writing
 
 - Output must read as native Traditional Chinese, not translated text.

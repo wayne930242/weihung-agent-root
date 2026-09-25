@@ -1,85 +1,31 @@
-Never use Simplified Chinese. Always use Traditional Chinese for all communication.
-All prompts and agent instructions must be in English.
+# weihung-user-claude
 
-提示詞、文件與文章應直接陳述期望行為，避免不必要的防禦性用語。
+This repository is the source of truth for one user's pi setup. `scripts/install.sh` links its skills and rules into the home directory, and `scripts/pi-target.py` generates `~/.pi/agent/AGENTS.md` and manages pi settings, packages, and ported resources. It supports only pi; the last multi-harness version is the `legacy-claude-codex` tag.
 
-Source-changing work invokes `aaaav-do` and states its Alignment and Reality anchor before the first production edit.
+## Language
 
-# Routing
+Communicate with the user in Traditional Chinese, never Simplified Chinese. Write code, prompts, skills, rules, and agent instructions in English. Prompts, documents, and articles state the expected behavior directly, without defensive wording.
 
-執行 `boss-say` 或選擇委派模型前，讀取 `~/.agents/skills/managing-model-preferences/model-preference-profile.md`；在本專案內使用 `skills/managing-model-preferences/model-preference-profile.md`。依當期 profile 明確指定模型與 effort。調整偏好使用 `managing-model-preferences` skill。
+## Layout
 
-IMPORTANT: Before responding to a significant request, choose one owner:
+- `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`; `pi-target.py` appends the active model strategy's tiers.
+- `pi/model-profiles.json`: the executable pi model and thinking tiers for each strategy.
+- `pi/extensions/`, `pi/skills/`: this repository's pi package, registered through `package.json`.
+- `skills/`: user skills linked into `~/.agents/skills/`. `managing-model-preferences` owns the strategy catalog, and the console in `web/` reads and switches it through the GitHub API.
+- `rules/`: user-global rules linked to `~/.pi/agent/rules/`. The template indexes every file by the work it covers, so a new rule also needs an entry there.
+- `scripts/pi-dispatch.py`: the dispatch recovery and handoff CLI behind the `dispatch-recovery` and `orchestrator-handoff` skills.
+- `docs/specs/`: durable design records.
 
-- A named or exact specialized skill -> use it.
-- Explanation or comparison -> `providing-knowledge`.
-- Research -> `investigating`.
-- Check, audit, or review -> `inspecting`.
-- Human feedback on working output -> `human-feedback`.
-- Any source-changing work -> `aaaav-do`.
-- A user-owned unresolved decision -> `grilling`.
+## Working here
 
-Specialized skills return source-changing work to `aaaav-do`; the
-finding travels, the work does not restart.
+- Source changes go through `aaaav-do` with an Alignment and Reality anchor before the first production edit.
+- Keep the user-root layer thin: manage only behavior that is stable across projects and worth versioning. Machine credentials, login state, and project-specific workflows stay outside this repository.
+- Installers never overwrite user files silently. A conflict fails unless `--force` is passed, which moves the old target to `~/.local/state/weihung-user-claude/backups/`, and uninstall restores what install replaced.
+- Run the tests that cover a change before committing: `bash tests/install.sh`, `bash tests/uninstall.sh`, `python3 tests/<name>.py`, and `node --experimental-strip-types --test tests/<name>.mjs`. Exercise installer changes with `--home` pointing at a temporary directory before running them on the real home.
+- After changing `pi/AGENTS.md.in`, `pi/model-profiles.json`, or the active strategy, run `bash scripts/install.sh` (or `python3 scripts/pi-target.py apply-profile --home "$HOME"` for a strategy switch) and reload pi.
 
-# Working Agreements
+## Commits
 
-- Show your reasoning. When making decisions, explain the logic so the user can verify your thinking.
-- Proactively report problems. If you see something suboptimal, say it immediately, even if the user did not ask.
-- Read before write. Understand existing patterns before editing.
-- Run relevant verification before claiming success.
-- Commit messages must not mention AI tools.
-
-# Scope Boundaries
-
-- Keep general working agreements here in `AGENTS.md`.
-- Put approval policy in Codex `rules/*.rules`, not in prose.
-- Put automation behavior in Codex `hooks.json` and `hooks/`, not in prose.
-- Put specialized delegation behavior in Codex `agents/*.toml`, not in prose.
-
-# Windows / WSL Path Interoperability
-
-- When running in WSL, translate local attachment paths written as `C:\\...`
-  (or another Windows drive path) to `/mnt/<drive>/...` before accessing them.
-  Use `wslpath -u` when available.
-- Quote translated paths because Windows user and temporary directories may
-  contain spaces.
-- Do not conclude that a Windows clipboard or temporary file has expired only
-  because its unconverted Windows path is unavailable inside WSL. Check the
-  translated path first.
-
-# Project Guidance Interoperability
-
-- If the current workspace contains a `CLAUDE.md` and no project-level `AGENTS.md` or `GEMINI.md`, treat `CLAUDE.md` as the authoritative project guide and inspect it before taking project-specific actions.
-- If the current workspace contains `.claude/skills/`, check for relevant project-specific skills in that directory when addressing project workflows.
-
-<!-- codebase-memory-mcp:start -->
-# Codebase Knowledge Graph (codebase-memory-mcp)
-
-This project uses codebase-memory-mcp to maintain a knowledge graph of the codebase.
-ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
-
-## Choose the Tool by Question
-- `search_graph` — find functions, classes, routes, and variables by concept or pattern
-- `trace_path` — trace callers, callees, dependencies, impact, or data flow
-- `get_code_snippet` — read a specific symbol after `search_graph` identifies its exact qualified name
-- `search_code` — find literals or text patterns in source code with graph context
-- `query_graph` — run Cypher queries for complex, multi-hop structural questions
-- `get_architecture` — get a high-level project or subsystem summary
-
-## Index Lifecycle
-- Query the existing index directly. Do not run `index_repository` before every search.
-- If `index_status` or `list_projects` is available, use it when index state or the project name is uncertain.
-- If a graph query reports that the project is not indexed, run `index_repository` once with the absolute repository path, then retry the query.
-- Re-index only when status is not ready, the watcher is unavailable, or known changed symbols are missing from results. When auto-watch is enabled, let it keep an existing index current.
-
-## When to fall back to grep/glob
-- Searching prose or non-code files such as Dockerfiles, shell scripts, and configuration
-- Searching exact raw output or error text when `search_code` is insufficient
-- When MCP tools return insufficient results
-
-## Examples
-- Find a handler: `search_graph(name_pattern=".*OrderHandler.*")`
-- Who calls it: `trace_path(function_name="OrderHandler", direction="inbound")`
-- Read source: `get_code_snippet(qualified_name="pkg/orders.OrderHandler")`
-<!-- codebase-memory-mcp:end -->
+- Use Conventional Commits: `type(scope): subject`, with types such as `feat`, `fix`, `refactor`, `chore`, `docs`, and `test`, and a scope such as `pi`, `install`, `rules`, or `model-preferences`. The subject may be English or Traditional Chinese.
+- Commit messages contain no AI tool attribution: no `Co-Authored-By`, `Claude-Session`, or similar trailers, and no mention of AI tools.
+- Stage files by name; never `git add .` or `git add -A`.
