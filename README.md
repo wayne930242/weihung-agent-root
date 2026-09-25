@@ -24,6 +24,8 @@ Installer options:
 - `--skip-external` writes configuration only: no npm, pi package, Herdr, or network installs.
 - `--force` backs up conflicting targets to `~/.local/state/weihung-user-claude/backups/<timestamp>/` before replacing them. Without it, a conflict stops the install.
 
+A machine set up before the pi-only change still has the Claude Code, Codex, and Gemini links from that version. Remove them first with the legacy uninstaller: `git worktree add /tmp/legacy legacy-claude-codex && bash /tmp/legacy/scripts/uninstall.sh --target claude,codex,gemini`, then `git worktree remove /tmp/legacy`.
+
 The installer is idempotent; re-run it after pulling changes. `bash scripts/uninstall.sh` (same `--home` and `--skip-external` options) removes this repository's links, packages, generated instructions, and settings, and restores what the install backed up. The pi binary, its logins, and `codebase-memory-mcp` stay.
 
 ## What the install sets up

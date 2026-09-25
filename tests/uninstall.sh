@@ -59,6 +59,22 @@ uninstall_restores_backed_up_targets() {
   rm -rf "$temp_dir"
 }
 
+uninstall_finds_rules_backup_behind_a_newer_backup() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+  local fake_home="$temp_dir/home"
+  mkdir -p "$fake_home/.pi/agent/rules"
+  printf 'mine\n' > "$fake_home/.pi/agent/rules/own.md"
+
+  run_install "$fake_home" --force
+  mkdir -p "$fake_home/.local/state/weihung-user-claude/backups/99991231-235959/.pi/agent"
+  run_uninstall "$fake_home"
+
+  [[ -d "$fake_home/.pi/agent/rules" && ! -L "$fake_home/.pi/agent/rules" ]] || fail "expected rules restored from an older backup directory"
+  [[ "$(cat "$fake_home/.pi/agent/rules/own.md")" == "mine" ]] || fail "expected restored rule content from the older backup"
+  rm -rf "$temp_dir"
+}
+
 uninstall_keeps_a_foreign_rules_link() {
   local temp_dir
   temp_dir="$(mktemp -d)"
@@ -79,7 +95,8 @@ uninstall_keeps_a_foreign_rules_link() {
 run_all_tests() {
   fresh_install_uninstall_removes_managed_files
   uninstall_restores_backed_up_targets
-  uninstall_keeps_a_foreign_rules_link
+  uninstall_finds_rules_backup_behind_a_newer_backup
+uninstall_keeps_a_foreign_rules_link
 }
 
 if [[ "${1:-}" == "" ]]; then

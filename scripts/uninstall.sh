@@ -33,24 +33,25 @@ fail() {
   exit 1
 }
 
-latest_backup_dir() {
-  if [[ ! -d "$BACKUP_BASE" ]]; then
-    return
-  fi
-
-  find "$BACKUP_BASE" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1
+# Install runs write their backups under per-second stamps, so the newest stamp
+# holding this path is the one to restore, not the newest stamp overall.
+backup_for() {
+  local rel_dest="$1"
+  [[ -d "$BACKUP_BASE" ]] || return 0
+  local dir
+  while IFS= read -r dir; do
+    if [[ -e "$dir/$rel_dest" || -L "$dir/$rel_dest" ]]; then
+      printf '%s\n' "$dir/$rel_dest"
+      return 0
+    fi
+  done < <(find "$BACKUP_BASE" -mindepth 1 -maxdepth 1 -type d | sort -r)
 }
-
-LATEST_BACKUP_DIR=""
 
 restore_or_remove() {
   local dest="$1"
   local rel_dest="${dest#"$TARGET_HOME"/}"
-  local backup_path=""
-
-  if [[ -n "$LATEST_BACKUP_DIR" && -e "$LATEST_BACKUP_DIR/$rel_dest" ]]; then
-    backup_path="$LATEST_BACKUP_DIR/$rel_dest"
-  fi
+  local backup_path
+  backup_path="$(backup_for "$rel_dest")"
 
   if [[ -n "$backup_path" ]]; then
     if [[ -L "$dest" ]]; then
@@ -106,11 +107,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-LATEST_BACKUP_DIR="$(latest_backup_dir || true)"
-if [[ -n "$LATEST_BACKUP_DIR" ]]; then
-  log "Using latest backup directory: $LATEST_BACKUP_DIR"
-fi
 
 while IFS= read -r skill_dir; do
   restore_or_remove "$TARGET_HOME/.agents/skills/$(basename "$skill_dir")"
