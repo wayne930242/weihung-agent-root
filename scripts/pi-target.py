@@ -41,8 +41,8 @@ HAIKU = "claude-bridge/claude-haiku-4-5"
 LUNA = "openai-codex/gpt-6-luna"
 ONE_M_TIERS = {"main", "complex_clear", "complex_unclear", "academic", "architecture"}
 # Versioned specs keep every machine on the same release; `pi update` skips them, so bump them here.
-# The theme collection loads only Vesper, which matches the Herdr theme, and none of its skills.
-THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/vesper.json"], "skills": []}
+# The theme collection loads only Catppuccin Mocha, which matches the Herdr theme, and none of its skills.
+THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []}
 PACKAGES = [
     BRIDGE_SOURCE,
     "npm:pi-herdr-agents@2.0.4",
@@ -65,12 +65,12 @@ AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels")
-UI_SETTINGS = {"theme": "vesper", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
+UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
 # powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, the
 # pi-usage and pi-web-access forks replace their npm releases, which would otherwise register
-# their tools twice, rpiv-todo replaces pi-todo's minified-only bundle, and Vesper replaces the
-# Catppuccin theme.
+# their tools twice, rpiv-todo replaces pi-todo's minified-only bundle, and the curated themes collection
+# replaces the standalone Catppuccin theme.
 RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:pi-web-access", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
 # cbmem.ts registers the codebase-memory tools directly; the same server imported from host
 # configs would add a second copy behind a namespace proxy.

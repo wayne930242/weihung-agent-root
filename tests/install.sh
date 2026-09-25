@@ -93,13 +93,13 @@ with tempfile.TemporaryDirectory() as directory:
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
-    assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/vesper.json"], "skills": []} in settings["packages"], settings
+    assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []} in settings["packages"], settings
     assert "npm:@juicesharp/rpiv-todo@2.11.0" in sources and "npm:cc-safety-net@2.4.7" in sources, sources
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["enabledModels"][0] == "claude-bridge/claude-opus-5-5", settings
     assert "openai-codex/gpt-6-luna" in settings["enabledModels"], settings
-    assert settings["theme"] == "vesper", settings
+    assert settings["theme"] == "catppuccin-mocha", settings
     assert settings["enableInstallTelemetry"] is False, settings
     assert settings["editorPaddingX"] == 1, settings
     assert settings["collapseChangelog"] is True, settings
