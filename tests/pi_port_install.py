@@ -86,7 +86,7 @@ if '--prefix' in args:
     failed = subprocess.run(["bash", str(ROOT / "scripts/install.sh"), "--home", str(home), "--force"],
                             env={**env, "TEST_NO_TTT_CLI": "1"}, capture_output=True, text=True)
     assert failed.returncode != 0 and "CLI is missing" in failed.stderr
-    assert json.loads((agent / ".weihung-user-claude.json").read_text())["ported_resources"]
+    assert json.loads((agent / ".weihung-agent-root.json").read_text())["ported_resources"]
     run("install.sh", home, env)
     instructions = (agent / "AGENTS.md").read_text()
     assert 500 <= len(instructions.split()) <= 750
@@ -112,6 +112,6 @@ if '--prefix' in args:
     assert not (agent / "extensions/cbmem.ts").exists()
     assert not (home / ".local/bin/ttt").exists()
     assert not (agent / "skills/pi-skills").exists()
-    assert not (home / ".local/share/weihung-user-claude/pi-skills").exists()
+    assert not (home / ".local/share/weihung-agent-root/pi-skills").exists()
     assert (agent / "extensions/moshi-hooks.ts").read_text() == "user extension\n"
     print("pi port install: pass")

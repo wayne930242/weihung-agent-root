@@ -97,7 +97,7 @@ class PiReviewFixes(unittest.TestCase):
             run_script("uninstall.sh", home, "--skip-external")
             self.assertFalse((home / ".pi/agent/rules").exists())
             self.assertFalse((home / ".agents").exists())
-            self.assertFalse((home / ".pi/agent/.weihung-user-claude.json").exists())
+            self.assertFalse((home / ".pi/agent/.weihung-agent-root.json").exists())
 
     def test_all_tiers_have_distinct_task_fallbacks(self):
         spec = importlib.util.spec_from_file_location("pi_target", PI_TARGET)
@@ -147,6 +147,51 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
                              ["git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e"])
 
+    def test_install_under_the_former_name_moves_to_the_new_one(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as directory:
+            # The installer resolves its home, and macOS temporary directories sit behind /var -> /private/var.
+            base = Path(directory).resolve()
+            home = base / "home"
+            legacy_root = base / "weihung-user-claude"
+            root = base / "weihung-agent-root"
+            shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git", "node_modules", "__pycache__"))
+            agent = home / ".pi/agent"
+            share = home / ".local/share/weihung-user-claude"
+            backup = home / ".local/state/weihung-user-claude/backups/1/.pi/agent/AGENTS.md"
+            (share / "pi-skills").mkdir(parents=True)
+            backup.parent.mkdir(parents=True)
+            backup.write_text("user instructions")
+            (agent / "skills").mkdir(parents=True)
+            (agent / "skills/pi-skills").symlink_to(share / "pi-skills")
+            (agent / "rules").symlink_to(legacy_root / "rules")
+            (home / ".agents/skills").mkdir(parents=True)
+            (home / ".agents/skills/reflecting-to-root").symlink_to(legacy_root / "skills/reflecting-to-root")
+            (agent / "settings.json").write_text(json.dumps({"packages": ["npm:user-package", "../../../weihung-user-claude"]}))
+            (agent / ".weihung-user-claude.json").write_text(json.dumps({
+                "instructions_backup": str(backup),
+                "pi_skills_clone": str(share / "pi-skills"),
+                "ported_resources": {".pi/agent/skills/pi-skills": {"installed": str(share / "pi-skills"), "link": True}},
+            }))
+            subprocess.run([sys.executable, str(root / "scripts/pi-target.py"), "migrate", "--home", str(home)], check=True)
+            new_share = home / ".local/share/weihung-agent-root"
+            state = json.loads((agent / ".weihung-agent-root.json").read_text())
+            self.assertFalse((agent / ".weihung-user-claude.json").exists())
+            self.assertFalse(share.exists())
+            self.assertEqual(Path(state["instructions_backup"]).read_text(), "user instructions")
+            self.assertEqual(state["pi_skills_clone"], str(new_share / "pi-skills"))
+            self.assertEqual(state["ported_resources"][".pi/agent/skills/pi-skills"]["installed"], str(new_share / "pi-skills"))
+            self.assertEqual(os.readlink(agent / "skills/pi-skills"), str(new_share / "pi-skills"))
+            self.assertEqual(os.readlink(agent / "rules"), str(root / "rules"))
+            self.assertEqual(os.readlink(home / ".agents/skills/reflecting-to-root"), str(root / "skills/reflecting-to-root"))
+            self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], ["npm:user-package", str(root)])
+
+            (agent / ".weihung-user-claude.json").write_text("{}")
+            conflict = subprocess.run([sys.executable, str(root / "scripts/pi-target.py"), "migrate", "--home", str(home)],
+                                      capture_output=True, text=True)
+            self.assertNotEqual(conflict.returncode, 0)
+            self.assertIn("merge them by hand", conflict.stderr)
+
     def test_earlier_straw_boss_revisions_are_retired_for_the_pin(self):
         for earlier in ("git:github.com/wayne930242/straw-boss", "git:github.com/wayne930242/straw-boss@old-commit"):
             with self.subTest(earlier=earlier), tempfile.TemporaryDirectory() as directory:
@@ -167,7 +212,7 @@ class PiReviewFixes(unittest.TestCase):
             settings = agent / "settings.json"
             settings.write_text(json.dumps({"packages": ["npm:user-package"], "powerline": {"welcome": False}}))
             run_script("install.sh", home, "--skip-external")
-            marker = agent / ".weihung-user-claude.json"
+            marker = agent / ".weihung-agent-root.json"
             # Reproduce what an install from before pi-open-tui left behind.
             state = json.loads(marker.read_text())
             state.update(previous_powerline={"welcome": False},
@@ -214,7 +259,7 @@ class PiReviewFixes(unittest.TestCase):
             settings.write_text(json.dumps({"packages": ["npm:user-package"]}))
             run_script("install.sh", home, "--skip-external")
             # Reproduce the unpinned packages and marker an install before pinning left behind.
-            marker = agent / ".weihung-user-claude.json"
+            marker = agent / ".weihung-agent-root.json"
             state = json.loads(marker.read_text())
             for key in ("previous_settings", "previous_ui_settings"):
                 state[key] = {name: value for name, value in state[key].items() if name not in ("enabledModels", "enableInstallTelemetry")}
@@ -327,7 +372,7 @@ class PiReviewFixes(unittest.TestCase):
             failed = subprocess.run(command, env={**os.environ, "HOME": str(home), **env},
                                     text=True, capture_output=True)
             self.assertNotEqual(failed.returncode, 0)
-            marker = home / ".pi/agent/.weihung-user-claude.json"
+            marker = home / ".pi/agent/.weihung-agent-root.json"
             self.assertTrue(marker.exists())
             self.assertFalse(json.loads(marker.read_text())["integration_installed"])
             run_script("uninstall.sh", home, "--skip-external")

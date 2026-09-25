@@ -1,4 +1,4 @@
-# weihung-user-claude
+# weihung-agent-root
 
 Personal user-root setup for [pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent). This repository is the source of truth for pi's user instructions, model routing, packages, skills, rules, and local extensions on every machine. It supports only pi; the last version that also configured Claude Code, Codex, and Gemini is the `legacy-claude-codex` tag.
 
@@ -9,8 +9,8 @@ Claude models reach pi through `pi-claude-bridge`, which runs on the machine's C
 Prerequisites: Node.js with npm, Python 3, Git, Herdr, and Claude Code logged in with the account that should serve Claude models.
 
 ```bash
-git clone https://github.com/wayne930242/weihung-user-claude ~/projects/weihung-user-claude
-cd ~/projects/weihung-user-claude
+git clone https://github.com/wayne930242/weihung-agent-root ~/projects/weihung-agent-root
+cd ~/projects/weihung-agent-root
 bash scripts/install.sh
 ```
 
@@ -22,7 +22,7 @@ Installer options:
 
 - `--home PATH` installs into another home directory, for example a throwaway smoke test.
 - `--skip-external` writes configuration only: no npm, pi package, Herdr, or network installs.
-- `--force` backs up conflicting targets to `~/.local/state/weihung-user-claude/backups/<timestamp>/` before replacing them. Without it, a conflict stops the install.
+- `--force` backs up conflicting targets to `~/.local/state/weihung-agent-root/backups/<timestamp>/` before replacing them. Without it, a conflict stops the install.
 
 A machine set up before the pi-only change still has the Claude Code, Codex, and Gemini links from that version. Remove them first with the legacy uninstaller: `git worktree add /tmp/legacy legacy-claude-codex && bash /tmp/legacy/scripts/uninstall.sh --target claude,codex,gemini`, then `git worktree remove /tmp/legacy`.
 
@@ -38,7 +38,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 - sets the default model, thinking level, `pi-herdr-agents` task models, UI settings, and MCP host-config discovery;
 - ports resources pi cannot install as packages: codebase-memory, mp-infra, and team-toon-tack.
 
-Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so uninstall removes exactly those files and restores the previous settings values.
+Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so uninstall removes exactly those files and restores the previous settings values.
 
 ### Links
 
@@ -46,7 +46,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-user-claude.json`, so 
 |---|---|
 | `~/.agents/skills/<name>` | [skills/](skills/): `managing-model-preferences`, `providing-knowledge`, `reflecting-to-root`, `writing-great-skills` |
 | `~/.pi/agent/rules` | [rules/](rules/): user-global rules |
-| `~/.pi/agent/skills/pi-skills` | A clone of [badlogic/pi-skills](https://github.com/badlogic/pi-skills) in `~/.local/share/weihung-user-claude/pi-skills`, pulled on each install. Its skills (`brave-search`, `browser-tools`, `gccli`, `gdcli`, `gmcli`, `transcribe`, `vscode`, `youtube-transcript`) need their own CLIs or keys as each `SKILL.md` describes. |
+| `~/.pi/agent/skills/pi-skills` | A clone of [badlogic/pi-skills](https://github.com/badlogic/pi-skills) in `~/.local/share/weihung-agent-root/pi-skills`, pulled on each install. Its skills (`brave-search`, `browser-tools`, `gccli`, `gdcli`, `gmcli`, `transcribe`, `vscode`, `youtube-transcript`) need their own CLIs or keys as each `SKILL.md` describes. |
 
 ### Packages
 
@@ -82,7 +82,7 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 
 - **codebase-memory**: the official `codebase-memory-mcp install --clients=pi` output, generated in a staging home and installed as `~/.pi/agent/extensions/cbmem.ts` and the `codebase-memory` skill, pointing at `~/.local/bin/codebase-memory-mcp`.
 - **mp-infra** (only when its checkout exists): its skills linked into `~/.pi/agent/skills/`, and `~/.pi/agent/mp-infra.json` for the hooks extension. Without the checkout the installer prints that it skipped mp-infra.
-- **team-toon-tack**: installed under `~/.local/share/weihung-user-claude/team-toon-tack`, providing the `managing-linear-tasks` skill, `/ttt-*` prompt templates, and the `ttt` CLI in `~/.local/bin`.
+- **team-toon-tack**: installed under `~/.local/share/weihung-agent-root/team-toon-tack`, providing the `managing-linear-tasks` skill, `/ttt-*` prompt templates, and the `ttt` CLI in `~/.local/bin`.
 
 ### Settings
 
@@ -152,7 +152,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 ## 中文摘要
 
-這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-user-claude`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
+這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-agent-root`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
 - 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、本 repo 的擴充（閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。

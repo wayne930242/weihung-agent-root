@@ -7,7 +7,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SKILLS_DIR="$REPO_ROOT/skills"
 
 TARGET_HOME="${HOME}"
-BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
+BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-agent-root/backups"
 SKIP_EXTERNAL=0
 
 usage() {
@@ -91,7 +91,7 @@ while [[ $# -gt 0 ]]; do
     --home)
       [[ $# -ge 2 ]] || fail "--home requires a path"
       TARGET_HOME="$2"
-      BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-user-claude/backups"
+      BACKUP_BASE="${TARGET_HOME}/.local/state/weihung-agent-root/backups"
       shift 2
       ;;
     --skip-external)
@@ -107,6 +107,9 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# State and links from the repository's former name move first; the steps below use the new name.
+python3 "$REPO_ROOT/scripts/pi-target.py" migrate --home "$TARGET_HOME"
 
 while IFS= read -r skill_dir; do
   restore_or_remove "$TARGET_HOME/.agents/skills/$(basename "$skill_dir")"

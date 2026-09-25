@@ -152,7 +152,7 @@ force_replaces_and_backs_up_conflicts() {
   run_install "$fake_home" --force >/dev/null
 
   assert_symlink_target "$fake_home/.pi/agent/rules" "$REPO_ROOT/rules"
-  local backup_base="$fake_home/.local/state/weihung-user-claude/backups"
+  local backup_base="$fake_home/.local/state/weihung-agent-root/backups"
   local backup_file
   backup_file="$(find "$backup_base" -type f -path '*/.pi/agent/rules/own.md' | head -n 1)"
   [[ -n "$backup_file" && "$(cat "$backup_file")" == "mine" ]] || fail "expected backed up rules directory"
@@ -177,7 +177,7 @@ install_prunes_retired_links_and_retires_skill_copies() {
   assert_absent "$fake_home/.agents/skills/leveraging-tasks"
   assert_symlink_target "$fake_home/.agents/skills/my-custom-skill" "$user_skill"
   assert_symlink_target "$fake_home/.agents/skills/providing-knowledge" "$REPO_ROOT/skills/providing-knowledge"
-  [[ -n "$(find "$fake_home/.local/state/weihung-user-claude/backups" -path '*/providing-knowledge/SKILL.md')" ]] \
+  [[ -n "$(find "$fake_home/.local/state/weihung-agent-root/backups" -path '*/providing-knowledge/SKILL.md')" ]] \
     || fail "expected the stale skill copy in the backup"
 
   rm -rf "$temp_dir"

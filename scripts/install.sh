@@ -50,7 +50,7 @@ ensure_backup_root() {
 
   local stamp
   stamp="$(date +%Y%m%d-%H%M%S)"
-  BACKUP_ROOT="$TARGET_HOME/.local/state/weihung-user-claude/backups/$stamp"
+  BACKUP_ROOT="$TARGET_HOME/.local/state/weihung-agent-root/backups/$stamp"
   mkdir -p "$BACKUP_ROOT"
 }
 
@@ -195,6 +195,9 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# State and links from the repository's former name move first; the steps below use the new name.
+python3 "$REPO_ROOT/scripts/pi-target.py" migrate --home "$TARGET_HOME"
 
 mkdir -p "$TARGET_HOME/.agents/skills"
 

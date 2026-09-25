@@ -36,7 +36,7 @@ fresh_install_uninstall_removes_managed_files() {
 
   [[ ! -e "$fake_home/.pi/agent/rules" && ! -L "$fake_home/.pi/agent/rules" ]] || fail "expected rules link removed"
   [[ ! -e "$fake_home/.pi/agent/AGENTS.md" ]] || fail "expected generated pi instructions removed"
-  [[ ! -e "$fake_home/.pi/agent/.weihung-user-claude.json" ]] || fail "expected install marker removed"
+  [[ ! -e "$fake_home/.pi/agent/.weihung-agent-root.json" ]] || fail "expected install marker removed"
   [[ ! -e "$fake_home/.pi/agent/mcp.json" ]] || fail "expected managed mcp.json removed"
   [[ ! -e "$fake_home/.pi-lens/config.json" ]] || fail "expected managed pi-lens config removed"
   [[ -z "$(find "$fake_home/.agents/skills" -type l -lname "$REPO_ROOT/*")" ]] || fail "expected repository skill links removed"
@@ -69,7 +69,7 @@ uninstall_finds_rules_backup_behind_a_newer_backup() {
   printf 'mine\n' > "$fake_home/.pi/agent/rules/own.md"
 
   run_install "$fake_home" --force
-  mkdir -p "$fake_home/.local/state/weihung-user-claude/backups/99991231-235959/.pi/agent"
+  mkdir -p "$fake_home/.local/state/weihung-agent-root/backups/99991231-235959/.pi/agent"
   run_uninstall "$fake_home"
 
   [[ -d "$fake_home/.pi/agent/rules" && ! -L "$fake_home/.pi/agent/rules" ]] || fail "expected rules restored from an older backup directory"

@@ -16,6 +16,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+MARKER = Path(".pi/agent/.weihung-agent-root.json")
+# Before its rename this repository was weihung-user-claude; installs from then keep state and links under that name.
+LEGACY_RENAMES = (
+    (Path(".pi/agent/.weihung-user-claude.json"), MARKER),
+    (Path(".local/share/weihung-user-claude"), Path(".local/share/weihung-agent-root")),
+    (Path(".local/state/weihung-user-claude"), Path(".local/state/weihung-agent-root")),
+)
+LEGACY_ROOT = ROOT.parent / "weihung-user-claude"
 BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e"
 LEGACY_BRIDGE = "npm:pi-claude-bridge"
 # Fork commit adding claude-bridge to /usage (upstream iefnaf/pi-usage#4).
@@ -72,10 +80,10 @@ MCP_SETTINGS = {"namespaceProxyTools": False}
 LENS_DISABLED_TOOLS = ("project_report", "symbol_search", "module_report")
 LENS_CONFIG = Path(".pi-lens/config.json")
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
-TTT_PREFIX = Path(".local/share/weihung-user-claude/team-toon-tack")
+TTT_PREFIX = Path(".local/share/weihung-agent-root/team-toon-tack")
 # pi-skills ships bare skill directories without a pi manifest; its README installs it as a clone under the skills root.
 PI_SKILLS_GIT = os.environ.get("PI_SKILLS_GIT", "https://github.com/badlogic/pi-skills.git")
-PI_SKILLS_CLONE = Path(".local/share/weihung-user-claude/pi-skills")
+PI_SKILLS_CLONE = Path(".local/share/weihung-agent-root/pi-skills")
 
 
 def package_source(value):
@@ -177,7 +185,7 @@ def managed_resource(home, state, destination, source, force=False, link=False):
         else:
             if not force:
                 raise ValueError(f"{destination} exists; use --force to back it up")
-            backup = home / ".local/state/weihung-user-claude/backups" / datetime.now().strftime("%Y%m%d-%H%M%S") / key
+            backup = home / ".local/state/weihung-agent-root/backups" / datetime.now().strftime("%Y%m%d-%H%M%S") / key
             backup.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(destination, backup)
             record = {**(record or {}), "backup": str(backup)}
@@ -189,7 +197,7 @@ def managed_resource(home, state, destination, source, force=False, link=False):
         destination.write_bytes(source)
         installed = hashlib.sha256(source).hexdigest()
     records[key] = {**(record or {}), "installed": installed, "link": link}
-    write_json(home / ".pi/agent/.weihung-user-claude.json", state)
+    write_json(home / MARKER, state)
 
 
 def aaaav_source():
@@ -210,7 +218,7 @@ def install_ported_resources(home, state, force):
     if not (ttt_root / "skills/managing-linear-tasks/SKILL.md").is_file():
         raise ValueError(f"team-toon-tack package is missing: {ttt_root}")
     state["ttt_prefix"] = str(prefix)
-    write_json(agent_dir / ".weihung-user-claude.json", state)
+    write_json(home / MARKER, state)
 
     # The official installer generates Pi's current extension and skill in a staging HOME.
     # Our generated AGENTS.md remains the sole owner of Pi instructions.
@@ -260,7 +268,7 @@ def install_ported_resources(home, state, force):
     else:
         run(["git", "clone", "-q", "--depth", "1", PI_SKILLS_GIT, str(clone)], home)
     state["pi_skills_clone"] = str(clone)
-    write_json(agent_dir / ".weihung-user-claude.json", state)
+    write_json(home / MARKER, state)
     managed_resource(home, state, agent_dir / "skills/pi-skills", clone, force, link=True)
 
 
@@ -468,7 +476,7 @@ def restore_lens(home, state):
 
 def install(home, skip_external, force):
     agent_dir = home / ".pi/agent"
-    marker_path = agent_dir / ".weihung-user-claude.json"
+    marker_path = home / MARKER
     first_install = not marker_path.exists()
     state = read_json(marker_path)
     state["aaaav"] = aaaav_source()
@@ -485,7 +493,7 @@ def install(home, skip_external, force):
     if current_hash and (first_install or current_hash != state.get("instructions_hash")):
         if not force:
             raise ValueError(f"{instructions_path} exists; use --force to back it up")
-        backup = home / ".local/state/weihung-user-claude/backups" / datetime.now().strftime("%Y%m%d-%H%M%S") / ".pi/agent/AGENTS.md"
+        backup = home / ".local/state/weihung-agent-root/backups" / datetime.now().strftime("%Y%m%d-%H%M%S") / ".pi/agent/AGENTS.md"
         backup.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(instructions_path, backup)
         state["instructions_backup"] = str(backup)
@@ -546,7 +554,7 @@ def install(home, skip_external, force):
 
 def uninstall(home, skip_external):
     agent_dir = home / ".pi/agent"
-    marker_path = agent_dir / ".weihung-user-claude.json"
+    marker_path = home / MARKER
     if not marker_path.exists():
         return
     state = read_json(marker_path)
@@ -636,20 +644,64 @@ def uninstall(home, skip_external):
     marker_path.unlink()
 
 
+def migrate_legacy_name(home):
+    """Move state from the repository's former name and repoint what referenced it."""
+    for old, new in LEGACY_RENAMES:
+        old, new = home / old, home / new
+        if not old.exists():
+            continue
+        if new.exists():
+            raise ValueError(f"both {old} and {new} exist; merge them by hand, then rerun")
+        new.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(old, new)
+    moved = {str(home / old): str(home / new) for old, new in LEGACY_RENAMES[1:]}
+    if LEGACY_ROOT != ROOT and not LEGACY_ROOT.exists():
+        moved[str(LEGACY_ROOT)] = str(ROOT)
+
+    def relocate(value):
+        if isinstance(value, dict):
+            return {key: relocate(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [relocate(item) for item in value]
+        if isinstance(value, str):
+            for old, new in moved.items():
+                if value == old or value.startswith(old + "/"):
+                    return new + value[len(old):]
+        return value
+
+    marker = home / MARKER
+    if marker.exists():
+        write_json(marker, relocate(read_json(marker)))
+    for directory in (".agents/skills", ".pi/agent/skills", ".pi/agent", ".local/bin"):
+        directory = home / directory
+        for link in (directory.iterdir() if directory.is_dir() else ()):
+            if link.is_symlink() and (target := relocate(os.readlink(link))) != os.readlink(link):
+                link.unlink()
+                link.symlink_to(target)
+    settings_path = home / ".pi/agent/settings.json"
+    if str(LEGACY_ROOT) in moved and settings_path.exists():
+        agent_dir = home / ".pi/agent"
+        settings = read_json(settings_path)
+        settings["packages"] = [str(ROOT) if package_id(value, agent_dir) == str(LEGACY_ROOT) else value
+                                for value in settings.get("packages", [])]
+        write_json(settings_path, settings)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("install", "uninstall", "apply-profile"))
+    parser.add_argument("action", choices=("migrate", "install", "uninstall", "apply-profile"))
     parser.add_argument("--home", type=Path, default=Path.home())
     parser.add_argument("--skip-external", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     home = args.home.expanduser().resolve()
+    migrate_legacy_name(home)
     if args.action == "install":
         install(home, args.skip_external, args.force)
     elif args.action == "uninstall":
         uninstall(home, args.skip_external)
-    else:
-        marker_path = home / ".pi/agent/.weihung-user-claude.json"
+    elif args.action == "apply-profile":
+        marker_path = home / MARKER
         state = read_json(marker_path)
         if not state:
             raise ValueError("Pi target is not installed")
