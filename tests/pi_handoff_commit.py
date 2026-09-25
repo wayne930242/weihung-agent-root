@@ -2,6 +2,7 @@ import importlib.util
 import io
 import json
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -83,6 +84,36 @@ class HandoffCommitTest(unittest.TestCase):
         self.assertIn("worker | transferred", inventory.getvalue())
         with self.assertRaises(ValueError):
             DISPATCH.reattach("owner", "worker")
+
+    def test_committed_handoff_keeps_receiver_session_marker(self):
+        self.run_handoff()
+        self.assertEqual((self.handoffs / "transfer.ready").read_text(), "receiver")
+
+    def test_reattach_preserves_concurrent_ledger_update(self):
+        updated = threading.Event()
+        worker = None
+
+        def update_status():
+            with DISPATCH.lock_ledger("owner"):
+                records = DISPATCH.read_ledger("owner")
+                records[0]["status"] = "done"
+                DISPATCH.write_json(self.owner_file, records)
+            updated.set()
+
+        def create_pane(_cwd, _label):
+            nonlocal worker
+            worker = threading.Thread(target=update_status)
+            worker.start()
+            self.assertTrue(updated.wait(2))
+            return "test:pane"
+
+        with patch.object(DISPATCH, "new_pane", side_effect=create_pane), \
+             patch.object(DISPATCH, "herdr", return_value={}), redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(ValueError, "changed while opening"):
+                DISPATCH.reattach("owner", "worker")
+        worker.join(timeout=2)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(json.loads(self.owner_file.read_text())[0]["status"], "done")
 
 
 if __name__ == "__main__":

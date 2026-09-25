@@ -99,7 +99,8 @@ try {
   writeFileSync(join(home, "release-pane"), "");
   assert.equal(await handoff.exit, 0, handoff.stderr());
 
-  const [handoffFile] = readdirSync(join(agentDir, "handoffs"));
+  const handoffFile = readdirSync(join(agentDir, "handoffs")).find((name) => name.endsWith(".json"));
+  writeFileSync(join(agentDir, "handoffs", handoffFile.replace(/\.json$/, ".ready")), "new");
   process.env.PI_HANDOFF_ID = handoffFile.replace(/\.json$/, "");
   const receiver = session("new", newFile);
   (await import(`${extension.href}?race=receiver`)).default(receiver.api);

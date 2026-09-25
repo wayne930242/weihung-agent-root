@@ -107,3 +107,26 @@ The implementation delegates dispatch, intercom, ask, todo, MCP, Claude bridge, 
 - Friction: The generated config lacked `status.enabled`, which `pi-herdr-agents` requires to load (`gap`). Action: resolved by setting and restoring the status config, then loading the actual package against generated temporary-HOME config.
 - Friction: `pi-herdr-agents` consumes a completed worker's `.exit` sidecar during normal delivery, leaving an extension ledger row marked `running` after parent restart (`gap`). Action: resolved by reconciling the parent's persisted `subagent_result` before observing unfinished workers and before ledger tools run; verified in Herdr.
 - Friction: A new Herdr tab returned before its shell accepted `agent start`, and a default tab could land in another workspace (`gap`). Action: resolved by choosing `HERDR_WORKSPACE_ID`, waiting for the new shell, and exercising a real receiving main pane.
+
+## Receiver resume and reattach follow-up (2026-09-25)
+
+The receiver-crash regression killed the first process after the handoff became committed and before it imported a dispatch. It failed against `8c7e48d` because the resumed session had no ledger. The reattach regression failed against that revision because a concurrent `done` update was overwritten with `running`. The committed-marker check also failed because the CLI removed the receiver's `.ready` file.
+
+| Requirement | Evidence | Result |
+|---|---|---|
+| A receiver restarted after commitment imports its assigned dispatch without the first process's environment variable | `node --experimental-strip-types tests/pi-handoff-resume.mjs` killed the first receiver with `SIGKILL`, restarted the same session without `PI_HANDOFF_ID`, and observed one imported worker, one result, and no unrelated handoff. In a real Herdr tab, Pi session `f9a94ee2-8c36-499c-b1e5-e840672ec95a` first wrote a session file, then was killed after commit with no receiver ledger. A new Pi process resumed that file without `PI_HANDOFF_ID`, recorded `herdr-final-worker` as `done`, `delivered=true`, emitted one `recovered_dispatch_result`, and received a successful `gpt-6-luna` response containing the test result. See `/Users/weihung/.straw-boss/plans/pi-migration/artifacts/f4-herdr-resume-uat.json`. | pass |
+| A committed handoff retains the receiver's session binding until a restart can find it | `test_committed_handoff_keeps_receiver_session_marker` observed `transfer.ready` containing `receiver` after the CLI committed the handoff. | pass |
+| Reattach preserves a concurrent owner-ledger status update | `test_reattach_preserves_concurrent_ledger_update` changed the worker to `done` while pane creation was in progress. Reattach reread under the owner lock, closed the provisional pane, raised a changed-state error, and left the ledger `done`. | pass |
+| Cross-process crash delivery semantics are recorded | Both Pi handoff and dispatch-recovery skills, the approved spec, and the design state that a crash between result send and receipt can cause redelivery, with at-least-once delivery across a process crash. The accepted window received documentation only. | pass |
+| Repository suites and real Pi installation remain usable | `bash tests/install.sh`, `bash tests/uninstall.sh`, `bash tests/prompts.sh`, `node tests/profile.mjs`, the four existing Pi runtime suites, the new resume test, `python3 tests/pi_dispatch_cli.py`, and `python3 -m unittest tests.pi_handoff_commit tests.pi_review_fixes -q` exited 0. `bash scripts/install.sh --target pi` completed on the authorized real HOME. | pass |
+
+The first isolated Herdr check imported the result but its model turn reported `Unknown provider: unknown`. The final check supplied the installed Codex authentication to the isolated test process, persisted a Pi session file before the crash, and observed a successful model response after resume. The accepted send-to-receipt crash window was documented rather than fault injected.
+
+### Reflexive pass for this follow-up
+
+- Friction: the combined graph regex returned no recovery symbols (`gap`). Action: the concept query found exact names; this was a query choice, so no standing instruction changed.
+- Friction: isolated Pi lacked a default model (`gap`). Action: the final run used an explicit Codex model and the installed authentication; the first run remains recorded, so no standing instruction changed.
+- Friction: zsh noclobber rejected a reused RPC log path (`gap`). Action: the test used a fresh log path; no standing instruction changed.
+- Friction: Pi RPC name and bash commands did not persist a session file (`gap`). Action: the final run used an authenticated prompt before killing Pi and resumed the resulting session file; no standing instruction changed.
+
+The `solid-loop` pass classified these as local discovery and test-environment facts. The skill edits passed the no-op check: each sentence states the ownership or delivery behavior a recovering agent needs.

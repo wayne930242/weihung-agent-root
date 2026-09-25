@@ -97,6 +97,7 @@ try {
   const { mkdirSync } = await import("node:fs");
   mkdirSync(handoffDir, { recursive: true });
   writeFileSync(join(handoffDir, "transfer-1.json"), JSON.stringify({ from: "old-parent", state: "committed", dispatches: [{ ...transferred, status: "running" }] }));
+  writeFileSync(join(handoffDir, "transfer-1.ready"), "new-parent");
   process.env.PI_HANDOFF_ID = "transfer-1";
   const receiving = session("new-parent", newParent);
   (await import(`${extension.href}?transfer=new`)).default(receiving.api);

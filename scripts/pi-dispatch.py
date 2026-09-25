@@ -151,9 +151,23 @@ def reattach(owner, dispatch_id):
     if pane and available is False:
         raise ValueError(f"Pane {pane} still has a foreground process; inspect it before resuming")
     if available is None:
+        previous_pane = item.get("paneId")
         pane = new_pane(item["cwd"], f"resume-{item['name']}")
-        item["paneId"] = pane
-        write_json(ledger_path(owner), records)
+        stale = False
+        with lock_ledger(owner):
+            records = read_ledger(owner)
+            item = next((record for record in records if record["id"] == dispatch_id), None)
+            stale = (not item or item["status"] != "running" or
+                     item.get("paneId") != previous_pane or dispatch_id in committed_dispatch_ids(owner))
+            if not stale:
+                item["paneId"] = pane
+                write_json(ledger_path(owner), records)
+        if stale:
+            try:
+                herdr("pane", "close", pane)
+            except RuntimeError:
+                pass
+            raise ValueError(f"Dispatch {dispatch_id} changed while opening its pane; inspect its recorded session")
     env = {
         "PI_SUBAGENT_SESSION": item["sessionFile"],
         "PI_SUBAGENT_ID": item["id"],
@@ -220,7 +234,6 @@ def handoff(owner, cwd, summary):
                 except RuntimeError:
                     pass
         raise
-    ready_file.unlink(missing_ok=True)
     print(f"Handoff {transfer_id} started in pane {pane}; active dispatches: {len(records)}")
 
 

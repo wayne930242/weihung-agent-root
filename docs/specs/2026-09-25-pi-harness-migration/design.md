@@ -16,7 +16,7 @@ Pi identifies git packages by repository when installing or removing them. Switc
 
 The handoff interface is `dispatch_control` plus an immutable handoff ID. The Python CLI writes a pending file, creates the pane, starts the receiving Pi agent, waits for the extension's ready marker, and submits the scope prompt. The old owner keeps every active dispatch through these steps. Under its ledger lock, the CLI then reads the still-running records and atomically replaces the pending file with a committed handoff file. This file is the ownership decision: completion before its replacement reaches the old session; completion afterward reaches the receiver. The old ledger's `transferred` status is a repairable view. A write failure in that view reports a warning and leaves the committed handoff authoritative. Pane, shell, start, readiness, prompt, or pending/commit-file failures leave ownership with the old session.
 
-The Pi extension imports records only after commitment. Its startup readiness marker and import poll keep the Python CLI independent of Pi session timing. The old process's `pi-herdr-agents` watcher still emits a native result, so the extension replaces it with a transfer notice and forwards the payload through an agent-local sidecar. The receiver watches that sidecar and the worker completion file. Atomic ledger replacement and directory locks cover concurrent processes; a per-dispatch delivery lock and marker allow one recovered delivery across receivers. The completion watcher retries a temporarily unreadable sidecar while the package consumes or replaces it.
+The Pi extension imports records only after commitment. Its readiness marker binds the handoff to the receiving session and remains after commit until that session durably imports the records, so a restarted receiver imports the committed file without the first process's `PI_HANDOFF_ID`. The startup import poll keeps the Python CLI independent of Pi session timing. The old process's `pi-herdr-agents` watcher still emits a native result, so the extension replaces it with a transfer notice and forwards the payload through an agent-local sidecar. The receiver watches that sidecar and the worker completion file. Atomic ledger replacement and directory locks cover concurrent processes; reattach rereads and updates its ledger under the owner lock after pane creation. A per-dispatch delivery lock and marker allow one recovered delivery across live receivers. The completion watcher retries a temporarily unreadable sidecar while the package consumes or replaces it. A crash after sending a result but before recording its receipt permits one replay after restart.
 
 The previous shape transferred the old ledger before pane creation and then rolled it back on selected failures. That made each later startup step a separate recovery case. The committed-file shape has one ownership transition after the receiver is ready, and `roll-call` derives stale old-ledger status from that file. The Python CLI and Pi extension occupy the existing dispatch-control seam; callers still use one `handoff` action. Tests exercise the CLI boundary with Herdr fault injection, the extension's result hooks, and real Herdr sessions.
 
@@ -86,3 +86,15 @@ Shell tests run with an isolated HOME, stub external commands, and inspect per-t
 - Tried: directing only the source agent to leave the final UAT gate closed.
   Found: the receiving agent inferred that it should create the release file from the handoff summary. The final check records that actor and verifies the ledger was running before completion.
   Led by: aaaav-do's final real Herdr anchor.
+- Tried: finding the recovery functions with a combined graph name and file regex.
+  Found: that query returned no symbols; a concept query returned the exact qualified names for tracing and source inspection.
+  Led by: the project graph-discovery instruction.
+- Tried: running the resumed-receiver Herdr check with an isolated Pi agent directory and its default model.
+  Found: Pi imported the dispatch and persisted the recovered result, then its model turn reported `Unknown provider: unknown` because the isolated directory had no model profile.
+  Led by: aaaav-do's real Herdr anchor.
+- Tried: reusing the first Pi RPC log path for a second Herdr test command.
+  Found: the tab's zsh noclobber setting rejected the redirection. A fresh log path let the command run.
+  Led by: aaaav-do's real Herdr anchor.
+- Tried: persisting a Pi receiver session with RPC `set_session_name` and `bash` commands.
+  Found: neither wrote a session file. An authenticated prompt produced the file required for a true `--session` restart.
+  Led by: aaaav-do's resumed-session anchor.

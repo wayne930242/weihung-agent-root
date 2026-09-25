@@ -292,27 +292,31 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
     processSessions.add(sessionId);
     if (sameProcess || !parentFile) return;
     reconcileDelivered(sessionId, parentFile);
+    const importHandoff = (handoffId: string) => {
+      const readyFile = join(handoffDir, `${handoffId}.ready`);
+      const handoffFile = join(handoffDir, `${handoffId}.json`);
+      let receiverSession: string;
+      try { receiverSession = readFileSync(readyFile, "utf8").trim(); }
+      catch (error: any) { if (error.code === "ENOENT") return; throw error; }
+      if (receiverSession !== sessionId || !existsSync(handoffFile)) return;
+      const handoff = JSON.parse(readFileSync(handoffFile, "utf8"));
+      if (handoff.state !== "committed") return;
+      withLedgerLock(sessionId, () => {
+        const existing = readLedger(sessionId);
+        const missing = (handoff.dispatches || []).filter((record: Dispatch) => !existing.some((item) => item.id === record.id));
+        if (missing.length) writeLedger(sessionId, [...existing, ...missing]);
+      });
+      try { unlinkSync(readyFile); }
+      catch (error: any) { if (error.code !== "ENOENT") throw error; }
+      for (const record of readLedger(sessionId)) {
+        if (record.status === "running") observe(sessionId, parentFile, record, pi);
+      }
+    };
     const handoffId = process.env.PI_HANDOFF_ID;
     if (handoffId) {
       mkdirSync(handoffDir, { recursive: true });
       writeFileSync(join(handoffDir, `${handoffId}.ready`), sessionId, { mode: 0o600 });
-      const importHandoff = () => {
-        const handoffFile = join(handoffDir, `${handoffId}.json`);
-        if (!existsSync(handoffFile)) return;
-        const handoff = JSON.parse(readFileSync(handoffFile, "utf8"));
-        if (handoff.state !== "committed") return;
-        withLedgerLock(sessionId, () => {
-          const existing = readLedger(sessionId);
-          for (const record of handoff.dispatches || []) {
-            if (!existing.some((item) => item.id === record.id)) existing.push(record);
-          }
-          writeLedger(sessionId, existing);
-        });
-        for (const record of readLedger(sessionId)) {
-          if (record.status === "running") observe(sessionId, parentFile, record, pi);
-        }
-      };
-      importHandoff();
+      importHandoff(handoffId);
       const timer = setInterval(() => {
         const handoffFile = join(handoffDir, `${handoffId}.json`);
         if (!existsSync(handoffFile)) {
@@ -320,13 +324,18 @@ export default function dispatchRecovery(pi: ExtensionAPI): void {
           handoffTimers.delete(timer);
           return;
         }
-        importHandoff();
+        importHandoff(handoffId);
         if (JSON.parse(readFileSync(handoffFile, "utf8")).state === "committed") {
           clearInterval(timer);
           handoffTimers.delete(timer);
         }
       }, 200);
       handoffTimers.add(timer);
+    }
+    if (existsSync(handoffDir)) {
+      for (const name of readdirSync(handoffDir)) {
+        if (name.endsWith(".ready") && name !== `${handoffId}.ready`) importHandoff(name.slice(0, -6));
+      }
     }
     for (const record of readLedger(sessionId)) {
       if (record.status === "running") observe(sessionId, parentFile, record, pi);

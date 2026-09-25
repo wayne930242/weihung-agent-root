@@ -123,6 +123,7 @@ async function checkWindow(stage, options = {}) {
     const transfer = existsSync(handoffs) ? readdirSync(handoffs).find((name) => name.endsWith(".json")) : undefined;
     if (success) {
       assert.ok(transfer);
+      writeFileSync(join(handoffs, transfer.replace(/\.json$/, ".ready")), newId);
       if (options.beforeCommit === false && options.beforeReceiverImport) {
         writeFileSync(`${child}.exit`, JSON.stringify({ type: "done" }));
       }
