@@ -18,7 +18,7 @@ On WSL, translate Windows attachment paths with `wslpath -u` when available and 
 
 ## User rules
 
-Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` (git), `deployment.md` (deploys), `dependencies.md` (packages and libraries), `clean-architecture.md` (design and refactoring), `ui-design.md` (UI), `skill-writing.md` (skills and agent instructions), `chinese-writing.md` (Chinese prose), and the language files `go.md`, `python.md`, `shell.md`, `typescript.md`, and `markdown.md`.
+Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` (git), `deployment.md` (deploys), `dependencies.md` (packages and libraries), `clean-architecture.md` (design and refactoring), `ui-design.md` (UI), `browser.md` (browser automation), `skill-writing.md` (skills and agent instructions), `chinese-writing.md` (Chinese prose), and the language files `go.md`, `python.md`, `shell.md`, `typescript.md`, and `markdown.md`.
 
 ## Model and dispatch
 
