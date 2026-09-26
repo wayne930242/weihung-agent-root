@@ -46,6 +46,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so u
 |---|---|
 | `~/.agents/skills/<name>` | [skills/](skills/): `managing-model-preferences`, `providing-knowledge`, `reflecting-to-root`, `writing-great-skills` |
 | `~/.pi/agent/rules` | [rules/](rules/): user-global rules |
+| `~/.pi/agent/agents` | [agents/](agents/): global overrides of the `pi-herdr-agents` 2.0.4 bundled roles. Each file is the bundled role with its `tools:` allowlist removed, so a child loads every installed tool; the bundled `spawning:` policy still limits nested subagents. Re-derive them when the `pi-herdr-agents` pin changes. |
 | `~/.pi/agent/skills/pi-skills` | A clone of [badlogic/pi-skills](https://github.com/badlogic/pi-skills) in `~/.local/share/weihung-agent-root/pi-skills`, pulled on each install. Its skills (`brave-search`, `browser-tools`, `gccli`, `gdcli`, `gmcli`, `transcribe`, `vscode`, `youtube-transcript`) need their own CLIs or keys as each `SKILL.md` describes. |
 
 ### Packages
@@ -68,6 +69,7 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 | `@moyai/pi-session-hoarder` | Verified local archives of every session in `~/.pi/agent/session-hoarder/`; `/hoarder status` reports it. Nothing leaves the machine unless `/hoarder storage s3` is configured. |
 | `pi-jev-compaction` | Every compaction, including `idle-compaction`'s, first asks TypeSafe Jev which stale tool calls and results to drop or truncate and keeps user and assistant text verbatim; without `TYPESAFE_API_KEY` or on a Jev error it falls back to pi's summary. `/jev-status` shows the key and thresholds. |
 | `cc-safety-net` | Blocks destructive commands (`git reset --hard`, `git push --force`, `rm -rf` on dangerous targets) and reads of secrets such as SSH keys, `.env`, and `~/.aws`, in every project. `npx cc-safety-net explain "<command>"` shows why a command is blocked; `npx cc-safety-net gui` edits the policy. |
+| `pi-codex-image-gen` | The `codex_generate_image` tool: generates and edits images with the existing `openai-codex` login, so no `OPENAI_API_KEY` is needed. Its install telemetry stays off because the installer sets `enableInstallTelemetry` to `false`. |
 | aaaav | The development workflow skills (`aaaav-do`, `investigating`, `inspecting`, `grilling`, and others) that the instructions route work through. |
 | straw-boss | The Pi dispatch workflow: `boss-say`, `work-on`, `choosing-graph`, `shipping-task`, `reporting-to-user`, and `dispatching-work`, plus the `dispatch_control` tool (list, reattach, and hand off dispatches over `~/.pi/agent/dispatch-ledger/`) and Herdr pane balancing. Installed from `github.com/wayne930242/straw-boss` at the commit pinned in `scripts/pi-target.py`; bump the pin to take a new release. |
 
@@ -154,7 +156,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-agent-root`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、本 repo 的擴充（閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、本 repo 的擴充（閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
 - 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。

@@ -46,6 +46,7 @@ fresh_install_creates_expected_links() {
     assert_symlink_target "$fake_home/.agents/skills/$name" "$REPO_ROOT/skills/$name"
   done
   assert_symlink_target "$fake_home/.pi/agent/rules" "$REPO_ROOT/rules"
+  assert_symlink_target "$fake_home/.pi/agent/agents" "$REPO_ROOT/agents"
   [[ -f "$fake_home/.pi/agent/AGENTS.md" ]] || fail "expected generated pi instructions"
   grep -q '~/.pi/agent/rules/' "$fake_home/.pi/agent/AGENTS.md" || fail "expected pi instructions to point to the rules"
   assert_absent "$fake_home/.claude"
@@ -88,13 +89,14 @@ with tempfile.TemporaryDirectory() as directory:
     assert all(word not in text for word in ("@shared/", "/codex:rescue"))
     assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 17, settings
+    assert len(settings["packages"]) == 18, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
     assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []} in settings["packages"], settings
     assert "npm:@juicesharp/rpiv-todo@2.11.0" in sources and "npm:cc-safety-net@2.4.7" in sources, sources
+    assert "npm:pi-codex-image-gen@0.1.13" in sources, sources
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["enabledModels"][0] == "claude-bridge/claude-opus-5-5", settings

@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SKILLS_DIR="$REPO_ROOT/skills"
 RULES_DIR="$REPO_ROOT/rules"
+AGENTS_DIR="$REPO_ROOT/agents"
 CODEBASE_MEMORY_INSTALL_URL="https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh"
 
 TARGET_HOME="${HOME}"
@@ -20,6 +21,7 @@ Usage: bash scripts/install.sh [--home PATH] [--force] [--skip-external]
 Installs this repository's pi setup:
   - ~/.agents/skills/*/        links to skills/
   - ~/.pi/agent/rules          link to rules/
+  - ~/.pi/agent/agents         link to agents/
   - ~/.local/bin/codebase-memory-mcp when missing
   - everything scripts/pi-target.py install manages: pi itself, its Herdr
     integration, pi packages, aaaav, this repository's pi package, the
@@ -213,6 +215,7 @@ for skill_name in "${root_skills[@]}"; do
   install_link "$SKILLS_DIR/$skill_name" "$TARGET_HOME/.agents/skills/$skill_name"
 done
 install_link "$RULES_DIR" "$TARGET_HOME/.pi/agent/rules"
+install_link "$AGENTS_DIR" "$TARGET_HOME/.pi/agent/agents"
 
 install_codebase_memory_mcp
 

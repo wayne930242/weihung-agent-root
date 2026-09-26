@@ -16,7 +16,8 @@ Usage: bash scripts/uninstall.sh [--home PATH] [--skip-external]
 
 Uninstall flow:
   - restore each managed link from the latest backup directory when a backup exists
-  - otherwise remove the repository links in ~/.agents/skills and ~/.pi/agent/rules
+  - otherwise remove the repository links in ~/.agents/skills, ~/.pi/agent/rules,
+    and ~/.pi/agent/agents
   - run scripts/pi-target.py uninstall, which removes this repository's pi
     packages and resources and restores the pi settings it changed
 
@@ -117,6 +118,9 @@ done < <(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
 prune_managed_links "$TARGET_HOME/.agents/skills"
 if [[ -L "$TARGET_HOME/.pi/agent/rules" && "$(readlink "$TARGET_HOME/.pi/agent/rules")" == "$REPO_ROOT/rules" ]]; then
   restore_or_remove "$TARGET_HOME/.pi/agent/rules"
+fi
+if [[ -L "$TARGET_HOME/.pi/agent/agents" && "$(readlink "$TARGET_HOME/.pi/agent/agents")" == "$REPO_ROOT/agents" ]]; then
+  restore_or_remove "$TARGET_HOME/.pi/agent/agents"
 fi
 
 pi_args=(uninstall --home "$TARGET_HOME")

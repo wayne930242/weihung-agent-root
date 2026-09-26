@@ -12,6 +12,7 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 - `pi/model-profiles.json`: the executable pi model and thinking tiers for each strategy.
 - `pi/extensions/`: this repository's pi package, registered through `package.json`. Dispatch recovery, handoff, and pane balancing live in straw-boss.
 - `skills/`: user skills linked into `~/.agents/skills/`. `managing-model-preferences` owns the strategy catalog.
+- `agents/`: global `pi-herdr-agents` role overrides linked to `~/.pi/agent/agents/`. Each is the bundled role without its `tools:` allowlist; re-derive them when the `pi-herdr-agents` pin changes.
 - `rules/`: user-global rules linked to `~/.pi/agent/rules/`. The template indexes every file by the work it covers, so a new rule also needs an entry there.
 - `docs/specs/`: durable design records.
 
