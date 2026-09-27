@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
-STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss@3d0fceb216ecadc3ed6a22d3b2a82dbd3fb3cd3a"
+STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss@e483ffb6f32fbd7189a4a48c0a0122c569b29b75"
 
 
 def write(path, content, executable=False):
