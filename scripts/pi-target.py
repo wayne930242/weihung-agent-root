@@ -63,6 +63,8 @@ PACKAGES = [
     "npm:pi-robot-hand@0.1.0",
 ]
 LOCAL_PACKAGE = str(ROOT)
+# The Playwriter CLI drives the user's own Chrome through its extension; playwriter-relay.ts starts its relay.
+PLAYWRITER = "playwriter@0.7.0"
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
@@ -529,6 +531,11 @@ def install(home, skip_external, force):
     retired_ids = {package_id(value, agent_dir) for value in RETIRED_PACKAGES} - previous_ids
     if not skip_external:
         run(["npm", "install", "-g", "@earendil-works/pi-coding-agent@latest"], home)
+        if "playwriter_preinstalled" not in state:
+            listed = subprocess.run(["npm", "ls", "-g", "--depth=0", "playwriter"], capture_output=True)
+            state["playwriter_preinstalled"] = listed.returncode == 0
+            write_json(marker_path, state)
+        run(["npm", "install", "-g", PLAYWRITER], home)
         run(["herdr", "integration", "install", "pi"], home)
         state["integration_installed"] = True
         write_json(marker_path, state)
@@ -596,6 +603,8 @@ def uninstall(home, skip_external):
                 run(["pi", "remove", package_source(package)], home)
         if state.get("integration_installed", True):
             run(["herdr", "integration", "uninstall", "pi"], home)
+        if state.get("playwriter_preinstalled") is False:
+            run(["npm", "uninstall", "-g", "playwriter"], home)
     settings = read_json(settings_path)
     # A package the user declared before install keeps the spec they wrote, not the pinned one.
     prior = {package_id(value, agent_dir): value for value in previous_packages}

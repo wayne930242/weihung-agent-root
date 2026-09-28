@@ -6,7 +6,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss@e483ffb6f32fbd7189a4a48c0a0122c569b29b75"
@@ -29,6 +28,7 @@ with tempfile.TemporaryDirectory(prefix="pi-fresh-machine-") as temporary:
     home = base / "home"
     bin_dir = base / "bin"
     calls = base / "pi-calls.log"
+    npm_calls = base / "npm-calls.log"
     fixture = base / "team-toon-tack"
     write(fixture / "skills/managing-linear-tasks/SKILL.md", "---\nname: managing-linear-tasks\ndescription: Test skill\n---\n")
     write(fixture / "commands/ttt-status.md", "# ttt status\n")
@@ -45,6 +45,10 @@ home = Path(os.environ['HOME']) / '.pi/agent'
 import os, shutil, sys
 from pathlib import Path
 args = sys.argv[1:]
+with open(os.environ['TEST_NPM_CALLS'], 'a') as log:
+    log.write(' '.join(args) + '\\n')
+if args[:1] == ['ls']:
+    sys.exit(1)
 if '--prefix' in args:
     prefix = Path(args[args.index('--prefix') + 1])
     shutil.copytree(os.environ['TEST_TTT_FIXTURE'], prefix / 'node_modules/team-toon-tack', dirs_exist_ok=True)
@@ -62,7 +66,7 @@ if '--prefix' in args:
     write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
            "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"),
-           "TEST_TTT_FIXTURE": str(fixture), "PI_SKILLS_GIT": str(pi_skills)}
+           "TEST_TTT_FIXTURE": str(fixture), "PI_SKILLS_GIT": str(pi_skills), "TEST_NPM_CALLS": str(npm_calls)}
     agent = home / ".pi/agent"
 
     result = run("install.sh", home, env)
@@ -72,8 +76,10 @@ if '--prefix' in args:
     assert AAAAV_GIT in json.loads((agent / "settings.json").read_text())["packages"]
     assert f"install {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
     assert STRAW_BOSS_GIT in json.loads((agent / "settings.json").read_text())["packages"]
+    assert "install -g playwriter@0.7.0" in npm_calls.read_text().splitlines()
 
     run("uninstall.sh", home, env)
+    assert "uninstall -g playwriter" in npm_calls.read_text().splitlines()
     assert f"remove {AAAAV_GIT}" in calls.read_text().splitlines()
     assert f"remove {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
     print("pi fresh machine: pass")

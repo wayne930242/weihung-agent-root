@@ -14,7 +14,7 @@ cd ~/projects/weihung-agent-root
 bash scripts/install.sh
 ```
 
-Then start `pi` inside Herdr and run `/login` for OpenAI Codex. Claude models need no pi login; the bridge uses Claude Code's.
+Then start `pi` inside Herdr and run `/login` for OpenAI Codex. Claude models need no pi login; the bridge uses Claude Code's. For browser work in your own Chrome, install the [Playwriter extension](https://chromewebstore.google.com/detail/playwriter/jfeammnjpkecdekppnclgkkffahnhfhe); clicking its icon on a tab hands that tab to agents, and clicking again takes it back.
 
 Clone beside the related checkouts when they exist: the installer uses `~/projects/aaaav` when present (otherwise `github.com/wayne930242/aaaav`) and the mp-infra plugin from `~/projects/moldplan-center` (or `PI_MP_INFRA_ROOT`).
 
@@ -33,6 +33,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 `scripts/install.sh` links the repository into the home directory, installs `codebase-memory-mcp` into `~/.local/bin` when it is missing, and runs `scripts/pi-target.py install`, which:
 
 - installs or upgrades pi (`npm install -g @earendil-works/pi-coding-agent`) and runs `herdr integration install pi`, which reports each pi session's state to Herdr;
+- installs the pinned [Playwriter](https://github.com/remorses/playwriter) CLI (`npm install -g playwriter@0.7.0`), which drives the user's own Chrome through the Playwriter extension; uninstall removes it only when this install added it;
 - installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in) plus the active model strategy;
 - sets the default model, thinking level, `pi-herdr-agents` task models, UI settings, and MCP host-config discovery;
@@ -81,6 +82,7 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 
 - [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn.
 - [mp-infra-hooks.ts](pi/extensions/mp-infra-hooks.ts): when `~/.pi/agent/mp-infra.json` exists, runs the mp-infra session-start hook, its production-safety check before shell commands, and its vault, playbook, and Nomad checks after edits.
+- [playwriter-relay.ts](pi/extensions/playwriter-relay.ts): at session start, starts the Playwriter relay on `127.0.0.1:19988` when it is down and warns when the Chrome extension is not connected, without delaying the session.
 
 ### Ported resources
 
@@ -158,7 +160,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-agent-root`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、本 repo 的擴充（閒置時自動壓縮、mp-infra 安全 hook），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、Playwriter CLI（操作使用者自己的 Chrome，需另外安裝 Chrome 擴充套件）、本 repo 的擴充（閒置時自動壓縮、mp-infra 安全 hook、pi 啟動時確保 Playwriter 中繼服務在跑），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
 - 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。

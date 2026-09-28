@@ -6,7 +6,8 @@
   "pi": {
     "extensions": [
       "./pi/extensions/idle-compaction.ts",
-      "./pi/extensions/mp-infra-hooks.ts"
+      "./pi/extensions/mp-infra-hooks.ts",
+      "./pi/extensions/playwriter-relay.ts"
     ]
   }
 }
