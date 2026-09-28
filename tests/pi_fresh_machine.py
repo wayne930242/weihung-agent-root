@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
-STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss@e483ffb6f32fbd7189a4a48c0a0122c569b29b75"
+STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"
 
 
 def write(path, content, executable=False):

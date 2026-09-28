@@ -31,7 +31,7 @@ USAGE_SOURCE = "git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3
 WEB_ACCESS_SOURCE = "git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
-STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@e483ffb6f32fbd7189a4a48c0a0122c569b29b75"
+STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 PINNED_GIT = {BRIDGE_SOURCE: BRIDGE_GIT_PREFIXES, STRAW_BOSS_SOURCE: ("git:github.com/wayne930242/straw-boss",)}
 OPUS_1M = "claude-bridge/claude-opus-5-5"

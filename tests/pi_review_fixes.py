@@ -207,7 +207,7 @@ class PiReviewFixes(unittest.TestCase):
                 run_script("install.sh", home, "--skip-external")
                 installed = json.loads((agent / "settings.json").read_text())["packages"]
                 self.assertEqual([item for item in installed if "straw-boss" in item],
-                                 ["git:github.com/wayne930242/straw-boss@e483ffb6f32fbd7189a4a48c0a0122c569b29b75"])
+                                 ["git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"])
 
     def test_upgrade_retires_the_powerline_footer_and_notify(self):
         with tempfile.TemporaryDirectory() as directory:
