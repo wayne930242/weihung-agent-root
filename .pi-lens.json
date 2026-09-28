@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "fail-fast": {
+      "disable": ["unchecked-throwing-call-python"]
+    }
+  }
+}

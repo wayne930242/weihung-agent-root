@@ -14,7 +14,6 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 MARKER = Path(".pi/agent/.weihung-agent-root.json")
 # Before its rename this repository was weihung-user-claude; installs from then keep state and links under that name.
