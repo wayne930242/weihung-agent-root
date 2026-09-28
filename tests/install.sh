@@ -89,7 +89,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert all(word not in text for word in ("@shared/", "/codex:rescue"))
     assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 20, settings
+    assert len(settings["packages"]) == 21, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
@@ -98,6 +98,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "npm:@juicesharp/rpiv-todo@2.11.0" in sources and "npm:cc-safety-net@2.4.7" in sources, sources
     assert "npm:pi-codex-image-gen@0.1.13" in sources, sources
     assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.0" in sources, sources
+    assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["enabledModels"][0] == "claude-bridge/claude-opus-5-5", settings

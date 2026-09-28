@@ -61,6 +61,7 @@ PACKAGES = [
     "npm:pi-codex-image-gen@0.1.13",
     "npm:pi-secret-drop@0.1.6",
     "npm:pi-robot-hand@0.1.0",
+    "npm:pi-phoenix-otel@0.2.0",
 ]
 LOCAL_PACKAGE = str(ROOT)
 # The Playwriter CLI drives the user's own Chrome through its extension; playwriter-relay.ts starts its relay.
