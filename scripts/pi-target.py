@@ -60,6 +60,8 @@ PACKAGES = [
     "npm:pi-jev-compaction@1.0.0",
     "npm:cc-safety-net@2.4.7",
     "npm:pi-codex-image-gen@0.1.13",
+    "npm:pi-secret-drop@0.1.6",
+    "npm:pi-robot-hand@0.1.0",
 ]
 LOCAL_PACKAGE = str(ROOT)
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
