@@ -122,7 +122,12 @@ def obsolete_pin(value):
 
 
 def read_json(path):
-    return json.loads(path.read_text()) if path.exists() else {}
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError as error:
+        raise ValueError(f"{path} is not valid JSON: {error}") from error
 
 
 def write_json(path, value):
@@ -187,7 +192,7 @@ def managed_resource(home, state, destination, source, force=False, link=False):
         else:
             if not force:
                 raise ValueError(f"{destination} exists; use --force to back it up")
-            backup = home / ".local/state/weihung-agent-root/backups" / datetime.now().strftime("%Y%m%d-%H%M%S") / key
+            backup = home / ".local/state/weihung-agent-root/backups" / datetime.now().astimezone().strftime("%Y%m%d-%H%M%S") / key
             backup.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(destination, backup)
             record = {**(record or {}), "backup": str(backup)}
@@ -306,7 +311,7 @@ def uninstall_ported_resources(home, state):
 
 
 def active_strategy():
-    match = re.search(r"^Active strategy: \[[^]]+\]\(strategies/([^)]+)\)", PROFILE.read_text(), re.M)
+    match = re.search(r"^Active strategy: \[[^]]+\]\(strategies/([^)]+)\)", PROFILE.read_text(), re.MULTILINE)
     if not match:
         raise ValueError("active strategy is missing from model-preference-profile.md")
     return match.group(1).removesuffix(".md")
@@ -358,7 +363,7 @@ def enabled_models(default, tiers):
 
 def instructions():
     body = (ROOT / "pi/AGENTS.md.in").read_text().rstrip()
-    strategy, default, profile_tiers, tasks = routing()
+    strategy, default, profile_tiers, _tasks = routing()
     tier_lines = [f"- Main: model `{', '.join(default_candidates(default))}`; thinking `{default[1]}`."]
     for name, (model, thinking) in profile_tiers.items():
         if name == "main":
@@ -502,7 +507,7 @@ def install(home, skip_external, force):
     if current_hash and (first_install or current_hash != state.get("instructions_hash")):
         if not force:
             raise ValueError(f"{instructions_path} exists; use --force to back it up")
-        backup = home / ".local/state/weihung-agent-root/backups" / datetime.now().strftime("%Y%m%d-%H%M%S") / ".pi/agent/AGENTS.md"
+        backup = home / ".local/state/weihung-agent-root/backups" / datetime.now().astimezone().strftime("%Y%m%d-%H%M%S") / ".pi/agent/AGENTS.md"
         backup.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(instructions_path, backup)
         state["instructions_backup"] = str(backup)

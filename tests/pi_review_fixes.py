@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-
 ROOT = Path(__file__).resolve().parent.parent
 PI_TARGET = ROOT / "scripts/pi-target.py"
 FAKE_CBMEM = """#!/usr/bin/env python3
@@ -194,7 +193,7 @@ class PiReviewFixes(unittest.TestCase):
 
             (agent / ".weihung-user-claude.json").write_text("{}")
             conflict = subprocess.run([sys.executable, str(root / "scripts/pi-target.py"), "migrate", "--home", str(home)],
-                                      capture_output=True, text=True)
+                                      capture_output=True, text=True, check=False)
             self.assertNotEqual(conflict.returncode, 0)
             self.assertIn("merge them by hand", conflict.stderr)
 
@@ -372,7 +371,7 @@ class PiReviewFixes(unittest.TestCase):
             env = {"PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "PI_SKILLS_GIT": str(pi_skills)}
             command = ["python3", str(PI_TARGET), "install", "--home", str(home)]
             failed = subprocess.run(command, env={**os.environ, "HOME": str(home), **env},
-                                    text=True, capture_output=True)
+                                    text=True, capture_output=True, check=False)
             self.assertNotEqual(failed.returncode, 0)
             marker = home / ".pi/agent/.weihung-agent-root.json"
             self.assertTrue(marker.exists())
@@ -381,11 +380,19 @@ class PiReviewFixes(unittest.TestCase):
             self.assertFalse(marker.exists())
             (home / "fail-once").write_text("")
             failed = subprocess.run(command, env={**os.environ, "HOME": str(home), **env},
-                                    text=True, capture_output=True)
+                                    text=True, capture_output=True, check=False)
             self.assertNotEqual(failed.returncode, 0)
             subprocess.run(command, env={**os.environ, "HOME": str(home), **env}, check=True)
             run_script("uninstall.sh", home, "--skip-external")
             self.assertFalse(marker.exists())
+
+    def test_malformed_json_names_the_file(self):
+        target = load_target()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.json"
+            path.write_text("{broken")
+            with self.assertRaisesRegex(ValueError, f"{path} is not valid JSON"):
+                target.read_json(path)
 
     def test_backup_survives_a_failed_link_and_is_restored(self):
         target = load_target()
