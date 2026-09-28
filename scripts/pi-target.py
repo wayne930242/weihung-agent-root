@@ -179,7 +179,7 @@ def managed_resource(home, state, destination, source, force=False, link=False):
     if destination.exists() or destination.is_symlink():
         current = (destination.readlink().as_posix() if destination.is_symlink() else
                    hashlib.sha256(destination.read_bytes()).hexdigest() if destination.is_file() else None)
-        if record and current == record["installed"]:
+        if record and current == record.get("installed"):
             destination.unlink()
         elif not record and ((link and destination.is_symlink() and current == str(source)) or
                              (not link and destination.is_file() and current == hashlib.sha256(source).hexdigest())):
@@ -191,6 +191,9 @@ def managed_resource(home, state, destination, source, force=False, link=False):
             backup.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(destination, backup)
             record = {**(record or {}), "backup": str(backup)}
+            # Record the backup before the next step can fail, so uninstall still restores it.
+            records[key] = record
+            write_json(home / MARKER, state)
     destination.parent.mkdir(parents=True, exist_ok=True)
     if link:
         destination.symlink_to(source)
@@ -281,11 +284,15 @@ def uninstall_ported_resources(home, state):
             current = destination.readlink().as_posix()
         elif destination.is_file():
             current = hashlib.sha256(destination.read_bytes()).hexdigest()
+        elif destination.exists():
+            continue
         else:
-            continue
-        if current != record["installed"]:
-            continue
-        destination.unlink()
+            current = None
+        # A missing destination still gets its backup back: an earlier run may have failed between the two.
+        if current is not None:
+            if current != record.get("installed"):
+                continue
+            destination.unlink()
         backup = record.get("backup")
         if backup and Path(backup).exists():
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -499,10 +506,13 @@ def install(home, skip_external, force):
         backup.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(instructions_path, backup)
         state["instructions_backup"] = str(backup)
+        write_json(marker_path, state)
     agent_dir.mkdir(parents=True, exist_ok=True)
     if not instructions_path.exists() or instructions_path.read_text() != content:
         instructions_path.write_text(content)
     state["instructions_hash"] = hashlib.sha256(content.encode()).hexdigest()
+    # A rerun after a later failure must recognize this file as ours, not back it up over the user's.
+    write_json(marker_path, state)
     mcp = read_json(mcp_path)
     update_mcp(mcp, state)
     write_json(mcp_path, mcp)
@@ -566,9 +576,9 @@ def uninstall(home, skip_external):
     instructions_path = agent_dir / "AGENTS.md"
     if instructions_path.exists() and hashlib.sha256(instructions_path.read_bytes()).hexdigest() == state.get("instructions_hash"):
         instructions_path.unlink()
-        backup = state.get("instructions_backup")
-        if backup and Path(backup).exists():
-            shutil.move(backup, instructions_path)
+    backup = state.get("instructions_backup")
+    if backup and Path(backup).exists() and not instructions_path.exists():
+        shutil.move(backup, instructions_path)
     previous_packages = state.get("previous_packages", [])
     previous_ids = {package_id(value, agent_dir) for value in previous_packages}
     managed_packages = PACKAGES + [state.get("aaaav", str(AAAAV)), LOCAL_PACKAGE]

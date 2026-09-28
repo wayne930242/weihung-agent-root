@@ -8,6 +8,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +44,14 @@ def seed_codebase_memory(home):
     binary.parent.mkdir(parents=True, exist_ok=True)
     binary.write_text(FAKE_CBMEM)
     binary.chmod(0o755)
+
+
+def load_target() -> Any:
+    spec = importlib.util.spec_from_file_location("pi_target_under_test", PI_TARGET)
+    assert spec and spec.loader
+    target = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(target)
+    return target
 
 
 def run_script(script, home, *args, env=None, check=True):
@@ -100,9 +110,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertFalse((home / ".pi/agent/.weihung-agent-root.json").exists())
 
     def test_all_tiers_have_distinct_task_fallbacks(self):
-        spec = importlib.util.spec_from_file_location("pi_target", PI_TARGET)
-        target = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(target)
+        target = load_target()
         profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
         for strategy, tiers in profiles.items():
             with self.subTest(strategy=strategy):
@@ -119,9 +127,7 @@ class PiReviewFixes(unittest.TestCase):
                     self.assertIn(f"model `{expected}`; thinking `{thinking}`", instructions)
 
     def test_only_main_and_complex_tiers_fall_back_to_opus_1m(self):
-        spec = importlib.util.spec_from_file_location("pi_target_tiers", PI_TARGET)
-        target = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(target)
+        target = load_target()
         profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
         one_m = {"main", "complex_clear", "complex_unclear", "academic"}
         for strategy, tiers in profiles.items():
@@ -286,9 +292,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertNotIn("enableInstallTelemetry", restored)
 
     def test_package_identity_ignores_the_npm_version(self):
-        spec = importlib.util.spec_from_file_location("pi_target_identity", PI_TARGET)
-        target = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(target)
+        target = load_target()
         agent = Path("/unused")
         self.assertEqual(target.package_id("npm:pi-lens@4.3.0", agent), "npm:pi-lens")
         self.assertEqual(target.package_id("npm:@scope/name@1.0.0", agent), "npm:@scope/name")
@@ -320,9 +324,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], [old, "npm:user-package"])
 
     def test_external_git_switch_keeps_the_new_checkout(self):
-        spec = importlib.util.spec_from_file_location("pi_target_git", PI_TARGET)
-        target = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(target)
+        target = load_target()
         old = "git:github.com/elidickinson/pi-claude-bridge@old-commit"
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
@@ -384,6 +386,60 @@ class PiReviewFixes(unittest.TestCase):
             subprocess.run(command, env={**os.environ, "HOME": str(home), **env}, check=True)
             run_script("uninstall.sh", home, "--skip-external")
             self.assertFalse(marker.exists())
+
+    def test_backup_survives_a_failed_link_and_is_restored(self):
+        target = load_target()
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            destination = home / ".pi/agent/skills/pi-skills"
+            destination.parent.mkdir(parents=True)
+            destination.write_text("user copy\n")
+            source = home / "clone"
+            source.mkdir()
+            with mock.patch.object(Path, "symlink_to", side_effect=OSError("link failed")), self.assertRaises(OSError):
+                    target.managed_resource(home, {}, destination, source, force=True, link=True)
+            state = target.read_json(home / target.MARKER)
+            target.managed_resource(home, state, destination, source, force=True, link=True)
+            target.uninstall_ported_resources(home, target.read_json(home / target.MARKER))
+            self.assertEqual(destination.read_text(), "user copy\n")
+
+    def test_failed_restore_is_retried_by_the_next_uninstall(self):
+        target = load_target()
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            destination = home / ".pi/agent/skills/pi-skills"
+            destination.parent.mkdir(parents=True)
+            destination.write_text("user copy\n")
+            source = home / "clone"
+            source.mkdir()
+            target.managed_resource(home, {}, destination, source, force=True, link=True)
+            state = target.read_json(home / target.MARKER)
+            with mock.patch.object(target.shutil, "move", side_effect=OSError("move failed")), self.assertRaises(OSError):
+                    target.uninstall_ported_resources(home, state)
+            target.uninstall_ported_resources(home, state)
+            self.assertEqual(destination.read_text(), "user copy\n")
+
+    def test_instructions_backup_survives_a_failed_install_and_uninstall(self):
+        target = load_target()
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            instructions = home / ".pi/agent/AGENTS.md"
+            instructions.parent.mkdir(parents=True)
+            instructions.write_text("user instructions\n")
+            with mock.patch.object(target, "update_mcp", side_effect=ValueError("broken mcp.json")), self.assertRaises(ValueError):
+                    target.install(home, skip_external=True, force=True)
+            target.install(home, skip_external=True, force=True)
+            real_move = target.shutil.move
+
+            def fail_on_instructions(source, destination):
+                if Path(destination) == instructions:
+                    raise OSError("move failed")
+                return real_move(source, destination)
+
+            with mock.patch.object(target.shutil, "move", side_effect=fail_on_instructions), self.assertRaises(OSError):
+                    target.uninstall(home, skip_external=True)
+            target.uninstall(home, skip_external=True)
+            self.assertEqual(instructions.read_text(), "user instructions\n")
 
 
 if __name__ == "__main__":
