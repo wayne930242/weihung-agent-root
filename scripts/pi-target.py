@@ -23,7 +23,7 @@ LEGACY_RENAMES = (
     (Path(".local/state/weihung-user-claude"), Path(".local/state/weihung-agent-root")),
 )
 LEGACY_ROOT = ROOT.parent / "weihung-user-claude"
-BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@c348c1e724bc585726114756e2ff1b1835220a03"
+BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@88f797dc1ad18b5e6b1cd239cf18ae7691fa65f9"
 LEGACY_BRIDGE = "npm:pi-claude-bridge"
 # Fork commit adding claude-bridge to /usage (upstream iefnaf/pi-usage#4).
 USAGE_SOURCE = "git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"
