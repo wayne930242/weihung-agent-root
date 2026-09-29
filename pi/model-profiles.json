@@ -5,8 +5,8 @@
     "recon": ["openai-codex/gpt-6-luna", "medium"],
     "ui": ["openai-codex/gpt-6-sol", "medium"],
     "review": ["openai-codex/gpt-6-sol", "low"],
-    "simple": ["claude-bridge/claude-200k-opus-5-5", "low"],
-    "coding": ["claude-bridge/claude-200k-opus-5-5", "medium"],
+    "simple": ["claude-bridge/claude-sonnet-5-5", "medium"],
+    "coding": ["claude-bridge/claude-sonnet-5-5", "high"],
     "complex_clear": ["openai-codex/gpt-6-sol", "high"],
     "complex_unclear": ["openai-codex/gpt-6-astra", "low"],
     "academic": ["openai-codex/gpt-6-astra", "high"]

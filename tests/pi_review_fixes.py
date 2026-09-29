@@ -150,7 +150,7 @@ class PiReviewFixes(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
-                             ["git:github.com/wayne930242/pi-claude-bridge@2f00cce984508e8bc1ea07ff98adc9c3873c709e"])
+                             ["git:github.com/wayne930242/pi-claude-bridge@c348c1e724bc585726114756e2ff1b1835220a03"])
 
     def test_install_under_the_former_name_moves_to_the_new_one(self):
         import shutil
