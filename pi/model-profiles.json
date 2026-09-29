@@ -3,7 +3,7 @@
     "main": ["claude-bridge/claude-opus-5-5", "high"],
     "docs": ["openai-codex/gpt-6-luna", "high"],
     "recon": ["openai-codex/gpt-6-luna", "medium"],
-    "ui": ["openai-codex/gpt-6-sol", "medium"],
+    "ui": ["openai-codex/gpt-6-astra", "medium"],
     "review": ["openai-codex/gpt-6-sol", "low"],
     "simple": ["claude-bridge/claude-sonnet-5-5", "medium"],
     "coding": ["claude-bridge/claude-sonnet-5-5", "high"],
