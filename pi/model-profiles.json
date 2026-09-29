@@ -1,6 +1,6 @@
 {
   "claude-drive-codex": {
-    "main": ["claude-bridge/claude-opus-5-5", "medium"],
+    "main": ["claude-bridge/claude-sonnet-5-5", "high"],
     "docs": ["openai-codex/gpt-6-luna", "high"],
     "recon": ["openai-codex/gpt-6-luna", "medium"],
     "ui": ["openai-codex/gpt-6-astra", "medium"],
@@ -8,8 +8,8 @@
     "simple": ["claude-bridge/claude-sonnet-5-5", "medium"],
     "coding": ["claude-bridge/claude-sonnet-5-5", "high"],
     "complex_clear": ["openai-codex/gpt-6-sol", "high"],
-    "complex_unclear": ["openai-codex/gpt-6-astra", "low"],
-    "academic": ["openai-codex/gpt-6-astra", "high"]
+    "complex_unclear": ["claude-bridge/claude-200k-opus-5-5", "high"],
+    "academic": ["claude-bridge/claude-200k-opus-5-5", "xhigh"]
   },
   "codex-drive-claude": {
     "main": ["openai-codex/gpt-6-sol", "high"],

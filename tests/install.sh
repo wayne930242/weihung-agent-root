@@ -102,14 +102,14 @@ with tempfile.TemporaryDirectory() as directory:
     assert {"source": "git:github.com/wayne930242/pi-code@b88ba30aa987d5e34ddffd4c6c469f78711ac711", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
-    assert settings["enabledModels"][0] == "claude-bridge/claude-opus-5-5", settings
+    assert settings["enabledModels"][0] == "claude-bridge/claude-sonnet-5-5", settings
     assert "openai-codex/gpt-6-luna" in settings["enabledModels"], settings
     assert settings["theme"] == "catppuccin-mocha", settings
     assert settings["enableInstallTelemetry"] is False, settings
     assert settings["editorPaddingX"] == 1, settings
     assert settings["collapseChangelog"] is True, settings
     assert settings["terminal"]["showTerminalProgress"] is True, settings
-    assert settings["compaction"] == {"modelOverrides": {"claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}}}, settings
+    assert settings["compaction"] == {"modelOverrides": {"claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, settings
     assert "powerline" not in settings and "npm:pi-open-tui@0.3.9" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
     assert mcp["settings"] == {"hostConfigDiscovery": "on", "namespaceProxyTools": False}, mcp
@@ -233,7 +233,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
     assert json.loads(config.read_text())["models"]["agents"] == original_models["agents"]
     installed_compaction = json.loads((agent / "settings.json").read_text())["compaction"]
-    assert installed_compaction == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}, "claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}}}, installed_compaction
+    assert installed_compaction == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}, "claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, installed_compaction
     subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
     run(uninstall, home)
     assert (agent / "AGENTS.md").read_text() == "user instructions\n"

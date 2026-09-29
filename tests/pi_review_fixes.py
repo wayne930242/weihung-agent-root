@@ -125,7 +125,7 @@ class PiReviewFixes(unittest.TestCase):
                     expected = ", ".join(target.candidates(model, tier))
                     self.assertIn(f"model `{expected}`; thinking `{thinking}`", instructions)
 
-    def test_only_main_and_complex_tiers_fall_back_to_opus_1m(self):
+    def test_only_main_falls_back_to_opus_1m(self):
         target = load_target()
         profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
         one_m = {"main", "complex_clear", "complex_unclear", "academic"}
@@ -135,8 +135,9 @@ class PiReviewFixes(unittest.TestCase):
                     self.assertNotEqual(model == target.OPUS_1M and tier not in one_m, True)
                     if model == target.LUNA:
                         self.assertEqual(target.candidates(model, tier)[1], target.HAIKU)
-        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "complex_clear")[1], target.OPUS_1M)
-        self.assertEqual(target.candidates("openai-codex/gpt-6-astra", "architecture")[1], target.OPUS_1M)
+        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "main")[1], target.OPUS_1M)
+        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "complex_clear")[1], target.OPUS_200K)
+        self.assertEqual(target.candidates("openai-codex/gpt-6-astra", "architecture")[1], target.OPUS_200K)
         self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "review")[1], target.OPUS_200K)
         self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "ui")[1], target.OPUS_200K)
 

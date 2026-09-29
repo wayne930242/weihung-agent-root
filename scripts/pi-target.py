@@ -47,9 +47,11 @@ PINNED_GIT = {
 }
 OPUS_1M = "claude-bridge/claude-opus-5-5"
 OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
+SONNET_1M = "claude-bridge/claude-sonnet-5-5"
 HAIKU = "claude-bridge/claude-haiku-4-5"
 LUNA = "openai-codex/gpt-6-luna"
-ONE_M_TIERS = {"main", "complex_clear", "complex_unclear", "academic", "architecture"}
+# Only the coordinating session falls back to a 1M Opus; complex tiers fall back to the 200K twin.
+ONE_M_TIERS = {"main"}
 # Versioned specs keep every machine on the same release; `pi update` skips them, so bump them here.
 # The theme collection loads only Catppuccin Mocha, which matches the Herdr theme, and none of its skills.
 THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []}
@@ -85,9 +87,9 @@ AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels")
-# pi's native compaction fires at contextWindow - reserveTokens: 500K for the 1M Opus, a ceiling for
-# a long running turn; idle-compaction.ts compacts at 300K between turns.
-COMPACTION_OVERRIDES = {OPUS_1M: {"reserveTokens": 500_000}}
+# pi's native compaction fires at contextWindow - reserveTokens: 500K for the 1M Opus and Sonnet, a
+# ceiling for a long running turn; idle-compaction.ts compacts at 300K between turns.
+COMPACTION_OVERRIDES = {OPUS_1M: {"reserveTokens": 500_000}, SONNET_1M: {"reserveTokens": 500_000}}
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
 # powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, pi-quotas

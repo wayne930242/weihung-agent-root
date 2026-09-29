@@ -2,15 +2,13 @@
 
 Active strategy: [claude-drive-codex](strategies/claude-drive-codex.md).
 Activated: 2026-09-23.
-Updated: 2026-09-29.
-Rationale: Codex quota has been reset, so Codex returns to its tiers while agy stays off; Sonnet 5.5 takes implementation from Opus:
-- Opus 5.5 1M medium handles main coordination; raise a session to high manually for production operations or hard debugging.
+Updated: 2026-09-30.
+Rationale: Claude carries the main load and Codex stays on the $20 plan; Sonnet 5.5 coordinates and implements, and Opus is reserved for hard thinking:
+- Sonnet 5.5 1M high handles main coordination; Sonnet 5.5 (200K) medium and high handle simple and standard implementation.
+- Opus 5.5 200K high handles complex work with unclear instructions and `task:architecture` planning and diagnosis; Opus 5.5 200K xhigh handles academic research and forward-looking hard problems.
 - Codex Luna (gpt-6-luna) high handles documentation; Luna medium handles investigation and source data processing.
-- Sonnet 5.5 (200K) medium and high handle simple and standard implementation.
-- Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6-sol) high handles routine review.
-- Codex Sol high handles complex work with clear instructions; Astra low handles complex work with unclear instructions.
-- Codex Astra high is reserved for academic research and forward-looking hard problems.
-- Fallbacks: Opus 5.5 1M backs up main and complex tiers, Opus 5.5 200K backs up the other Codex tiers, and Haiku 4.5 backs up Luna.
+- Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6-sol) high handles routine review and complex work with clear instructions.
+- Fallbacks: Opus 5.5 1M backs up a Codex main session only; Opus 5.5 200K backs up the other Codex tiers, Haiku 4.5 backs up Luna, and Codex backs up Claude tiers.
 
 Before selecting a delegated model, read this entrypoint and the active strategy's Pi tiers. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatches retain their settings.
 
@@ -39,7 +37,7 @@ Before selecting a delegated model, read this entrypoint and the active strategy
 | [claude-with-agy](strategies/claude-with-agy.md) | Codex-light: Luna medium for documents, investigation, UI, and review; Opus 5.5 for implementation and all complex work |
 | [drive-all](strategies/drive-all.md) | claude-drive-codex tiers with Luna medium documents |
 | [claude-only](strategies/claude-only.md) | Opus 5.5 for every tier, thinking low to xhigh |
-| [claude-drive-codex](strategies/claude-drive-codex.md) | Opus 5.5 medium coordination; Sonnet 5.5 implementation (medium/high); Luna high docs and medium investigation; Astra medium UI; Sol high review and clear complex work; Astra low ambiguous complex work, high academic research |
+| [claude-drive-codex](strategies/claude-drive-codex.md) | Sonnet 5.5 1M high coordination; Sonnet 5.5 implementation (medium/high); Opus 5.5 200K high ambiguous complex work, xhigh academic research; Luna high docs and medium investigation; Astra medium UI; Sol high review and clear complex work |
 | [codex-drive-claude](strategies/codex-drive-claude.md) | claude-drive-codex tiers under a Sol high main session |
 | [codex-first](strategies/codex-first.md) | Same pi tiers as codex-drive-claude |
 | [claude-coding-codex-doc](strategies/claude-coding-codex-doc.md) | Opus 5.5 coding, investigation, and review; Luna documents; Sol UI |
