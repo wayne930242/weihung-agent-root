@@ -7,7 +7,7 @@ Rationale: Codex quota has been reset, so Codex returns to its tiers while agy s
 - Opus 5.5 1M high handles main coordination.
 - Codex Luna (gpt-6-luna) high handles documentation; Luna medium handles investigation and source data processing.
 - Sonnet 5.5 (200K) medium and high handle simple and standard implementation.
-- Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6-sol) low handles routine review.
+- Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6-sol) high handles routine review.
 - Codex Sol high handles complex work with clear instructions; Astra low handles complex work with unclear instructions.
 - Codex Astra high is reserved for academic research and forward-looking hard problems.
 - Fallbacks: Opus 5.5 1M backs up main and complex tiers, Opus 5.5 200K backs up the other Codex tiers, and Haiku 4.5 backs up Luna.
@@ -39,7 +39,7 @@ Before selecting a delegated model, read this entrypoint and the active strategy
 | [claude-with-agy](strategies/claude-with-agy.md) | Codex-light: Luna medium for documents, investigation, UI, and review; Opus 5.5 for implementation and all complex work |
 | [drive-all](strategies/drive-all.md) | claude-drive-codex tiers with Luna medium documents |
 | [claude-only](strategies/claude-only.md) | Opus 5.5 for every tier, thinking low to xhigh |
-| [claude-drive-codex](strategies/claude-drive-codex.md) | Opus 5.5 high coordination; Sonnet 5.5 implementation (medium/high); Luna high docs and medium investigation; Astra medium UI; Sol low review, high clear complex work; Astra low ambiguous complex work, high academic research |
+| [claude-drive-codex](strategies/claude-drive-codex.md) | Opus 5.5 high coordination; Sonnet 5.5 implementation (medium/high); Luna high docs and medium investigation; Astra medium UI; Sol high review and clear complex work; Astra low ambiguous complex work, high academic research |
 | [codex-drive-claude](strategies/codex-drive-claude.md) | claude-drive-codex tiers under a Sol high main session |
 | [codex-first](strategies/codex-first.md) | Same pi tiers as codex-drive-claude |
 | [claude-coding-codex-doc](strategies/claude-coding-codex-doc.md) | Opus 5.5 coding, investigation, and review; Luna documents; Sol UI |
