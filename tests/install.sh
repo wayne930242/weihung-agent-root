@@ -97,7 +97,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []} in settings["packages"], settings
     assert "npm:@juicesharp/rpiv-todo@2.11.0" in sources and "npm:cc-safety-net@2.4.7" in sources, sources
     assert "npm:pi-codex-image-gen@0.1.13" in sources, sources
-    assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.0" in sources, sources
+    assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.1" in sources, sources
     assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings

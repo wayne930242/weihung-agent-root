@@ -60,7 +60,7 @@ PACKAGES = [
     "npm:cc-safety-net@2.4.7",
     "npm:pi-codex-image-gen@0.1.13",
     "npm:pi-secret-drop@0.1.6",
-    "npm:pi-robot-hand@0.1.0",
+    "npm:pi-robot-hand@0.1.1",
     "npm:pi-phoenix-otel@0.2.0",
 ]
 LOCAL_PACKAGE = str(ROOT)
@@ -629,7 +629,7 @@ def uninstall(home, skip_external):
                 run(["pi", "remove", package_source(package)], home)
         if state.get("integration_installed", True):
             run(["herdr", "integration", "uninstall", "pi"], home)
-        if state.get("playwriter_preinstalled") is False:
+        if not state.get("playwriter_preinstalled", True):
             run(["npm", "uninstall", "-g", "playwriter"], home)
     settings = read_json(settings_path)
     # A package the user declared before install keeps the spec they wrote, not the pinned one.
