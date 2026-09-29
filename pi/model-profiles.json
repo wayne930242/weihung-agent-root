@@ -1,6 +1,6 @@
 {
   "claude-drive-codex": {
-    "main": ["claude-bridge/claude-opus-5-5", "high"],
+    "main": ["claude-bridge/claude-opus-5-5", "medium"],
     "docs": ["openai-codex/gpt-6-luna", "high"],
     "recon": ["openai-codex/gpt-6-luna", "medium"],
     "ui": ["openai-codex/gpt-6-astra", "medium"],
