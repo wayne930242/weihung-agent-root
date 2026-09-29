@@ -90,7 +90,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 21, settings
-    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@88f797dc1ad18b5e6b1cd239cf18ae7691fa65f9", settings
+    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@08f0e83bd0032cf9dd4acb5664591d589327ea45", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
@@ -224,7 +224,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
-    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@88f797d") for package in installed_packages), installed_packages
+    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@08f0e83") for package in installed_packages), installed_packages
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
     installed_mcp = json.loads((agent / "mcp.json").read_text())
     assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": "cbm", "disabled": True}, installed_mcp

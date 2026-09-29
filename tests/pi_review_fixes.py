@@ -150,7 +150,7 @@ class PiReviewFixes(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertEqual([item for item in installed if "pi-claude-bridge" in item],
-                             ["git:github.com/wayne930242/pi-claude-bridge@88f797dc1ad18b5e6b1cd239cf18ae7691fa65f9"])
+                             ["git:github.com/wayne930242/pi-claude-bridge@08f0e83bd0032cf9dd4acb5664591d589327ea45"])
 
     def test_install_under_the_former_name_moves_to_the_new_one(self):
         import shutil
@@ -239,7 +239,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual(restored["packages"], ["npm:user-package"])
             self.assertEqual(restored["powerline"], {"welcome": False})
 
-    def test_upgrade_replaces_npm_pi_usage_with_the_fork(self):
+    def test_upgrade_replaces_pi_usage_with_pi_quotas(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             agent = home / ".pi/agent"
@@ -247,13 +247,15 @@ class PiReviewFixes(unittest.TestCase):
             settings = agent / "settings.json"
             settings.write_text(json.dumps({"packages": ["npm:user-package"]}))
             run_script("install.sh", home, "--skip-external")
-            # An install from before the fork registered the npm release.
+            # Earlier installs registered the npm release, then the pi-usage fork.
             current = json.loads(settings.read_text())
-            current["packages"].append("npm:pi-usage")
+            current["packages"] += ["npm:pi-usage", "git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"]
             settings.write_text(json.dumps(current))
             run_script("install.sh", home, "--skip-external")
-            usage = [item for item in json.loads(settings.read_text())["packages"] if "pi-usage" in item]
-            self.assertEqual(usage, ["git:github.com/wayne930242/pi-usage@a683c242cf42801c484c9ae6eeb3accdf4b7c696"])
+            packages = json.loads(settings.read_text())["packages"]
+            self.assertEqual([item for item in packages if "pi-usage" in item or "pi-quotas" in item],
+                             ["git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e8de1f856f7ee6b"])
+            self.assertIn("npm:user-package", packages)
 
     def test_upgrade_pins_packages_and_retires_replaced_ones(self):
         with tempfile.TemporaryDirectory() as directory:
