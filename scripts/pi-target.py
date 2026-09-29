@@ -70,6 +70,9 @@ AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels")
+# pi's native compaction fires at contextWindow - reserveTokens: 500K for the 1M Opus, a ceiling for
+# a long running turn; idle-compaction.ts compacts at 300K between turns.
+COMPACTION_OVERRIDES = {OPUS_1M: {"reserveTokens": 500_000}}
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
 # powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, the
@@ -491,6 +494,27 @@ def restore_lens(home, state):
         path.unlink()
 
 
+def update_compaction(home, state):
+    settings_path = home / ".pi/agent/settings.json"
+    settings = read_json(settings_path)
+    state.setdefault("previous_compaction_present", "compaction" in settings)
+    compaction = settings.setdefault("compaction", {})
+    state.setdefault("previous_compaction_overrides", deepcopy(compaction.get("modelOverrides")))
+    compaction["modelOverrides"] = {**(compaction.get("modelOverrides") or {}), **deepcopy(COMPACTION_OVERRIDES)}
+    write_json(settings_path, settings)
+    state["installed_compaction_overrides"] = deepcopy(compaction["modelOverrides"])
+
+
+def restore_compaction(settings, state):
+    compaction = settings.get("compaction")
+    if not isinstance(compaction, dict):
+        return
+    restore_managed_keys(compaction, "modelOverrides", state.get("installed_compaction_overrides"),
+                         state.get("previous_compaction_overrides"), tuple(COMPACTION_OVERRIDES))
+    if not compaction and not state.get("previous_compaction_present", True):
+        settings.pop("compaction")
+
+
 def install(home, skip_external, force):
     agent_dir = home / ".pi/agent"
     marker_path = home / MARKER
@@ -527,6 +551,7 @@ def install(home, skip_external, force):
     update_lens(home, state)
     update_profile(home, state)
     update_ui(home, state)
+    update_compaction(home, state)
     write_json(marker_path, state)
     previous_ids = {package_id(value, agent_dir) for value in state["previous_packages"]}
     retired_ids = {package_id(value, agent_dir) for value in RETIRED_PACKAGES} - previous_ids
@@ -641,6 +666,7 @@ def uninstall(home, skip_external):
                 settings.pop(key, None)
     restore_managed_keys(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
     retire_powerline(settings, state)
+    restore_compaction(settings, state)
     write_json(settings_path, settings)
     restore_lens(home, state)
     mcp = read_json(mcp_path)

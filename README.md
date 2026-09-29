@@ -81,7 +81,7 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 
 [package.json](package.json) registers these extensions:
 
-- [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn.
+- [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn. The installer also sets pi's native threshold for the 1M `claude-bridge/claude-opus-5-5` to 500k (`compaction.modelOverrides` with `reserveTokens: 500000`), which only a long running turn reaches.
 - [mp-infra-hooks.ts](pi/extensions/mp-infra-hooks.ts): when `~/.pi/agent/mp-infra.json` exists, runs the mp-infra session-start hook, its production-safety check before shell commands, and its vault, playbook, and Nomad checks after edits.
 - [playwriter-relay.ts](pi/extensions/playwriter-relay.ts): at session start, starts the Playwriter relay on `127.0.0.1:19988` when it is down and warns when the Chrome extension is not connected, without delaying the session.
 

@@ -108,6 +108,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["editorPaddingX"] == 1, settings
     assert settings["collapseChangelog"] is True, settings
     assert settings["terminal"]["showTerminalProgress"] is True, settings
+    assert settings["compaction"] == {"modelOverrides": {"claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}}}, settings
     assert "powerline" not in settings and "npm:pi-open-tui@0.3.9" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
     assert mcp["settings"] == {"hostConfigDiscovery": "on", "namespaceProxyTools": False}, mcp
@@ -209,7 +210,7 @@ with tempfile.TemporaryDirectory() as directory:
     agent = home / ".pi/agent"
     agent.mkdir(parents=True)
     (agent / "AGENTS.md").write_text("user instructions\n")
-    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], "theme": "light", "enabledModels": ["user/model"], "terminal": {"showImages": False}, "powerline": {"welcome": False}}))
+    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], "theme": "light", "enabledModels": ["user/model"], "terminal": {"showImages": False}, "powerline": {"welcome": False}, "compaction": {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}}))
     original_mcp = {"settings": {"namespaceProxyTools": True}, "mcpServers": {"codebase-memory-mcp": {"command": "cbm"}, "user": {"url": "https://example.test/mcp"}}}
     (agent / "mcp.json").write_text(json.dumps(original_mcp))
     lens_path = home / ".pi-lens/config.json"
@@ -230,6 +231,8 @@ with tempfile.TemporaryDirectory() as directory:
     assert installed_mcp["settings"]["namespaceProxyTools"] is False, installed_mcp
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
     assert json.loads(config.read_text())["models"]["agents"] == original_models["agents"]
+    installed_compaction = json.loads((agent / "settings.json").read_text())["compaction"]
+    assert installed_compaction == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}, "claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}}}, installed_compaction
     subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
     run(uninstall, home)
     assert (agent / "AGENTS.md").read_text() == "user instructions\n"
@@ -242,6 +245,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert json.loads(lens_path.read_text()) == original_lens
     assert settings["terminal"] == {"showImages": False}, settings
     assert settings["powerline"] == {"welcome": False}, settings
+    assert settings["compaction"] == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}, settings
     assert json.loads(config.read_text()) == {"models": original_models, "panes": {"mode": "tab"}, "other": True}
 PY
 }
