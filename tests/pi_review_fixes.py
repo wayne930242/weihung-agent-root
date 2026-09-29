@@ -239,6 +239,26 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual(restored["packages"], ["npm:user-package"])
             self.assertEqual(restored["powerline"], {"welcome": False})
 
+    def test_upgrade_replaces_the_pi_code_npm_release_with_its_fork(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            settings = agent / "settings.json"
+            settings.write_text(json.dumps({"packages": ["npm:user-package"]}))
+            run_script("install.sh", home, "--skip-external")
+            # Reproduce the npm release an earlier install registered.
+            current = json.loads(settings.read_text())
+            current["packages"] = [package for package in current["packages"] if "pi-code@" not in json.dumps(package)]
+            current["packages"].append({"source": "npm:pi-code@1.0.77", "extensions": ["extensions/claude-rules.ts"]})
+            settings.write_text(json.dumps(current))
+            run_script("install.sh", home, "--skip-external")
+            upgraded = json.loads(settings.read_text())["packages"]
+            self.assertEqual([package for package in upgraded if "pi-code@" in json.dumps(package)],
+                             [{"source": "git:github.com/wayne930242/pi-code@b88ba30aa987d5e34ddffd4c6c469f78711ac711",
+                               "extensions": ["extensions/claude-rules.ts"]}])
+            self.assertIn("npm:user-package", upgraded)
+
     def test_upgrade_replaces_pi_usage_with_pi_quotas(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

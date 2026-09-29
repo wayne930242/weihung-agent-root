@@ -33,6 +33,9 @@ QUOTAS_GIT_PREFIXES = ("git:github.com/wayne930242/pi-quotas", "git:github.com/w
 # Fork commit reading Pi's exported VERSION for lazy web-tool activation (upstream nicobailon/pi-web-access#429).
 WEB_ACCESS_SOURCE = "git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
+# Fork commit delivering unscoped Claude rules as context files, which claude-bridge forwards
+# (upstream ilovepixelart/pi-code#295); switch to the npm release once merged.
+CLAUDE_RULES_SOURCE = "git:github.com/wayne930242/pi-code@b88ba30aa987d5e34ddffd4c6c469f78711ac711"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
 STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
@@ -40,6 +43,7 @@ PINNED_GIT = {
     BRIDGE_SOURCE: BRIDGE_GIT_PREFIXES,
     STRAW_BOSS_SOURCE: ("git:github.com/wayne930242/straw-boss",),
     QUOTAS_SOURCE: QUOTAS_GIT_PREFIXES,
+    CLAUDE_RULES_SOURCE: ("git:github.com/wayne930242/pi-code",),
 }
 OPUS_1M = "claude-bridge/claude-opus-5-5"
 OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
@@ -49,6 +53,9 @@ ONE_M_TIERS = {"main", "complex_clear", "complex_unclear", "academic", "architec
 # Versioned specs keep every machine on the same release; `pi update` skips them, so bump them here.
 # The theme collection loads only Catppuccin Mocha, which matches the Herdr theme, and none of its skills.
 THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []}
+# pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
+# its other extensions duplicate the todo, MCP, subagent, and web packages below.
+CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}
 PACKAGES = [
     BRIDGE_SOURCE,
     "npm:pi-herdr-agents@2.0.4",
@@ -69,6 +76,7 @@ PACKAGES = [
     "npm:pi-secret-drop@0.1.6",
     "npm:pi-robot-hand@0.1.1",
     "npm:pi-phoenix-otel@0.2.0",
+    CLAUDE_RULES_PACKAGE,
 ]
 LOCAL_PACKAGE = str(ROOT)
 # The Playwriter CLI drives the user's own Chrome through its extension; playwriter-relay.ts starts its relay.
@@ -84,9 +92,9 @@ UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChange
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
 # powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, pi-quotas
 # replaces pi-usage, the pi-web-access fork replaces its npm release, which would otherwise register
-# its tools twice, rpiv-todo replaces pi-todo's minified-only bundle, and the curated themes collection
-# replaces the standalone Catppuccin theme.
-RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:pi-web-access", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
+# its tools twice, rpiv-todo replaces pi-todo's minified-only bundle, the curated themes collection
+# replaces the standalone Catppuccin theme, and the pi-code fork replaces its npm release.
+RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:pi-web-access", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme", "npm:pi-code"]
 # cbmem.ts registers the codebase-memory tools directly; the same server imported from host
 # configs would add a second copy behind a namespace proxy.
 MCP_DISABLED_SERVER = "codebase-memory-mcp"
