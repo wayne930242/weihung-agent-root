@@ -10,7 +10,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 COMMANDS = ("assign", "cancel", "comment", "create", "done", "edit", "estimate", "show", "status", "sync", "work-on", "write-work-on-skill")
-SKILLS = ("ansible", "canary-service-discovery", "customer-host-lifecycle", "deployment", "infra-owner", "infrastructure-planning", "keycloak-management", "monitoring", "nomad", "proxy-jump-troubleshoot", "rotate-token", "tailscale-acl", "troubleshoot", "vault-security")
 
 
 def write(path, content, executable=False):
@@ -38,11 +37,7 @@ with tempfile.TemporaryDirectory(prefix="pi-port-install-") as temporary:
     base = Path(temporary)
     home = base / "home"
     bin_dir = base / "bin"
-    plugin = base / "mp-infra"
     fixture = base / "team-toon-tack"
-    for name in SKILLS:
-        write(plugin / "skills" / name / "SKILL.md", f"---\nname: {name}\ndescription: Test skill\n---\n")
-    write(plugin / "hooks/production-safety-hook", "#!/usr/bin/env python3\n")
     write(fixture / "skills/managing-linear-tasks/SKILL.md", "---\nname: managing-linear-tasks\ndescription: Test skill\n---\n")
     for name in COMMANDS:
         write(fixture / "commands" / f"ttt-{name}.md", f"# ttt {name}\n")
@@ -77,7 +72,7 @@ if '--prefix' in args:
     write(bin_dir / "pi", "#!/bin/sh\nexit 0\n", True)
     write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
-           "PI_MP_INFRA_ROOT": str(plugin), "TEST_TTT_FIXTURE": str(fixture),
+           "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_SDLC_ROOT": str(base / "no-sdlc"), "TEST_TTT_FIXTURE": str(fixture),
            "PI_SKILLS_GIT": str(pi_skills)}
     agent = home / ".pi/agent"
     write(agent / "prompts/ttt-status.md", "user prompt\n")
@@ -94,7 +89,7 @@ if '--prefix' in args:
     assert instructions.count("Commit messages contain no AI tool attribution.") == 1
     assert "@shared/" not in instructions
     assert "/codex:rescue" not in instructions and "Straw Boss `boss-say`" in instructions
-    assert len(list((agent / "skills").iterdir())) == len(SKILLS) + 3
+    assert len(list((agent / "skills").iterdir())) == 3 + 1
     assert (agent / "skills/pi-skills/brave-search/SKILL.md").is_file()
     assert len(list((agent / "prompts").glob("ttt-*.md"))) == 12
     assert str(home / ".local/bin/ttt") in (agent / "prompts/ttt-show.md").read_text()

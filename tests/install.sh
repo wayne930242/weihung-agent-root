@@ -5,7 +5,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_SCRIPT="$REPO_ROOT/scripts/install.sh"
 UNINSTALL_SCRIPT="$REPO_ROOT/scripts/uninstall.sh"
-export PI_SDLC_ROOT="$REPO_ROOT/.no-sdlc-checkout"
+export PI_SDLC_ROOT="$REPO_ROOT/.no-sdlc-checkout" PI_MP_INFRA_ROOT="$REPO_ROOT/.no-mp-infra-checkout"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2

@@ -240,27 +240,32 @@ def aaaav_source():
     return str(AAAAV) if AAAAV.exists() else AAAAV_GIT
 
 
-def sdlc_source():
-    # sdlc is a Pi package inside the waydosoft-marketplace checkout; a machine without that checkout skips it.
-    root = Path(os.environ.get("PI_SDLC_ROOT", SDLC)).resolve()
+# Company plugins are Pi packages inside the waydosoft-marketplace checkout; a machine without that checkout skips them.
+COMPANY_PLUGINS = {"mp_infra": ("mp-infra", "PI_MP_INFRA_ROOT", MP_INFRA), "sdlc": ("sdlc", "PI_SDLC_ROOT", SDLC)}
+
+
+def plugin_source(name, variable, default):
+    root = Path(os.environ.get(variable, default)).resolve()
     if (root / "package.json").is_file():
         return str(root)
-    print(f"sdlc not found at {root}; skipped its skills. Set PI_SDLC_ROOT to the plugin checkout and rerun to add them.",
-          file=sys.stderr)
+    print(f"{name} not found at {root}; skipped. Set {variable} to the plugin checkout and rerun to add it.", file=sys.stderr)
     return None
 
 
 def local_packages(state):
-    return [state.get("aaaav", str(AAAAV)), LOCAL_PACKAGE, *([state["sdlc"]] if state.get("sdlc") else [])]
+    return [state.get("aaaav", str(AAAAV)), LOCAL_PACKAGE, *(state[key] for key in COMPANY_PLUGINS if state.get(key))]
+
+
+def run_company_plugin(action, home, source):
+    # An optional plugin must not stop the install or uninstall: a failed `pi` call leaves its settings entry to the write that follows.
+    try:
+        run(["pi", action, source], home)
+    except (subprocess.CalledProcessError, OSError) as error:
+        print(f"could not run pi {action} for {source}: {error}; continuing.", file=sys.stderr)
 
 
 def install_ported_resources(home, state, force):
     agent_dir = home / ".pi/agent"
-    mp_root = Path(os.environ.get("PI_MP_INFRA_ROOT", MP_INFRA)).resolve()
-    has_mp_infra = (mp_root / "hooks/production-safety-hook").is_file()
-    if not has_mp_infra:
-        print(f"mp-infra not found at {mp_root}; skipped its skills and hooks. "
-              "Set PI_MP_INFRA_ROOT to the plugin checkout and rerun to add them.", file=sys.stderr)
     prefix = home / TTT_PREFIX
     run(["npm", "install", "--prefix", str(prefix), "--no-save", "--no-package-lock", "team-toon-tack@latest"], home)
     ttt_root = prefix / "node_modules/team-toon-tack"
@@ -291,11 +296,6 @@ def install_ported_resources(home, state, force):
                 content = content.replace(staged_binary, str(binary))
             managed_resource(home, state, agent_dir / relative, content.encode(), force)
 
-    if has_mp_infra:
-        managed_resource(home, state, agent_dir / "mp-infra.json", (json.dumps({"root": str(mp_root)}, indent=2) + "\n").encode(), force)
-        for skill in sorted((mp_root / "skills").iterdir()):
-            if (skill / "SKILL.md").is_file():
-                managed_resource(home, state, agent_dir / "skills" / skill.name, skill, force, link=True)
     managed_resource(home, state, agent_dir / "skills/managing-linear-tasks", ttt_root / "skills/managing-linear-tasks", force, link=True)
     for command in sorted((ttt_root / "commands").glob("ttt-*.md")):
         action = ("Create the resulting project skill under `.agents/skills/` for Pi."
@@ -321,26 +321,40 @@ def install_ported_resources(home, state, force):
     managed_resource(home, state, agent_dir / "skills/pi-skills", clone, force, link=True)
 
 
+def restore_resource(home, key, record):
+    destination = home / key
+    if destination.is_symlink():
+        current = destination.readlink().as_posix()
+    elif destination.is_file():
+        current = hashlib.sha256(destination.read_bytes()).hexdigest()
+    elif destination.exists():
+        return
+    else:
+        current = None
+    # A missing destination still gets its backup back: an earlier run may have failed between the two.
+    if current is not None:
+        if current != record.get("installed"):
+            return
+        destination.unlink()
+    backup = record.get("backup")
+    if backup and Path(backup).exists():
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(backup, destination)
+
+
+def retire_mp_infra_port(home, state):
+    # mp-infra used to be ported here as a settings file plus one skill link each; the plugin is a Pi package now,
+    # and leaving those links would load every skill twice.
+    records = state.get("ported_resources", {})
+    for key in [key for key, record in records.items()
+                if key == ".pi/agent/mp-infra.json" or "/plugins/mp-infra/skills/" in str(record.get("installed", ""))]:
+        restore_resource(home, key, records.pop(key))
+    write_json(home / MARKER, state)
+
+
 def uninstall_ported_resources(home, state):
     for key, record in reversed(list(state.get("ported_resources", {}).items())):
-        destination = home / key
-        if destination.is_symlink():
-            current = destination.readlink().as_posix()
-        elif destination.is_file():
-            current = hashlib.sha256(destination.read_bytes()).hexdigest()
-        elif destination.exists():
-            continue
-        else:
-            current = None
-        # A missing destination still gets its backup back: an earlier run may have failed between the two.
-        if current is not None:
-            if current != record.get("installed"):
-                continue
-            destination.unlink()
-        backup = record.get("backup")
-        if backup and Path(backup).exists():
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(backup, destination)
+        restore_resource(home, key, record)
     prefix = state.get("ttt_prefix")
     if prefix and Path(prefix) == home / TTT_PREFIX and Path(prefix).exists():
         shutil.rmtree(prefix)
@@ -572,10 +586,13 @@ def install(home, skip_external, force):
     first_install = not marker_path.exists()
     state = read_json(marker_path)
     state["aaaav"] = aaaav_source()
-    if sdlc := sdlc_source():
-        state["sdlc"] = sdlc
-    else:
-        state.pop("sdlc", None)
+    gone = []
+    for key, (name, variable, default) in COMPANY_PLUGINS.items():
+        if source := plugin_source(name, variable, default):
+            state[key] = source
+        elif key in state:
+            gone.append(state.pop(key))
+    retire_mp_infra_port(home, state)
     settings_path = agent_dir / "settings.json"
     mcp_path = agent_dir / "mcp.json"
     instructions_path = agent_dir / "AGENTS.md"
@@ -638,8 +655,9 @@ def install(home, skip_external, force):
         install_ported_resources(home, state, force)
         write_json(marker_path, state)
         run(["pi", "install", LOCAL_PACKAGE], home)
-        if state.get("sdlc"):
-            run(["pi", "install", state["sdlc"]], home)
+        for key in COMPANY_PLUGINS:
+            if state.get(key):
+                run_company_plugin("install", home, state[key])
     else:
         settings = read_json(settings_path)
         settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + PACKAGES + local_packages(state), agent_dir) if not obsolete_pin(package)]
@@ -654,7 +672,9 @@ def install(home, skip_external, force):
     managed = [source if package_source(source).startswith(("npm:", "git:")) else
                next((value for value in current if package_id(value, agent_dir) == package_id(source, agent_dir)), source)
                for source in owned]
-    settings["packages"] = unique_packages(unmanaged + managed, agent_dir)
+    gone_ids = {package_id(value, agent_dir) for value in gone}
+    settings["packages"] = [value for value in unique_packages(unmanaged + managed, agent_dir)
+                            if package_id(value, agent_dir) not in gone_ids]
     write_json(settings_path, settings)
     write_json(marker_path, state)
 
@@ -677,13 +697,17 @@ def uninstall(home, skip_external):
     previous_packages = state.get("previous_packages", [])
     previous_ids = {package_id(value, agent_dir) for value in previous_packages}
     managed_packages = PACKAGES + local_packages(state)
+    company = [state[key] for key in COMPANY_PLUGINS if state.get(key)]
     owned = {package_id(value, agent_dir) for value in managed_packages} - previous_ids
     if not skip_external:
         installed_ids = {package_id(value, agent_dir) for value in read_json(settings_path).get("packages", [])}
         for package in managed_packages:
             identity = package_id(package, agent_dir)
             if identity in owned and identity in installed_ids:
-                run(["pi", "remove", package_source(package)], home)
+                if package in company:
+                    run_company_plugin("remove", home, package)
+                else:
+                    run(["pi", "remove", package_source(package)], home)
         if state.get("integration_installed", True):
             run(["herdr", "integration", "uninstall", "pi"], home)
         if not state.get("playwriter_preinstalled", True):

@@ -37,7 +37,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 - installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in) plus the active model strategy;
 - sets the default model, thinking level, `pi-herdr-agents` task models, UI settings, and MCP host-config discovery;
-- ports resources pi cannot install as packages: codebase-memory, mp-infra, and team-toon-tack.
+- ports resources pi cannot install as packages: codebase-memory and team-toon-tack.
 
 Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so uninstall removes exactly those files and restores the previous settings values.
 
@@ -84,13 +84,12 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 [package.json](package.json) registers these extensions:
 
 - [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn. The installer also sets pi's native threshold for the 1M `claude-bridge/claude-opus-5-5` to 500k (`compaction.modelOverrides` with `reserveTokens: 500000`), which only a long running turn reaches.
-- [mp-infra-hooks.ts](pi/extensions/mp-infra-hooks.ts): when `~/.pi/agent/mp-infra.json` exists, runs the mp-infra session-start hook, its production-safety check before shell commands, and its vault, playbook, and Nomad checks after edits.
 - [playwriter-relay.ts](pi/extensions/playwriter-relay.ts): at session start, starts the Playwriter relay on `127.0.0.1:19988` when it is down and warns when the Chrome extension is not connected, without delaying the session.
 
 ### Ported resources
 
 - **codebase-memory**: the official `codebase-memory-mcp install --clients=pi` output, generated in a staging home and installed as `~/.pi/agent/extensions/cbmem.ts` and the `codebase-memory` skill, pointing at `~/.local/bin/codebase-memory-mcp`.
-- **mp-infra** (only when its checkout exists): its skills linked into `~/.pi/agent/skills/`, and `~/.pi/agent/mp-infra.json` for the hooks extension. Without the checkout the installer prints that it skipped mp-infra.
+- **mp-infra and sdlc** (only when their checkouts exist): installed as Pi packages, with mp-infra's hooks extension shipped in the plugin. Without a checkout the installer prints that it skipped the plugin, and a failing `pi install` for either one only warns.
 - **team-toon-tack**: installed under `~/.local/share/weihung-agent-root/team-toon-tack`, providing the `managing-linear-tasks` skill, `/ttt-*` prompt templates, and the `ttt` CLI in `~/.local/bin`.
 
 ### Settings
@@ -163,7 +162,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-agent-root`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、Phoenix 追蹤（pi-phoenix-otel）、Claude Code rules 載入（pi-code 的 claude-rules）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、Playwriter CLI（操作使用者自己的 Chrome，需另外安裝 Chrome 擴充套件）、本 repo 的擴充（閒置時自動壓縮、mp-infra 安全 hook、pi 啟動時確保 Playwriter 中繼服務在跑），以及 codebase-memory、mp-infra（有 checkout 時）與 team-toon-tack。
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、Phoenix 追蹤（pi-phoenix-otel）、Claude Code rules 載入（pi-code 的 claude-rules）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、Playwriter CLI（操作使用者自己的 Chrome，需另外安裝 Chrome 擴充套件）、本 repo 的擴充（閒置時自動壓縮、pi 啟動時確保 Playwriter 中繼服務在跑），公司 plugin mp-infra（含安全 hook）與 sdlc（有 checkout 時作為 Pi package，缺席或安裝失敗只警告），以及 codebase-memory 與 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
 - 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。

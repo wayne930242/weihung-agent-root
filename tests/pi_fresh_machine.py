@@ -63,7 +63,8 @@ if '--prefix' in args:
     subprocess.run(["git", "init", "-q", str(pi_skills)], check=True)
     subprocess.run(["git", "-C", str(pi_skills), "add", "."], check=True)
     subprocess.run(["git", "-C", str(pi_skills), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture"], check=True)
-    write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{calls}'\n", True)
+    # A company plugin whose `pi` calls fail must not stop the install or uninstall.
+    write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{calls}'\ncase \"$*\" in */sdlc) exit 1;; esac\n", True)
     write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
            "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"), "PI_SDLC_ROOT": str(base / "no-sdlc"),
@@ -80,7 +81,14 @@ if '--prefix' in args:
     assert STRAW_BOSS_GIT in json.loads((agent / "settings.json").read_text())["packages"]
     assert "install -g playwriter@0.7.0" in npm_calls.read_text().splitlines()
 
-    run("uninstall.sh", home, env)
+    plugin = base / "plugins/sdlc"
+    write(plugin / "package.json", "{}")
+    env = {**env, "PI_SDLC_ROOT": str(plugin)}
+    result = run("install.sh", home, env)
+    assert f"could not run pi install for {plugin.resolve()}" in result.stderr, result.stderr
+    assert str(plugin.resolve()) in json.loads((agent / "settings.json").read_text())["packages"]
+    result = run("uninstall.sh", home, env)
+    assert f"could not run pi remove for {plugin.resolve()}" in result.stderr, result.stderr
     assert "uninstall -g playwriter" in npm_calls.read_text().splitlines()
     assert f"remove {AAAAV_GIT}" in calls.read_text().splitlines()
     assert f"remove {STRAW_BOSS_GIT}" in calls.read_text().splitlines()

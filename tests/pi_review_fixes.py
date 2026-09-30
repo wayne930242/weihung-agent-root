@@ -1,5 +1,6 @@
 """Regression checks for the Pi migration review findings."""
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -211,29 +212,67 @@ class PiReviewFixes(unittest.TestCase):
                 pin = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', PI_TARGET.read_text()).group(1)
                 self.assertEqual([item for item in installed if "straw-boss" in item], [pin])
 
-    def test_sdlc_checkout_is_managed_when_present_and_left_alone_when_absent(self):
+    def test_company_plugins_are_managed_when_present_and_skipped_when_absent(self):
+        variables = {"mp-infra": "PI_MP_INFRA_ROOT", "sdlc": "PI_SDLC_ROOT"}
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
-            sdlc = home / "marketplace/plugins/sdlc"
-            sdlc.mkdir(parents=True)
-            (sdlc / "package.json").write_text("{}")
+            roots = {name: home / "marketplace/plugins" / name for name in variables}
+            for root in roots.values():
+                root.mkdir(parents=True)
+                (root / "package.json").write_text("{}")
+            env = {variable: str(roots[name]) for name, variable in variables.items()}
             agent = home / ".pi/agent"
             agent.mkdir(parents=True)
             for _ in range(2):
-                run_script("install.sh", home, "--skip-external", env={"PI_SDLC_ROOT": str(sdlc)})
+                run_script("install.sh", home, "--skip-external", env=env)
             installed = json.loads((agent / "settings.json").read_text())["packages"]
-            self.assertEqual(installed.count(str(sdlc.resolve())), 1)
-            run_script("uninstall.sh", home, "--skip-external", env={"PI_SDLC_ROOT": str(sdlc)})
+            for root in roots.values():
+                self.assertEqual(installed.count(str(root.resolve())), 1)
+            # The checkout goes away: the next install drops the entry instead of leaving Pi a missing package.
+            (roots["sdlc"] / "package.json").unlink()
+            result = run_script("install.sh", home, "--skip-external", env=env)
+            self.assertIn("sdlc not found", result.stderr)
+            installed = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertNotIn(str(roots["sdlc"].resolve()), installed)
+            self.assertIn(str(roots["mp-infra"].resolve()), installed)
+            run_script("uninstall.sh", home, "--skip-external", env=env)
             settings = agent / "settings.json"
             remaining = json.loads(settings.read_text()).get("packages", []) if settings.exists() else []
-            self.assertNotIn(str(sdlc.resolve()), remaining)
+            self.assertFalse([item for item in remaining if "marketplace" in str(item)])
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
-            missing = home / "no-sdlc"
-            result = run_script("install.sh", home, "--skip-external", env={"PI_SDLC_ROOT": str(missing)})
+            env = {variable: str(home / "missing" / name) for name, variable in variables.items()}
+            result = run_script("install.sh", home, "--skip-external", env=env)
+            self.assertIn("mp-infra not found", result.stderr)
             self.assertIn("sdlc not found", result.stderr)
             installed = json.loads((home / ".pi/agent/settings.json").read_text())["packages"]
-            self.assertFalse([item for item in installed if "sdlc" in item])
+            self.assertFalse([item for item in installed if "marketplace" in str(item) or "/missing/" in str(item)])
+
+    def test_mp_infra_port_from_earlier_installs_is_retired_for_the_package(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            plugin = home / "marketplace/plugins/mp-infra"
+            (plugin / "skills/nomad").mkdir(parents=True)
+            (plugin / "package.json").write_text("{}")
+            env = {"PI_MP_INFRA_ROOT": str(plugin), "PI_SDLC_ROOT": str(home / "no-sdlc")}
+            run_script("install.sh", home, "--skip-external", env=env)
+            # Reproduce what an install from before mp-infra became a package left behind.
+            marker = agent / ".weihung-agent-root.json"
+            state = json.loads(marker.read_text())
+            (agent / "skills").mkdir(parents=True, exist_ok=True)
+            (agent / "skills/nomad").symlink_to(plugin / "skills/nomad")
+            (agent / "mp-infra.json").write_text(json.dumps({"root": str(plugin)}))
+            ported = state.setdefault("ported_resources", {})
+            ported[".pi/agent/skills/nomad"] = {"installed": str(plugin / "skills/nomad"), "link": True}
+            ported[".pi/agent/mp-infra.json"] = {"installed": hashlib.sha256((agent / "mp-infra.json").read_bytes()).hexdigest(), "link": False}
+            marker.write_text(json.dumps(state))
+            run_script("install.sh", home, "--skip-external", env=env)
+            self.assertFalse((agent / "skills/nomad").is_symlink())
+            self.assertFalse((agent / "mp-infra.json").exists())
+            resources = json.loads(marker.read_text())["ported_resources"]
+            self.assertNotIn(".pi/agent/skills/nomad", resources)
+            self.assertNotIn(".pi/agent/mp-infra.json", resources)
 
     def test_upgrade_retires_the_powerline_footer_and_notify(self):
         with tempfile.TemporaryDirectory() as directory:
