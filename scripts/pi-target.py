@@ -99,6 +99,8 @@ RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", 
 # configs would add a second copy behind a namespace proxy.
 MCP_DISABLED_SERVER = "codebase-memory-mcp"
 MCP_SETTINGS = {"namespaceProxyTools": False}
+# pi-mcp-adapter owns /mcp; pi's built-in MCP support would otherwise warn on every start that it stepped aside.
+BUILTIN_MCP_OFF = "-builtin:mcp"
 # codebase-memory owns structural discovery; these pi-lens tools duplicate it in every prompt.
 LENS_DISABLED_TOOLS = ("project_report", "symbol_search", "module_report")
 LENS_CONFIG = Path(".pi-lens/config.json")
@@ -444,12 +446,30 @@ def update_ui(home, state):
     settings.update(UI_SETTINGS)
     settings.setdefault("terminal", {})["showTerminalProgress"] = True
     retire_powerline(settings, state)
+    disable_builtin_mcp(settings, state)
     config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
     write_json(settings_path, settings)
     write_json(config_path, config)
     state["installed_ui_settings"] = {key: deepcopy(settings[key]) for key in UI_SETTINGS}
     state["installed_terminal"] = deepcopy(settings["terminal"])
     state["installed_panes"] = deepcopy(config["panes"])
+
+
+def disable_builtin_mcp(settings, state):
+    extensions = settings.get("extensions")
+    state.setdefault("previous_extensions_present", extensions is not None)
+    state.setdefault("added_builtin_mcp_off", BUILTIN_MCP_OFF not in (extensions or []))
+    if BUILTIN_MCP_OFF not in (extensions or []):
+        settings["extensions"] = [*(extensions or []), BUILTIN_MCP_OFF]
+
+
+def restore_builtin_mcp(settings, state):
+    extensions = settings.get("extensions")
+    if not state.get("added_builtin_mcp_off") or not isinstance(extensions, list):
+        return
+    settings["extensions"] = [item for item in extensions if item != BUILTIN_MCP_OFF]
+    if not settings["extensions"] and not state.get("previous_extensions_present", True):
+        settings.pop("extensions")
 
 
 def update_mcp(mcp, state):
@@ -681,6 +701,7 @@ def uninstall(home, skip_external):
                 settings.pop(key, None)
     restore_managed_keys(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
     retire_powerline(settings, state)
+    restore_builtin_mcp(settings, state)
     restore_compaction(settings, state)
     write_json(settings_path, settings)
     restore_lens(home, state)

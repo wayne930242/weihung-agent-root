@@ -315,6 +315,23 @@ class PiReviewFixes(unittest.TestCase):
             self.assertNotIn("enabledModels", restored)
             self.assertNotIn("enableInstallTelemetry", restored)
 
+    def test_builtin_mcp_is_disabled_for_the_adapter_and_restored(self):
+        for before in (None, ["extra.ts"], ["-builtin:mcp"]):
+            with self.subTest(before=before), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory)
+                agent = home / ".pi/agent"
+                agent.mkdir(parents=True)
+                settings = agent / "settings.json"
+                settings.write_text(json.dumps({} if before is None else {"extensions": before}))
+                run_script("install.sh", home, "--skip-external")
+                installed = json.loads(settings.read_text())["extensions"]
+                self.assertEqual(installed.count("-builtin:mcp"), 1, installed)
+                self.assertEqual([item for item in installed if item != "-builtin:mcp"], [item for item in before or [] if item != "-builtin:mcp"])
+                run_script("install.sh", home, "--skip-external")
+                self.assertEqual(json.loads(settings.read_text())["extensions"], installed)
+                run_script("uninstall.sh", home, "--skip-external")
+                self.assertEqual(json.loads(settings.read_text()).get("extensions"), before)
+
     def test_package_identity_ignores_the_npm_version(self):
         target = load_target()
         agent = Path("/unused")
