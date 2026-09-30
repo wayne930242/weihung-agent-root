@@ -76,6 +76,7 @@ PACKAGES = [
     "npm:pi-codex-image-gen@0.1.13",
     "npm:pi-secret-drop@0.1.6",
     "npm:pi-robot-hand@0.1.1",
+    "npm:@pify/memory@0.13.0",
     "npm:pi-phoenix-otel@0.2.0",
     CLAUDE_RULES_PACKAGE,
 ]
