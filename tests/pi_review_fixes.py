@@ -321,7 +321,7 @@ class PiReviewFixes(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             upgraded = json.loads(settings.read_text())["packages"]
             self.assertEqual([package for package in upgraded if "pi-code@" in json.dumps(package)],
-                             [{"source": "npm:pi-code@1.2.0",
+                             [{"source": "npm:pi-code@1.2.1",
                                "extensions": ["extensions/claude-rules.ts"]}])
             self.assertIn("npm:user-package", upgraded)
 

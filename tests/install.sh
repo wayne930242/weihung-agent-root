@@ -102,7 +102,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.1" in sources, sources
     assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
     assert "npm:@pify/memory@0.13.0" in sources, sources
-    assert {"source": "npm:pi-code@1.2.0", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
+    assert {"source": "npm:pi-code@1.2.1", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["enabledModels"][0] == "claude-bridge/claude-sonnet-5-5", settings
