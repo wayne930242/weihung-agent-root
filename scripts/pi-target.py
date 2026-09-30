@@ -244,7 +244,7 @@ def aaaav_source():
 COMPANY_PLUGINS = {"mp_infra": ("mp-infra", "PI_MP_INFRA_ROOT", MP_INFRA), "sdlc": ("sdlc", "PI_SDLC_ROOT", SDLC)}
 
 
-def plugin_source(name, variable, default):
+def plugin_source(name: str, variable: str, default: Path) -> str | None:
     root = Path(os.environ.get(variable, default)).resolve()
     if (root / "package.json").is_file():
         return str(root)
