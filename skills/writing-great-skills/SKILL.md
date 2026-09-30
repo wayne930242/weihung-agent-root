@@ -1,6 +1,6 @@
 ---
 name: writing-great-skills
-description: Use when writing or editing skills or agent-system instructions.
+description: Use when naming a skill's invocation, structure, or failure mode with the shared vocabulary; `solid-loop` owns the editing.
 ---
 
 A skill exists to wrangle determinism out of a stochastic system. **Predictability** — the agent taking the same _process_ every run, not producing the same output — is the root virtue; every lever below serves it.
@@ -51,11 +51,7 @@ Where the ladder decides _how far down_ a piece sits, **co-location** decides _w
 
 ## Pruning
 
-Keep each meaning in a **single source of truth**: one authoritative place, so changing the behaviour is a one-place edit.
-
-Check every line for **relevance**: does it still bear on what the skill does?
-
-Then hunt **no-ops** sentence by sentence, not just line by line: run the no-op test on each sentence in isolation, and when one fails, delete the whole sentence rather than trim words from it. Be aggressive — most prose that fails should go, not be rewritten.
+Pruning runs through `solid-loop`: it owns the **single source of truth**, **relevance**, and **no-op** passes.
 
 ## Leading words
 
