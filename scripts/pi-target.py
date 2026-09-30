@@ -34,7 +34,7 @@ WEB_ACCESS_SOURCE = "npm:pi-web-access@0.33.0"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.2.0"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
-STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"
+STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@d48d6a5b9dd0e996627b3a009043287ae28a7630"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 # The pi-web-access and pi-code forks are retired for their npm releases, which include the fork fixes.
 PINNED_GIT = {
