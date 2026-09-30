@@ -33,15 +33,6 @@ with tempfile.TemporaryDirectory(prefix="pi-fresh-machine-") as temporary:
     fixture = base / "team-toon-tack"
     write(fixture / "skills/managing-linear-tasks/SKILL.md", "---\nname: managing-linear-tasks\ndescription: Test skill\n---\n")
     write(fixture / "commands/ttt-status.md", "# ttt status\n")
-    write(home / ".local/bin/codebase-memory-mcp", """#!/usr/bin/env python3
-import os
-from pathlib import Path
-home = Path(os.environ['HOME']) / '.pi/agent'
-(home / 'extensions').mkdir(parents=True, exist_ok=True)
-(home / 'skills/codebase-memory').mkdir(parents=True, exist_ok=True)
-(home / 'extensions/cbmem.ts').write_text("const BIN = '" + str(Path(os.environ['HOME']) / '.local/bin/codebase-memory-mcp') + "';\\n")
-(home / 'skills/codebase-memory/SKILL.md').write_text('---\\nname: codebase-memory\\ndescription: Test skill\\n---\\n')
-""", True)
     write(bin_dir / "npm", """#!/usr/bin/env python3
 import os, shutil, sys
 from pathlib import Path

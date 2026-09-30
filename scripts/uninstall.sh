@@ -21,7 +21,7 @@ Uninstall flow:
   - run scripts/pi-target.py uninstall, which removes this repository's pi
     packages and resources and restores the pi settings it changed
 
-The pi binary, its login state, and codebase-memory-mcp stay installed.
+The pi binary and its login state stay installed.
 EOF
 }
 

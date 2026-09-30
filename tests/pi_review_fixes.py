@@ -15,17 +15,6 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 PI_TARGET = ROOT / "scripts/pi-target.py"
-FAKE_CBMEM = """#!/usr/bin/env python3
-import os
-from pathlib import Path
-home = Path(os.environ['HOME'])
-(home / '.pi/agent/extensions').mkdir(parents=True, exist_ok=True)
-(home / '.pi/agent/skills/codebase-memory').mkdir(parents=True, exist_ok=True)
-(home / '.pi/agent/extensions/cbmem.ts').write_text("const BIN = '" + str(home / '.local/bin/codebase-memory-mcp') + "';\\n")
-(home / '.pi/agent/skills/codebase-memory/SKILL.md').write_text('---\\nname: codebase-memory\\n---\\n')
-"""
-
-
 def fake_npm_install(args):
     """Produce what a successful `npm install --prefix` of team-toon-tack leaves behind."""
     if "--prefix" not in args:
@@ -38,13 +27,6 @@ def fake_npm_install(args):
     cli.parent.mkdir(parents=True, exist_ok=True)
     cli.write_text("#!/bin/sh\n")
     cli.chmod(0o755)
-
-
-def seed_codebase_memory(home):
-    binary = home / ".local/bin/codebase-memory-mcp"
-    binary.parent.mkdir(parents=True, exist_ok=True)
-    binary.write_text(FAKE_CBMEM)
-    binary.chmod(0o755)
 
 
 def load_target() -> Any:
@@ -274,6 +256,29 @@ class PiReviewFixes(unittest.TestCase):
             self.assertNotIn(".pi/agent/skills/nomad", resources)
             self.assertNotIn(".pi/agent/mp-infra.json", resources)
 
+    def test_codebase_memory_port_from_earlier_installs_is_retired(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            run_script("install.sh", home, "--skip-external")
+            marker = agent / ".weihung-agent-root.json"
+            # Reproduce what an install from before codebase-memory was dropped left behind.
+            (agent / "extensions").mkdir(parents=True, exist_ok=True)
+            (agent / "skills/codebase-memory").mkdir(parents=True, exist_ok=True)
+            (agent / "extensions/cbmem.ts").write_text("const BIN = 'x';\n")
+            (agent / "skills/codebase-memory/SKILL.md").write_text("---\nname: codebase-memory\n---\n")
+            state = json.loads(marker.read_text())
+            ported = state.setdefault("ported_resources", {})
+            for key in (".pi/agent/extensions/cbmem.ts", ".pi/agent/skills/codebase-memory/SKILL.md"):
+                ported[key] = {"installed": hashlib.sha256((home / key).read_bytes()).hexdigest(), "link": False}
+            marker.write_text(json.dumps(state))
+            run_script("install.sh", home, "--skip-external")
+            self.assertFalse((agent / "extensions/cbmem.ts").exists())
+            self.assertFalse((agent / "skills/codebase-memory").exists())
+            resources = json.loads(marker.read_text())["ported_resources"]
+            self.assertNotIn(".pi/agent/extensions/cbmem.ts", resources)
+            self.assertNotIn(".pi/agent/skills/codebase-memory/SKILL.md", resources)
+
     def test_upgrade_retires_the_powerline_footer_and_notify(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
@@ -439,8 +444,6 @@ class PiReviewFixes(unittest.TestCase):
             settings.write_text(json.dumps({"packages": [old]}))
             removals = []
 
-            seed_codebase_memory(home)
-
             def fake_run(args, _home):
                 if args[0] == "npm":
                     fake_npm_install(args)
@@ -461,7 +464,6 @@ class PiReviewFixes(unittest.TestCase):
             home = Path(directory)
             bin_dir = home / "bin"
             bin_dir.mkdir()
-            seed_codebase_memory(home)
             for name in ("npm", "herdr", "pi"):
                 script = bin_dir / name
                 script.write_text("#!/bin/sh\n[ -e \"$HOME/fail-once\" ] && { rm \"$HOME/fail-once\"; exit 4; }\n"

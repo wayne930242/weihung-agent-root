@@ -26,18 +26,18 @@ Installer options:
 
 A machine set up before the pi-only change still has the Claude Code, Codex, and Gemini links from that version. Remove them first with the legacy uninstaller: `git worktree add /tmp/legacy legacy-claude-codex && bash /tmp/legacy/scripts/uninstall.sh --target claude,codex,gemini`, then `git worktree remove /tmp/legacy`.
 
-The installer is idempotent; re-run it after pulling changes. `bash scripts/uninstall.sh` (same `--home` and `--skip-external` options) removes this repository's links, packages, generated instructions, and settings, and restores what the install backed up. The pi binary, its logins, and `codebase-memory-mcp` stay.
+The installer is idempotent; re-run it after pulling changes. `bash scripts/uninstall.sh` (same `--home` and `--skip-external` options) removes this repository's links, packages, generated instructions, and settings, and restores what the install backed up. The pi binary and its logins stay.
 
 ## What the install sets up
 
-`scripts/install.sh` links the repository into the home directory, installs `codebase-memory-mcp` into `~/.local/bin` when it is missing, and runs `scripts/pi-target.py install`, which:
+`scripts/install.sh` links the repository into the home directory and runs `scripts/pi-target.py install`, which:
 
 - installs or upgrades pi (`npm install -g @earendil-works/pi-coding-agent`) and runs `herdr integration install pi`, which reports each pi session's state to Herdr;
 - installs the pinned [Playwriter](https://github.com/remorses/playwriter) CLI (`npm install -g playwriter@0.7.0`), which drives the user's own Chrome through the Playwriter extension; uninstall removes it only when this install added it;
 - installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in) plus the active model strategy;
 - sets the default model, thinking level, `pi-herdr-agents` task models, UI settings, and MCP host-config discovery;
-- ports resources pi cannot install as packages: codebase-memory and team-toon-tack.
+- ports resources pi cannot install as packages: team-toon-tack and pi-skills; it retires the `cbmem.ts` extension and `codebase-memory` skill that earlier installs ported.
 
 Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so uninstall removes exactly those files and restores the previous settings values.
 
@@ -58,14 +58,14 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 |---|---|
 | `pi-claude-bridge` | The `claude-bridge` provider: Claude models through the local Claude Code login. Pinned to the fork commit `wayne930242/pi-claude-bridge@08f0e83` on `weihung-integration`, rebuilt on upstream 0.9.0. It registers `claude-sonnet-5-5` at 1M with a 200K twin until pi-ai's catalog lists it, and merges four upstream PRs still open upstream: 200K twins such as `claude-200k-opus-5-5` beside each 1M model ([#131](https://github.com/elidickinson/pi-claude-bridge/pull/131)), so main and complex tiers run Opus 5.5 1M while other tiers run 200K; `provider.reportApiCost`, which prices usage at API list prices ([#133](https://github.com/elidickinson/pi-claude-bridge/pull/133)); one-shot calls from extensions, such as `fetch_content`'s answer mode, served on an isolated Claude Code process instead of failing prompt capture ([#123](https://github.com/elidickinson/pi-claude-bridge/pull/123)); and tools an extension activates mid-turn, such as `web_enable` and `pi_lens_activate_tools`, reaching Claude in the same turn ([#125](https://github.com/elidickinson/pi-claude-bridge/pull/125)). Claude subscription usage comes from `pi-quotas`. |
 | `pi-herdr-agents` | The `subagent` tool: dispatches workers into visible Herdr panes or isolated Git worktrees, with per-task model routing and a status widget. |
-| `pi-mcp-adapter` | The `mcp` gateway for MCP servers. Servers come from `~/.config/mcp/mcp.json`, `~/.agents/mcp.json`, or pi's own config; host configs of other tools on the machine load as a lowest-precedence fallback because the installer sets `hostConfigDiscovery` to `on`. The installer disables the imported `codebase-memory-mcp`, whose tools `cbmem.ts` already registers directly, and turns off the per-server `mcp__<server>` proxy tools, so MCP servers are reached through `mcp` alone. It also adds `-builtin:mcp` to the settings `extensions`, because the adapter replaces pi's built-in MCP support, which would otherwise warn on every start. |
+| `pi-mcp-adapter` | The `mcp` gateway for MCP servers. Servers come from `~/.config/mcp/mcp.json`, `~/.agents/mcp.json`, or pi's own config; host configs of other tools on the machine load as a lowest-precedence fallback because the installer sets `hostConfigDiscovery` to `on`. The installer keeps `codebase-memory-mcp` disabled in case another tool's config still registers it, and turns off the per-server `mcp__<server>` proxy tools, so MCP servers are reached through `mcp` alone. It also adds `-builtin:mcp` to the settings `extensions`, because the adapter replaces pi's built-in MCP support, which would otherwise warn on every start. |
 | `pi-intercom` | The `intercom` tool: messages and questions between pi sessions on the same machine. |
 | `pi-ask-user` | The `ask_user` tool: structured questions with options for decisions that belong to the user. |
 | `@juicesharp/rpiv-todo` | The `todo` tool and `/todos`: a task list with dependencies shown above the editor, rebuilt from the session so it survives `/reload` and compaction. |
 | `pi-open-tui` | The interface: logo header, Starship-style footer with Git, context, tokens, and cost, and a rounded editor. `/open-tui` edits its settings in `~/.pi/agent/open-tui.json`. |
 | `@victor-software-house/pi-curated-themes` | The `catppuccin-mocha` theme, matching Herdr's `catppuccin` theme. A package filter loads only `themes/catppuccin-mocha.json` and none of the package's skills. |
 | `pi-web-access` | `web_search`, `fetch_content`, and video understanding, loaded on demand through `web_enable`. Search works without keys through Exa MCP or the Codex login; provider keys go in `~/.pi/agent/web-search.json`. |
-| `pi-lens` | Diagnostics after each edit, `lens_diagnostics`, `read_symbol`, `read_enclosing`, and on-demand ast-grep and LSP navigation tools. The installer disables `project_report`, `symbol_search`, and `module_report` in `~/.pi-lens/config.json`, because codebase-memory owns structural discovery. |
+| `pi-lens` | Diagnostics after each edit, `lens_diagnostics`, `read_symbol`, `read_enclosing`, and on-demand ast-grep and LSP navigation tools. The installer disables `project_report`, `symbol_search`, and `module_report` in `~/.pi-lens/config.json` to keep every prompt small; `read_symbol`, `read_enclosing`, and `lens_diagnostics` cover navigation and checks. |
 | `pi-quotas` | Quota status in the footer and `/quotas` for every signed-in provider, plus per-provider commands such as `/anthropic:quotas` and `/codex:quotas`. `claude-bridge` reads the Claude Code login. Pinned to the fork commit `wayne930242/pi-quotas@caa30da` on `claude-bridge`, which adds `claude-bridge` support ([upstream PR #51](https://github.com/latentminds-ai/pi-quotas/pull/51)), until that PR is released. |
 | `@moyai/pi-session-hoarder` | Verified local archives of every session in `~/.pi/agent/session-hoarder/`; `/hoarder status` reports it. Nothing leaves the machine unless `/hoarder storage s3` is configured. |
 | `pi-jev-compaction` | Every compaction, including `idle-compaction`'s, first asks TypeSafe Jev which stale tool calls and results to drop or truncate and keeps user and assistant text verbatim; without `TYPESAFE_API_KEY` or on a Jev error it falls back to pi's summary. `/jev-status` shows the key and thresholds. |
@@ -89,7 +89,6 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 
 ### Ported resources
 
-- **codebase-memory**: the official `codebase-memory-mcp install --clients=pi` output, generated in a staging home and installed as `~/.pi/agent/extensions/cbmem.ts` and the `codebase-memory` skill, pointing at `~/.local/bin/codebase-memory-mcp`.
 - **mp-infra and sdlc** (only when their checkouts exist): installed as Pi packages, with mp-infra's hooks extension shipped in the plugin. Without a checkout the installer prints that it skipped the plugin, and a failing `pi install` for either one only warns.
 - **team-toon-tack**: installed under `~/.local/share/weihung-agent-root/team-toon-tack`, providing the `managing-linear-tasks` skill, `/ttt-*` prompt templates, and the `ttt` CLI in `~/.local/bin`.
 
@@ -106,7 +105,7 @@ Other keys in these files stay as the user wrote them.
 
 ## Instructions and rules
 
-`~/.pi/agent/AGENTS.md` is generated, not linked: edit [pi/AGENTS.md.in](pi/AGENTS.md.in) and re-run the installer. It covers language, work routing through skills, dispatch in Herdr, code discovery with codebase-memory, and verification, and ends with the active strategy's model tiers.
+`~/.pi/agent/AGENTS.md` is generated, not linked: edit [pi/AGENTS.md.in](pi/AGENTS.md.in) and re-run the installer. It covers language, work routing through skills, dispatch in Herdr, code discovery through LSP and ast-grep, and verification, and ends with the active strategy's model tiers.
 
 The files in [rules/](rules/) (git safety, deployment, dependencies, clean architecture, UI design, skill writing, Chinese writing, and Go, Python, shell, TypeScript, and Markdown conventions) are not loaded into every session. The instructions list each file with the work it covers, and pi reads the matching file from `~/.pi/agent/rules/` before that work. A new rule file needs its entry in that list.
 
@@ -163,7 +162,7 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 這個 repo 只管理 pi 的使用者層設定。新機器：clone 到 `~/projects/weihung-agent-root`，執行 `bash scripts/install.sh`，在 Herdr 裡啟動 `pi` 後以 `/login` 登入 OpenAI Codex；Claude 模型經由 pi-claude-bridge 使用本機 Claude Code 的登入。
 
-- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、Phoenix 追蹤（pi-phoenix-otel）、Claude Code rules 載入（pi-code 的 claude-rules）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、Playwriter CLI（操作使用者自己的 Chrome，需另外安裝 Chrome 擴充套件）、本 repo 的擴充（閒置時自動壓縮、pi 啟動時確保 Playwriter 中繼服務在跑），公司 plugin mp-infra（含安全 hook）與 sdlc（有 checkout 時作為 Pi package，缺席或安裝失敗只警告），以及 codebase-memory 與 team-toon-tack。
+- 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、Phoenix 追蹤（pi-phoenix-otel）、Claude Code rules 載入（pi-code 的 claude-rules）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、Playwriter CLI（操作使用者自己的 Chrome，需另外安裝 Chrome 擴充套件）、本 repo 的擴充（閒置時自動壓縮、pi 啟動時確保 Playwriter 中繼服務在跑），公司 plugin mp-infra（含安全 hook）與 sdlc（有 checkout 時作為 Pi package，缺席或安裝失敗只警告），以及 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
 - 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、派工候選與 AGENTS.md。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。

@@ -7,7 +7,6 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SKILLS_DIR="$REPO_ROOT/skills"
 RULES_DIR="$REPO_ROOT/rules"
 AGENTS_DIR="$REPO_ROOT/agents"
-CODEBASE_MEMORY_INSTALL_URL="https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh"
 
 TARGET_HOME="${HOME}"
 FORCE=0
@@ -22,11 +21,10 @@ Installs this repository's pi setup:
   - ~/.agents/skills/*/        links to skills/
   - ~/.pi/agent/rules          link to rules/
   - ~/.pi/agent/agents         link to agents/
-  - ~/.local/bin/codebase-memory-mcp when missing
   - everything scripts/pi-target.py install manages: pi itself, its Herdr
     integration, pi packages, aaaav, this repository's pi package, the
     generated ~/.pi/agent/AGENTS.md, model routing, UI settings,
-    codebase-memory, mp-infra (when its checkout exists), and team-toon-tack
+    mp-infra (when its checkout exists), and team-toon-tack
 
 Pass --skip-external to install configuration only, without npm, pi, Herdr,
 or network installers.
@@ -137,42 +135,6 @@ retire_skill_copies() {
   done
 }
 
-install_codebase_memory_mcp() {
-  local binary="$TARGET_HOME/.local/bin/codebase-memory-mcp"
-
-  if [[ -x "$binary" ]]; then
-    log "OK: $binary"
-    return
-  fi
-
-  # The upstream installer downloads a 300 MB binary and registers it with
-  # every coding agent it finds, so a sandboxed run says so rather than
-  # inferring it: a test drives this script with HOME set to its own fixture,
-  # which makes the target home indistinguishable from the real one.
-  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then
-    log "Skipping codebase-memory-mcp: --skip-external installs configuration only."
-    return
-  fi
-
-  log "Installing codebase-memory-mcp from $CODEBASE_MEMORY_INSTALL_URL"
-  local status=0
-  curl -fsSL "$CODEBASE_MEMORY_INSTALL_URL" | bash || status=$?
-
-  # The installed binary is the outcome that matters. Its own activation step
-  # registers the MCP server with every coding agent it finds and exits
-  # non-zero when any one of those writes fails, which leaves a working
-  # install behind.
-  if [[ ! -x "$binary" ]]; then
-    log "Warning: codebase-memory-mcp install failed (exit $status). Run it again with:"
-    log "  curl -fsSL $CODEBASE_MEMORY_INSTALL_URL | bash"
-    return
-  fi
-
-  if [[ "$status" -ne 0 ]]; then
-    log "Note: codebase-memory-mcp installed; its agent-configuration step exited $status."
-  fi
-}
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home)
@@ -217,7 +179,6 @@ done
 install_link "$RULES_DIR" "$TARGET_HOME/.pi/agent/rules"
 install_link "$AGENTS_DIR" "$TARGET_HOME/.pi/agent/agents"
 
-install_codebase_memory_mcp
 
 pi_args=(install --home "$TARGET_HOME")
 if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then pi_args+=(--skip-external); fi

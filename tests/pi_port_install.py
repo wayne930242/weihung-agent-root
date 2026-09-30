@@ -41,15 +41,6 @@ with tempfile.TemporaryDirectory(prefix="pi-port-install-") as temporary:
     write(fixture / "skills/managing-linear-tasks/SKILL.md", "---\nname: managing-linear-tasks\ndescription: Test skill\n---\n")
     for name in COMMANDS:
         write(fixture / "commands" / f"ttt-{name}.md", f"# ttt {name}\n")
-    write(home / ".local/bin/codebase-memory-mcp", """#!/usr/bin/env python3
-import os
-from pathlib import Path
-home = Path(os.environ['HOME']) / '.pi/agent'
-(home / 'extensions').mkdir(parents=True, exist_ok=True)
-(home / 'skills/codebase-memory').mkdir(parents=True, exist_ok=True)
-(home / 'extensions/cbmem.ts').write_text("const BIN = '" + str(Path(os.environ['HOME']) / '.local/bin/codebase-memory-mcp') + "';\\n")
-(home / 'skills/codebase-memory/SKILL.md').write_text('---\\nname: codebase-memory\\ndescription: Test skill\\n---\\n')
-""", True)
     write(bin_dir / "npm", """#!/usr/bin/env python3
 import os, sys, shutil
 from pathlib import Path
@@ -89,13 +80,13 @@ if '--prefix' in args:
     assert instructions.count("Commit messages contain no AI tool attribution.") == 1
     assert "@shared/" not in instructions
     assert "/codex:rescue" not in instructions and "Straw Boss `boss-say`" in instructions
-    assert len(list((agent / "skills").iterdir())) == 3 + 1
+    assert len(list((agent / "skills").iterdir())) == 3
     assert (agent / "skills/pi-skills/brave-search/SKILL.md").is_file()
     assert len(list((agent / "prompts").glob("ttt-*.md"))) == 12
     assert str(home / ".local/bin/ttt") in (agent / "prompts/ttt-show.md").read_text()
     assert "`.agents/skills/`" in (agent / "prompts/ttt-write-work-on-skill.md").read_text()
-    assert str(home / ".local/bin/codebase-memory-mcp") in (agent / "extensions/cbmem.ts").read_text()
-    assert "pi-cbmem-" not in (agent / "extensions/cbmem.ts").read_text()
+    assert not (agent / "extensions/cbmem.ts").exists()
+    assert not (agent / "skills/codebase-memory").exists()
     assert (home / ".local/bin/ttt").is_symlink()
     assert (agent / "extensions/moshi-hooks.ts").read_text() == "user extension\n"
     first = snapshot(agent)

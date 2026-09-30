@@ -9,7 +9,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -97,13 +96,13 @@ UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChange
 # replaces pi-usage, rpiv-todo replaces pi-todo's minified-only bundle, and the curated themes
 # collection replaces the standalone Catppuccin theme.
 RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
-# cbmem.ts registers the codebase-memory tools directly; the same server imported from host
-# configs would add a second copy behind a namespace proxy.
+# codebase-memory is no longer installed, but other agents' configs may still register its server;
+# keeping it disabled stops pi-mcp-adapter from importing it through host config discovery.
 MCP_DISABLED_SERVER = "codebase-memory-mcp"
 MCP_SETTINGS = {"namespaceProxyTools": False}
 # pi-mcp-adapter owns /mcp; pi's built-in MCP support would otherwise warn on every start that it stepped aside.
 BUILTIN_MCP_OFF = "-builtin:mcp"
-# codebase-memory owns structural discovery; these pi-lens tools duplicate it in every prompt.
+# These pi-lens tools stay off to keep every prompt small; `read_symbol`, `read_enclosing`, and `lens_diagnostics` cover navigation.
 LENS_DISABLED_TOOLS = ("project_report", "symbol_search", "module_report")
 LENS_CONFIG = Path(".pi-lens/config.json")
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
@@ -275,28 +274,6 @@ def install_ported_resources(home, state, force):
     state["ttt_prefix"] = str(prefix)
     write_json(home / MARKER, state)
 
-    # The official installer generates Pi's current extension and skill in a staging HOME.
-    # Our generated AGENTS.md remains the sole owner of Pi instructions.
-    with tempfile.TemporaryDirectory(prefix="pi-cbmem-") as temporary:
-        stage = Path(temporary)
-        env = {**os.environ, "HOME": str(stage), "XDG_CACHE_HOME": str(stage / ".cache")}
-        binary = home / ".local/bin/codebase-memory-mcp"
-        if not binary.is_file():
-            raise ValueError(f"codebase-memory-mcp binary is missing: {binary}")
-        subprocess.run([str(binary), "install", "--clients=pi", "-y"], check=True, env=env,
-                       stdout=subprocess.DEVNULL)
-        for relative in ("extensions/cbmem.ts", "skills/codebase-memory/SKILL.md"):
-            source = stage / ".pi/agent" / relative
-            if not source.is_file():
-                raise ValueError(f"official codebase-memory Pi resource is missing: {relative}")
-            content = source.read_text()
-            if relative.endswith("cbmem.ts"):
-                staged_binary = str(stage / ".local/bin/codebase-memory-mcp")
-                if staged_binary not in content:
-                    raise ValueError("official Pi extension did not identify its staged binary")
-                content = content.replace(staged_binary, str(binary))
-            managed_resource(home, state, agent_dir / relative, content.encode(), force)
-
     managed_resource(home, state, agent_dir / "skills/managing-linear-tasks", ttt_root / "skills/managing-linear-tasks", force, link=True)
     for command in sorted((ttt_root / "commands").glob("ttt-*.md")):
         action = ("Create the resulting project skill under `.agents/skills/` for Pi."
@@ -350,6 +327,19 @@ def retire_mp_infra_port(home, state):
     for key in [key for key, record in records.items()
                 if key == ".pi/agent/mp-infra.json" or "/plugins/mp-infra/skills/" in str(record.get("installed", ""))]:
         restore_resource(home, key, records.pop(key))
+    write_json(home / MARKER, state)
+
+
+def retire_codebase_memory_port(home, state):
+    # codebase-memory used to be ported here as an extension and a skill; discovery goes through pi-lens now,
+    # and the leftovers would keep listing a skill no instruction routes to.
+    records = state.get("ported_resources", {})
+    for key in (".pi/agent/extensions/cbmem.ts", ".pi/agent/skills/codebase-memory/SKILL.md"):
+        if key in records:
+            restore_resource(home, key, records.pop(key))
+    skill_dir = home / ".pi/agent/skills/codebase-memory"
+    if skill_dir.is_dir() and not any(skill_dir.iterdir()):
+        skill_dir.rmdir()
     write_json(home / MARKER, state)
 
 
@@ -594,6 +584,7 @@ def install(home, skip_external, force):
         elif key in state:
             gone.append(state.pop(key))
     retire_mp_infra_port(home, state)
+    retire_codebase_memory_port(home, state)
     settings_path = agent_dir / "settings.json"
     mcp_path = agent_dir / "mcp.json"
     instructions_path = agent_dir / "AGENTS.md"
