@@ -88,6 +88,7 @@ with tempfile.TemporaryDirectory() as directory:
     text = (home / ".pi/agent/AGENTS.md").read_text()
     assert all(word not in text for word in ("@shared/", "/codex:rescue"))
     assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
+    assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 23, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@08f0e83bd0032cf9dd4acb5664591d589327ea45", settings

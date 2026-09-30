@@ -32,6 +32,10 @@ In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and 
 
 Use codebase-memory MCP for structural discovery: `search_graph` finds symbols, `trace_path` follows calls and dependencies, `get_code_snippet` reads identified symbols, and `get_architecture` or `query_graph` covers broader structure. Query an existing index first. Index a missing project once; re-index when its status or missing changed symbols show it is stale. Check coverage for relied-on files and read uncovered lines directly. Use text search for prose, configuration, shell scripts, and exact literals.
 
+## Memory
+
+Search with `memory_search` before assuming something was never recorded. When the user asks you to remember something or corrects you, save it with `memory_write`: `global` for cross-project facts, `project` only for conventions the repository ships. Rules for every project go through `reflecting-to-root`, not memory.
+
 ## Verification and delivery
 
 Follow `aaaav-do` through Align, Advance, Anchor, Act, and Verify. Exercise the Reality anchor, review the diff against the contract, and report remaining gaps. Keep tests, builds, interactive checks, CI, deployment, and release evidence distinct. Deliver complete code without TODOs, stubs, or mocks. Run relevant tests before deployment. Commit messages contain no AI tool attribution.
