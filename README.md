@@ -52,7 +52,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so u
 
 ### Packages
 
-Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts/pi-target.py), so every machine installs the same release and `pi update` leaves them alone; bump a version there and re-run the installer.
+Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts/pi-target.py), so every machine installs the same release and `pi update` leaves them alone. `python3 scripts/pi-pins.py outdated` compares each pin with its registry (git pins with the remote HEAD), and `python3 scripts/pi-pins.py bump [name ...]` rewrites npm pins to the latest release in `pi-target.py`, this README, and the tests; git pins move only when named. Review the diff, run the tests, then re-run the installer and reload pi.
 
 | Package | Role |
 |---|---|
