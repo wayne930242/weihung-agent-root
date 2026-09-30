@@ -135,11 +135,11 @@ class PiReviewFixes(unittest.TestCase):
                     self.assertNotEqual(model == target.OPUS_1M and tier not in one_m, True)
                     if model == target.LUNA:
                         self.assertEqual(target.candidates(model, tier)[1], target.HAIKU)
-        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "main")[1], target.OPUS_1M)
-        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "complex_clear")[1], target.OPUS_200K)
+        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "main")[1], target.OPUS_1M)
+        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "complex_clear")[1], target.OPUS_200K)
         self.assertEqual(target.candidates("openai-codex/gpt-6-astra", "architecture")[1], target.OPUS_200K)
-        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "review")[1], target.OPUS_200K)
-        self.assertEqual(target.candidates("openai-codex/gpt-6-sol", "ui")[1], target.OPUS_200K)
+        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "review")[1], target.OPUS_200K)
+        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "ui")[1], target.OPUS_200K)
 
     def test_upstream_bridge_pin_is_retired_for_the_fork(self):
         upstream = "git:github.com/elidickinson/pi-claude-bridge@227f5eb4450a070dfbc083a7fe75b8b35366b941"

@@ -281,7 +281,7 @@ with tempfile.TemporaryDirectory() as directory:
     ))
     subprocess.run(["python3", str(script), "apply-profile", "--home", str(home)], check=True)
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert (settings["defaultProvider"], settings["defaultModel"]) == ("openai-codex", "gpt-6-sol")
+    assert (settings["defaultProvider"], settings["defaultModel"]) == ("openai-codex", "gpt-6.1-sol")
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
     assert config["models"]["tasks"]["recon"][0] == "openai-codex/gpt-6-luna"
     assert "Active model strategy: codex-first" in (home / ".pi/agent/AGENTS.md").read_text()

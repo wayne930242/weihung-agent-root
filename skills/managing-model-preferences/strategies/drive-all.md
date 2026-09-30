@@ -13,11 +13,11 @@ Rationale: The user configured a multi-harness profile (drive-all): documentatio
 | main | `claude-bridge/claude-opus-5-5` | high |
 | docs | `openai-codex/gpt-6-luna` | medium |
 | recon | `openai-codex/gpt-6-luna` | medium |
-| ui | `openai-codex/gpt-6-sol` | medium |
-| review | `openai-codex/gpt-6-sol` | low |
+| ui | `openai-codex/gpt-6.1-sol` | medium |
+| review | `openai-codex/gpt-6.1-sol` | low |
 | simple | `claude-bridge/claude-200k-opus-5-5` | low |
 | coding | `claude-bridge/claude-200k-opus-5-5` | medium |
-| complex_clear | `openai-codex/gpt-6-sol` | high |
+| complex_clear | `openai-codex/gpt-6.1-sol` | high |
 | complex_unclear | `openai-codex/gpt-6-astra` | low |
 | academic | `openai-codex/gpt-6-astra` | high |
 

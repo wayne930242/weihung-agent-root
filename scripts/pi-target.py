@@ -362,7 +362,7 @@ def candidates(model, tier):
         "complex_unclear": "openai-codex/gpt-6-astra",
         "architecture": "openai-codex/gpt-6-astra",
         "academic": "openai-codex/gpt-6-astra",
-    }.get(tier, "openai-codex/gpt-6-sol")
+    }.get(tier, "openai-codex/gpt-6.1-sol")
     if model.startswith("claude-bridge/"):
         other = codex_fallback
     elif model == LUNA:

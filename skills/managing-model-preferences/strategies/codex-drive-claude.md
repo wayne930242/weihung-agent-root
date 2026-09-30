@@ -11,14 +11,14 @@ On 2026-09-24 the user retired Sonnet and aligned this strategy with claude-driv
 
 | Tier | Model | Thinking |
 |---|---|---|
-| main | `openai-codex/gpt-6-sol` | high |
+| main | `openai-codex/gpt-6.1-sol` | high |
 | docs | `openai-codex/gpt-6-luna` | high |
 | recon | `openai-codex/gpt-6-luna` | medium |
-| ui | `openai-codex/gpt-6-sol` | medium |
-| review | `openai-codex/gpt-6-sol` | low |
+| ui | `openai-codex/gpt-6.1-sol` | medium |
+| review | `openai-codex/gpt-6.1-sol` | low |
 | simple | `claude-bridge/claude-200k-opus-5-5` | low |
 | coding | `claude-bridge/claude-200k-opus-5-5` | medium |
-| complex_clear | `openai-codex/gpt-6-sol` | high |
+| complex_clear | `openai-codex/gpt-6.1-sol` | high |
 | complex_unclear | `openai-codex/gpt-6-astra` | low |
 | academic | `openai-codex/gpt-6-astra` | high |
 

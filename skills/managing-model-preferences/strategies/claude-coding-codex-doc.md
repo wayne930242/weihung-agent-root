@@ -13,7 +13,7 @@ Rationale: The user saved the model split used before the model preference profi
 | main | `claude-bridge/claude-opus-5-5` | high |
 | docs | `openai-codex/gpt-6-luna` | high |
 | recon | `claude-bridge/claude-200k-opus-5-5` | medium |
-| ui | `openai-codex/gpt-6-sol` | medium |
+| ui | `openai-codex/gpt-6.1-sol` | medium |
 | review | `claude-bridge/claude-200k-opus-5-5` | medium |
 | simple | `claude-bridge/claude-200k-opus-5-5` | medium |
 | coding | `claude-bridge/claude-200k-opus-5-5` | medium |

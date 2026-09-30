@@ -7,7 +7,7 @@ Rationale: Claude carries the main load and Codex stays on the $20 plan; Sonnet 
 - Sonnet 5.5 1M high handles main coordination; Sonnet 5.5 (200K) medium and high handle simple and standard implementation.
 - Opus 5.5 200K high handles complex work with unclear instructions and `task:architecture` planning and diagnosis; Opus 5.5 200K xhigh handles academic research and forward-looking hard problems.
 - Codex Luna (gpt-6-luna) high handles documentation; Luna medium handles investigation and source data processing.
-- Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6-sol) high handles routine review and complex work with clear instructions.
+- Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6.1-sol) high handles routine review and complex work with clear instructions.
 - Fallbacks: Opus 5.5 1M backs up a Codex main session only; Opus 5.5 200K backs up the other Codex tiers, Haiku 4.5 backs up Luna, and Codex backs up Claude tiers.
 
 Before selecting a delegated model, read this entrypoint and the active strategy's Pi tiers. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatches retain their settings.

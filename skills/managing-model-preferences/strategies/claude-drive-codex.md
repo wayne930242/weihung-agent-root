@@ -14,10 +14,10 @@ Rationale: The user asked to align this strategy with drive-all and replace the 
 | docs | `openai-codex/gpt-6-luna` | high |
 | recon | `openai-codex/gpt-6-luna` | medium |
 | ui | `openai-codex/gpt-6-astra` | medium |
-| review | `openai-codex/gpt-6-sol` | high |
+| review | `openai-codex/gpt-6.1-sol` | high |
 | simple | `claude-bridge/claude-sonnet-5-5` | medium |
 | coding | `claude-bridge/claude-sonnet-5-5` | high |
-| complex_clear | `openai-codex/gpt-6-sol` | high |
+| complex_clear | `openai-codex/gpt-6.1-sol` | high |
 | complex_unclear | `claude-bridge/claude-200k-opus-5-5` | high |
 | academic | `claude-bridge/claude-200k-opus-5-5` | xhigh |
 
