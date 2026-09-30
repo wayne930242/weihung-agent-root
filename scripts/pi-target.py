@@ -77,6 +77,7 @@ PACKAGES = [
     "npm:pi-secret-drop@0.1.6",
     "npm:pi-robot-hand@0.1.1",
     "npm:@pify/memory@0.13.0",
+    "npm:pi-loop-monitor@0.2.1",
     "npm:pi-phoenix-otel@0.2.0",
     CLAUDE_RULES_PACKAGE,
 ]

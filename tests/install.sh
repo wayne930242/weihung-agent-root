@@ -91,7 +91,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
     assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 23, settings
+    assert len(settings["packages"]) == 24, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@08f0e83bd0032cf9dd4acb5664591d589327ea45", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
@@ -102,6 +102,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.1" in sources, sources
     assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
     assert "npm:@pify/memory@0.13.0" in sources, sources
+    assert "npm:pi-loop-monitor@0.2.1" in sources, sources
     assert {"source": "npm:pi-code@1.2.1", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
