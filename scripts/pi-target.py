@@ -106,6 +106,7 @@ BUILTIN_MCP_OFF = "-builtin:mcp"
 LENS_DISABLED_TOOLS = ("project_report", "symbol_search", "module_report")
 LENS_CONFIG = Path(".pi-lens/config.json")
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
+SDLC = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/sdlc"
 TTT_PREFIX = Path(".local/share/weihung-agent-root/team-toon-tack")
 # pi-skills ships bare skill directories without a pi manifest; its README installs it as a clone under the skills root.
 PI_SKILLS_GIT = os.environ.get("PI_SKILLS_GIT", "https://github.com/badlogic/pi-skills.git")
@@ -237,6 +238,20 @@ def managed_resource(home, state, destination, source, force=False, link=False):
 def aaaav_source():
     # A machine with an aaaav checkout beside this repo develops against it; any other installs the published repo.
     return str(AAAAV) if AAAAV.exists() else AAAAV_GIT
+
+
+def sdlc_source():
+    # sdlc is a Pi package inside the waydosoft-marketplace checkout; a machine without that checkout skips it.
+    root = Path(os.environ.get("PI_SDLC_ROOT", SDLC)).resolve()
+    if (root / "package.json").is_file():
+        return str(root)
+    print(f"sdlc not found at {root}; skipped its skills. Set PI_SDLC_ROOT to the plugin checkout and rerun to add them.",
+          file=sys.stderr)
+    return None
+
+
+def local_packages(state):
+    return [state.get("aaaav", str(AAAAV)), LOCAL_PACKAGE, *([state["sdlc"]] if state.get("sdlc") else [])]
 
 
 def install_ported_resources(home, state, force):
@@ -557,6 +572,10 @@ def install(home, skip_external, force):
     first_install = not marker_path.exists()
     state = read_json(marker_path)
     state["aaaav"] = aaaav_source()
+    if sdlc := sdlc_source():
+        state["sdlc"] = sdlc
+    else:
+        state.pop("sdlc", None)
     settings_path = agent_dir / "settings.json"
     mcp_path = agent_dir / "mcp.json"
     instructions_path = agent_dir / "AGENTS.md"
@@ -619,13 +638,15 @@ def install(home, skip_external, force):
         install_ported_resources(home, state, force)
         write_json(marker_path, state)
         run(["pi", "install", LOCAL_PACKAGE], home)
+        if state.get("sdlc"):
+            run(["pi", "install", state["sdlc"]], home)
     else:
         settings = read_json(settings_path)
-        settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + PACKAGES + [state["aaaav"], LOCAL_PACKAGE], agent_dir) if not obsolete_pin(package)]
+        settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + PACKAGES + local_packages(state), agent_dir) if not obsolete_pin(package)]
         write_json(settings_path, settings)
     settings = read_json(settings_path)
     current = settings.get("packages", [])
-    owned = PACKAGES + [state["aaaav"], LOCAL_PACKAGE]
+    owned = PACKAGES + local_packages(state)
     owned_ids = {package_id(value, agent_dir) for value in owned}
     unmanaged = [value for value in current
                  if package_id(value, agent_dir) not in owned_ids | retired_ids and not obsolete_pin(value)]
@@ -655,7 +676,7 @@ def uninstall(home, skip_external):
         shutil.move(backup, instructions_path)
     previous_packages = state.get("previous_packages", [])
     previous_ids = {package_id(value, agent_dir) for value in previous_packages}
-    managed_packages = PACKAGES + [state.get("aaaav", str(AAAAV)), LOCAL_PACKAGE]
+    managed_packages = PACKAGES + local_packages(state)
     owned = {package_id(value, agent_dir) for value in managed_packages} - previous_ids
     if not skip_external:
         installed_ids = {package_id(value, agent_dir) for value in read_json(settings_path).get("packages", [])}

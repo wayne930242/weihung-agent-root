@@ -16,7 +16,7 @@ bash scripts/install.sh
 
 Then start `pi` inside Herdr and run `/login` for OpenAI Codex. Claude models need no pi login; the bridge uses Claude Code's. For browser work in your own Chrome, install the [Playwriter extension](https://chromewebstore.google.com/detail/playwriter/jfeammnjpkecdekppnclgkkffahnhfhe); clicking its icon on a tab hands that tab to agents, and clicking again takes it back.
 
-Clone beside the related checkouts when they exist: the installer uses `~/projects/aaaav` when present (otherwise `github.com/wayne930242/aaaav`) and the mp-infra plugin from `~/projects/moldplan-center` (or `PI_MP_INFRA_ROOT`).
+Clone beside the related checkouts when they exist: the installer uses `~/projects/aaaav` when present (otherwise `github.com/wayne930242/aaaav`) and the mp-infra and sdlc plugins from `~/projects/moldplan-center` (or `PI_MP_INFRA_ROOT`, `PI_SDLC_ROOT`).
 
 Installer options:
 

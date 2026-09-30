@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -207,8 +208,32 @@ class PiReviewFixes(unittest.TestCase):
                 (agent / "settings.json").write_text(json.dumps({"packages": [earlier]}))
                 run_script("install.sh", home, "--skip-external")
                 installed = json.loads((agent / "settings.json").read_text())["packages"]
-                self.assertEqual([item for item in installed if "straw-boss" in item],
-                                 ["git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"])
+                pin = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', PI_TARGET.read_text()).group(1)
+                self.assertEqual([item for item in installed if "straw-boss" in item], [pin])
+
+    def test_sdlc_checkout_is_managed_when_present_and_left_alone_when_absent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            sdlc = home / "marketplace/plugins/sdlc"
+            sdlc.mkdir(parents=True)
+            (sdlc / "package.json").write_text("{}")
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            for _ in range(2):
+                run_script("install.sh", home, "--skip-external", env={"PI_SDLC_ROOT": str(sdlc)})
+            installed = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertEqual(installed.count(str(sdlc.resolve())), 1)
+            run_script("uninstall.sh", home, "--skip-external", env={"PI_SDLC_ROOT": str(sdlc)})
+            settings = agent / "settings.json"
+            remaining = json.loads(settings.read_text()).get("packages", []) if settings.exists() else []
+            self.assertNotIn(str(sdlc.resolve()), remaining)
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            missing = home / "no-sdlc"
+            result = run_script("install.sh", home, "--skip-external", env={"PI_SDLC_ROOT": str(missing)})
+            self.assertIn("sdlc not found", result.stderr)
+            installed = json.loads((home / ".pi/agent/settings.json").read_text())["packages"]
+            self.assertFalse([item for item in installed if "sdlc" in item])
 
     def test_upgrade_retires_the_powerline_footer_and_notify(self):
         with tempfile.TemporaryDirectory() as directory:

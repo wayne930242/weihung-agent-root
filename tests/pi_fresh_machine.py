@@ -2,13 +2,14 @@
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
-STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"
+STRAW_BOSS_GIT = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', (ROOT / "scripts/pi-target.py").read_text()).group(1)
 
 
 def write(path, content, executable=False):
@@ -65,13 +66,14 @@ if '--prefix' in args:
     write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{calls}'\n", True)
     write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
-           "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"),
+           "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"), "PI_SDLC_ROOT": str(base / "no-sdlc"),
            "TEST_TTT_FIXTURE": str(fixture), "PI_SKILLS_GIT": str(pi_skills), "TEST_NPM_CALLS": str(npm_calls)}
     agent = home / ".pi/agent"
 
     result = run("install.sh", home, env)
     assert "mp-infra" in result.stderr and "skipped" in result.stderr, result.stderr
     assert not (agent / "mp-infra.json").exists()
+    assert "sdlc not found" in result.stderr, result.stderr
     assert f"install {AAAAV_GIT}" in calls.read_text().splitlines()
     assert AAAAV_GIT in json.loads((agent / "settings.json").read_text())["packages"]
     assert f"install {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
