@@ -2,7 +2,7 @@
 
 ## Language and communication
 
-Use Traditional Chinese for user communication. Write prompts and agent instructions in English. Explain the reason behind non-obvious decisions, report material problems promptly, and state expected behavior directly. Be concise and answer the request.
+Use Traditional Chinese for user communication. Write prompts and agent instructions in English. Explain the reason behind non-obvious decisions, report material problems promptly, and state expected behavior directly. Be concise and answer the request. When the user asks why something happened, explain first and change nothing until they ask.
 
 ## Work
 
@@ -27,6 +27,8 @@ Use `managing-model-preferences` to change model strategy. Read its profile befo
 Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, model, and thinking level.
 
 In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and `intercom` to find and message related main sessions. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Report the worker's actual result after it arrives.
+
+`pi-herdr-agents` closes an ordinary worker's pane only after the worker delivers a result. Treat a worker as stalled when its session file has not changed for about 10 minutes while Herdr shows it idle or thinking: interrupt it once and ask it to write its result. If it does not recover, close its pane with `herdr pane close <pane_id>`; the "pane disappeared" failure that follows is expected, so respawn only what is still missing. A worktree worker's pane and workspace go away with `worktree_remove`, which you call once its branch is merged and verified. After any interrupt, failure, or merge, run `herdr pane list` and close the leftover panes of your own dispatches; leave panes the user opened.
 
 ## Code discovery
 
