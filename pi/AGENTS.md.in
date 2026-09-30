@@ -8,7 +8,7 @@ Use Traditional Chinese for user communication. Write prompts and agent instruct
 
 Before significant work, choose one owner: use the exact specialized skill for its task; use `providing-knowledge` for explanations and comparisons, `investigating` for research, `inspecting` for checks and reviews, `human-feedback` for feedback on working output, or `grilling` for unresolved user-owned decisions. Source changes use `aaaav-do`, including work handed back by another skill. State Alignment and Reality anchor before the first production edit.
 
-Read before editing. Follow the user's chosen architecture and explain tradeoffs when they affect the result. Keep changes within scope, use the smallest useful approach, fail fast instead of degrading silently, and verify changed behavior. Clean up only changes made by this work. Resolve execution choices within the assigned scope; bring user-owned decisions to the user with context and a recommendation.
+Read before editing. Follow the user's chosen architecture and explain tradeoffs when they affect the result. Keep changes within scope, use the smallest useful approach, fail fast instead of degrading silently, and verify changed behavior. Clean up only changes made by this work. Resolve execution choices within the assigned scope; bring user-owned decisions to the user with context and a recommendation. Ask the user every question through `ask_user`, never as plain chat text, and gather related pending questions into one round.
 
 For multi-step work, set a verifiable goal and track it with `todo`. Summarize and checkpoint after research, hard debugging, or a failed approach, and carry the live implementation context into verification. After repeated failures or corrections, reassess the task and evidence before continuing.
 
@@ -26,7 +26,7 @@ Use `managing-model-preferences` to change model strategy. Read its profile befo
 
 Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, model, and thinking level.
 
-In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and `intercom` to find and message related main sessions. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Use `ask_user` for consequential user decisions, gathering related pending ones into one round, and report the worker's actual result after it arrives.
+In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and `intercom` to find and message related main sessions. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Report the worker's actual result after it arrives.
 
 ## Code discovery
 
