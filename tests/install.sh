@@ -96,10 +96,10 @@ with tempfile.TemporaryDirectory() as directory:
     assert registry and all("@" in name[1:] for name in registry), registry
     assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []} in settings["packages"], settings
     assert "npm:@juicesharp/rpiv-todo@2.11.0" in sources and "npm:cc-safety-net@2.4.7" in sources, sources
-    assert "npm:pi-codex-image-gen@0.1.13" in sources, sources
+    assert "npm:pi-codex-image-gen@0.1.13" in sources and "npm:pi-web-access@0.33.0" in sources, sources
     assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.1" in sources, sources
     assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
-    assert {"source": "git:github.com/wayne930242/pi-code@b88ba30aa987d5e34ddffd4c6c469f78711ac711", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
+    assert {"source": "npm:pi-code@1.2.0", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["enabledModels"][0] == "claude-bridge/claude-sonnet-5-5", settings

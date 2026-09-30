@@ -30,19 +30,18 @@ LEGACY_BRIDGE = "npm:pi-claude-bridge"
 QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e8de1f856f7ee6b"
 # pi-quotas replaces the pi-usage fork, so every pi-usage fork revision is retired with its other revisions.
 QUOTAS_GIT_PREFIXES = ("git:github.com/wayne930242/pi-quotas", "git:github.com/wayne930242/pi-usage")
-# Fork commit reading Pi's exported VERSION for lazy web-tool activation (upstream nicobailon/pi-web-access#429).
-WEB_ACCESS_SOURCE = "git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c"
+WEB_ACCESS_SOURCE = "npm:pi-web-access@0.33.0"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
-# Fork commit delivering unscoped Claude rules as context files, which claude-bridge forwards
-# (upstream ilovepixelart/pi-code#295); switch to the npm release once merged.
-CLAUDE_RULES_SOURCE = "git:github.com/wayne930242/pi-code@b88ba30aa987d5e34ddffd4c6c469f78711ac711"
+CLAUDE_RULES_SOURCE = "npm:pi-code@1.2.0"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
 STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@69781678ac79ab13690bea1dfa00f9c725988728"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
+# The pi-web-access and pi-code forks are retired for their npm releases, which include the fork fixes.
 PINNED_GIT = {
     BRIDGE_SOURCE: BRIDGE_GIT_PREFIXES,
     STRAW_BOSS_SOURCE: ("git:github.com/wayne930242/straw-boss",),
     QUOTAS_SOURCE: QUOTAS_GIT_PREFIXES,
+    WEB_ACCESS_SOURCE: ("git:github.com/wayne930242/pi-web-access",),
     CLAUDE_RULES_SOURCE: ("git:github.com/wayne930242/pi-code",),
 }
 OPUS_1M = "claude-bridge/claude-opus-5-5"
@@ -93,10 +92,9 @@ COMPACTION_OVERRIDES = {OPUS_1M: {"reserveTokens": 500_000}, SONNET_1M: {"reserv
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
 # Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
 # powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, pi-quotas
-# replaces pi-usage, the pi-web-access fork replaces its npm release, which would otherwise register
-# its tools twice, rpiv-todo replaces pi-todo's minified-only bundle, the curated themes collection
-# replaces the standalone Catppuccin theme, and the pi-code fork replaces its npm release.
-RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:pi-web-access", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme", "npm:pi-code"]
+# replaces pi-usage, rpiv-todo replaces pi-todo's minified-only bundle, and the curated themes
+# collection replaces the standalone Catppuccin theme.
+RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
 # cbmem.ts registers the codebase-memory tools directly; the same server imported from host
 # configs would add a second copy behind a namespace proxy.
 MCP_DISABLED_SERVER = "codebase-memory-mcp"

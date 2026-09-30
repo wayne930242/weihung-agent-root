@@ -240,7 +240,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual(restored["packages"], ["npm:user-package"])
             self.assertEqual(restored["powerline"], {"welcome": False})
 
-    def test_upgrade_replaces_the_pi_code_npm_release_with_its_fork(self):
+    def test_upgrade_replaces_the_pi_code_fork_with_its_npm_release(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             agent = home / ".pi/agent"
@@ -248,15 +248,16 @@ class PiReviewFixes(unittest.TestCase):
             settings = agent / "settings.json"
             settings.write_text(json.dumps({"packages": ["npm:user-package"]}))
             run_script("install.sh", home, "--skip-external")
-            # Reproduce the npm release an earlier install registered.
+            # Reproduce the fork an earlier install registered.
             current = json.loads(settings.read_text())
             current["packages"] = [package for package in current["packages"] if "pi-code@" not in json.dumps(package)]
-            current["packages"].append({"source": "npm:pi-code@1.0.77", "extensions": ["extensions/claude-rules.ts"]})
+            current["packages"].append({"source": "git:github.com/wayne930242/pi-code@b88ba30aa987d5e34ddffd4c6c469f78711ac711",
+                                        "extensions": ["extensions/claude-rules.ts"]})
             settings.write_text(json.dumps(current))
             run_script("install.sh", home, "--skip-external")
             upgraded = json.loads(settings.read_text())["packages"]
             self.assertEqual([package for package in upgraded if "pi-code@" in json.dumps(package)],
-                             [{"source": "git:github.com/wayne930242/pi-code@b88ba30aa987d5e34ddffd4c6c469f78711ac711",
+                             [{"source": "npm:pi-code@1.2.0",
                                "extensions": ["extensions/claude-rules.ts"]}])
             self.assertIn("npm:user-package", upgraded)
 
@@ -294,7 +295,8 @@ class PiReviewFixes(unittest.TestCase):
                 state.pop(f"{key}_present")
             marker.write_text(json.dumps(state))
             current = json.loads(settings.read_text())
-            current["packages"] = ["npm:user-package", "npm:pi-lens", "npm:pi-web-access@0.31.0", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
+            current["packages"] = ["npm:user-package", "npm:pi-lens", "npm:pi-web-access@0.31.0",
+                                   "git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
             current.pop("enabledModels")
             current.pop("enableInstallTelemetry")
             settings.write_text(json.dumps(current))
@@ -305,7 +307,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertFalse(any("pi-todo" in item or "catppuccin" in item for item in sources), sources)
             self.assertIn("npm:@juicesharp/rpiv-todo@2.11.0", sources)
             self.assertEqual([item for item in sources if "pi-web-access" in item],
-                             ["git:github.com/wayne930242/pi-web-access@3b13c02cb2ece014b432bece21b9a380ed4c240c"])
+                             ["npm:pi-web-access@0.33.0"])
             self.assertIs(upgraded["enableInstallTelemetry"], False)
             run_script("uninstall.sh", home, "--skip-external")
             restored = json.loads(settings.read_text())
