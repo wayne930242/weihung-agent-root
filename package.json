@@ -9,5 +9,10 @@
       "./pi/extensions/mp-infra-hooks.ts",
       "./pi/extensions/playwriter-relay.ts"
     ]
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.99.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
   }
 }
