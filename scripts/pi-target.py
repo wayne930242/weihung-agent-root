@@ -518,6 +518,16 @@ def restore_builtin_mcp(settings, state):
         settings.pop("extensions")
 
 
+def mcp_config_path(agent_dir):
+    """pi-mcp-adapter 4.0.0 reads only mcp-adapter.json, leaving mcp.json to pi's built-in MCP support."""
+    legacy, current = agent_dir / "mcp.json", agent_dir / "mcp-adapter.json"
+    if legacy.exists():
+        if current.exists():
+            raise ValueError(f"{legacy} and {current} both exist; pi-mcp-adapter reads only the latter, so merge them by hand")
+        shutil.move(legacy, current)
+    return current
+
+
 def update_mcp(mcp, state):
     state.setdefault("previous_discovery", mcp.get("settings", {}).get("hostConfigDiscovery"))
     settings = mcp.setdefault("settings", {})
@@ -623,7 +633,7 @@ def install(home, skip_external, force, herdr_root=None):
     retire_mp_infra_port(home, state)
     retire_codebase_memory_port(home, state)
     settings_path = agent_dir / "settings.json"
-    mcp_path = agent_dir / "mcp.json"
+    mcp_path = mcp_config_path(agent_dir)
     instructions_path = agent_dir / "AGENTS.md"
     settings = read_json(settings_path)
     previous_packages = state.get("previous_packages", list(settings.get("packages", [])))
@@ -720,7 +730,7 @@ def uninstall(home, skip_external):
     state = read_json(marker_path)
     uninstall_ported_resources(home, state)
     settings_path = agent_dir / "settings.json"
-    mcp_path = agent_dir / "mcp.json"
+    mcp_path = mcp_config_path(agent_dir)
     instructions_path = agent_dir / "AGENTS.md"
     if instructions_path.exists() and hashlib.sha256(instructions_path.read_bytes()).hexdigest() == state.get("instructions_hash"):
         instructions_path.unlink()

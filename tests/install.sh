@@ -115,7 +115,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["terminal"]["showTerminalProgress"] is True, settings
     assert settings["compaction"] == {"modelOverrides": {"claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, settings
     assert "powerline" not in settings and "npm:pi-open-tui@0.3.10" in settings["packages"], settings
-    mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
+    mcp = json.loads((home / ".pi/agent/mcp-adapter.json").read_text())
     assert mcp["settings"] == {"hostConfigDiscovery": "on", "namespaceProxyTools": False}, mcp
     assert mcp["mcpServers"] == {"codebase-memory-mcp": {"disabled": True}}, mcp
     lens = json.loads((home / ".pi-lens/config.json").read_text())
@@ -217,7 +217,7 @@ with tempfile.TemporaryDirectory() as directory:
     (agent / "AGENTS.md").write_text("user instructions\n")
     (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], "theme": "light", "enabledModels": ["user/model"], "terminal": {"showImages": False}, "powerline": {"welcome": False}, "compaction": {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}}))
     original_mcp = {"settings": {"namespaceProxyTools": True}, "mcpServers": {"codebase-memory-mcp": {"command": "cbm"}, "user": {"url": "https://example.test/mcp"}}}
-    (agent / "mcp.json").write_text(json.dumps(original_mcp))
+    (agent / "mcp.json").write_text(json.dumps(original_mcp))  # written by an installer older than pi-mcp-adapter 4.0.0
     lens_path = home / ".pi-lens/config.json"
     lens_path.parent.mkdir()
     original_lens = {"lsp": {"enabled": False}, "tools": {"symbol_search": {"enabled": True}}}
@@ -231,7 +231,8 @@ with tempfile.TemporaryDirectory() as directory:
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
     assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@08f0e83") for package in installed_packages), installed_packages
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
-    installed_mcp = json.loads((agent / "mcp.json").read_text())
+    assert not (agent / "mcp.json").exists(), "the legacy file moves to mcp-adapter.json"
+    installed_mcp = json.loads((agent / "mcp-adapter.json").read_text())
     assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": "cbm", "disabled": True}, installed_mcp
     assert installed_mcp["settings"]["namespaceProxyTools"] is False, installed_mcp
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
@@ -246,7 +247,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["theme"] == "light", settings
     assert settings["enabledModels"] == ["user/model"], settings
     assert "enableInstallTelemetry" not in settings, settings
-    assert json.loads((agent / "mcp.json").read_text()) == original_mcp
+    assert json.loads((agent / "mcp-adapter.json").read_text()) == original_mcp
     assert json.loads(lens_path.read_text()) == original_lens
     assert settings["terminal"] == {"showImages": False}, settings
     assert settings["powerline"] == {"welcome": False}, settings

@@ -38,7 +38,7 @@ fresh_install_uninstall_removes_managed_files() {
   [[ ! -e "$fake_home/.pi/agent/agents" && ! -L "$fake_home/.pi/agent/agents" ]] || fail "expected agents link removed"
   [[ ! -e "$fake_home/.pi/agent/AGENTS.md" ]] || fail "expected generated pi instructions removed"
   [[ ! -e "$fake_home/.pi/agent/.weihung-agent-root.json" ]] || fail "expected install marker removed"
-  [[ ! -e "$fake_home/.pi/agent/mcp.json" ]] || fail "expected managed mcp.json removed"
+  [[ ! -e "$fake_home/.pi/agent/mcp-adapter.json" ]] || fail "expected managed mcp-adapter.json removed"
   [[ ! -e "$fake_home/.pi-lens/config.json" ]] || fail "expected managed pi-lens config removed"
   [[ -z "$(find "$fake_home/.agents/skills" -type l -lname "$REPO_ROOT/*")" ]] || fail "expected repository skill links removed"
   [[ "$(readlink "$fake_home/.agents/skills/user-skill")" == "$user_skill" ]] || fail "expected user skill link kept"

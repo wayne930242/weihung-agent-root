@@ -384,6 +384,21 @@ class PiReviewFixes(unittest.TestCase):
             self.assertNotIn("enabledModels", restored)
             self.assertNotIn("enableInstallTelemetry", restored)
 
+    def test_mcp_config_moves_to_the_adapter_file_and_conflicts_fail_fast(self):
+        with tempfile.TemporaryDirectory() as directory:
+            agent = Path(directory) / ".pi/agent"
+            agent.mkdir(parents=True)
+            target = load_target()
+            self.assertEqual(target.mcp_config_path(agent), agent / "mcp-adapter.json")
+            (agent / "mcp.json").write_text('{"mcpServers": {"user": {}}}')
+            self.assertEqual(target.mcp_config_path(agent), agent / "mcp-adapter.json")
+            self.assertFalse((agent / "mcp.json").exists())
+            self.assertEqual(json.loads((agent / "mcp-adapter.json").read_text()), {"mcpServers": {"user": {}}})
+            (agent / "mcp.json").write_text("{}")
+            with self.assertRaisesRegex(ValueError, "merge them by hand"):
+                target.mcp_config_path(agent)
+            self.assertEqual((agent / "mcp.json").read_text(), "{}")
+
     def test_builtin_mcp_is_disabled_for_the_adapter_and_restored(self):
         for before in (None, ["extra.ts"], ["-builtin:mcp"]):
             with self.subTest(before=before), tempfile.TemporaryDirectory() as directory:
