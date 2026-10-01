@@ -109,7 +109,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert {"source": "npm:pi-code@1.4.0", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
-    assert settings["enabledModels"][0] == "claude-bridge/claude-sonnet-5-5", settings
+    assert settings["enabledModels"][0] == "claude-bridge/claude-opus-5-5", settings
     assert "openai-codex/gpt-6-luna" in settings["enabledModels"], settings
     assert settings["theme"] == "catppuccin-mocha", settings
     assert settings["enableInstallTelemetry"] is False, settings

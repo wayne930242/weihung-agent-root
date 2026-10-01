@@ -2,9 +2,9 @@
 
 Active strategy: [claude-drive-codex](strategies/claude-drive-codex.md).
 Activated: 2026-09-23.
-Updated: 2026-09-30.
-Rationale: Claude carries the main load and Codex stays on the $20 plan; Sonnet 5.5 coordinates and implements, and Opus is reserved for hard thinking:
-- Sonnet 5.5 1M high handles main coordination; Sonnet 5.5 (200K) medium and high handle simple and standard implementation.
+Updated: 2026-10-02.
+Rationale: Claude carries the main load and Codex stays on the $20 plan; Opus 5.5 1M coordinates, Sonnet 5.5 implements, and Opus 200K is reserved for hard thinking:
+- Opus 5.5 1M medium handles main coordination; Sonnet 5.5 (200K) medium and high handle simple and standard implementation.
 - Opus 5.5 200K high handles complex work with unclear instructions and `task:architecture` planning and diagnosis; Opus 5.5 200K xhigh handles academic research and forward-looking hard problems.
 - Codex Luna (gpt-6-luna) high handles documentation; Luna medium handles investigation and source data processing.
 - Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6.1-sol) high handles routine review and complex work with clear instructions.
@@ -37,7 +37,7 @@ Before selecting a delegated model, read this entrypoint and the active strategy
 | [claude-with-agy](strategies/claude-with-agy.md) | Codex-light: Luna medium for documents, investigation, UI, and review; Opus 5.5 for implementation and all complex work |
 | [drive-all](strategies/drive-all.md) | claude-drive-codex tiers with Luna medium documents |
 | [claude-only](strategies/claude-only.md) | Opus 5.5 for every tier, thinking low to xhigh |
-| [claude-drive-codex](strategies/claude-drive-codex.md) | Sonnet 5.5 1M high coordination; Sonnet 5.5 implementation (medium/high); Opus 5.5 200K high ambiguous complex work, xhigh academic research; Luna high docs and medium investigation; Astra medium UI; Sol high review and clear complex work |
+| [claude-drive-codex](strategies/claude-drive-codex.md) | Opus 5.5 1M medium coordination; Sonnet 5.5 implementation (medium/high); Opus 5.5 200K high ambiguous complex work, xhigh academic research; Luna high docs and medium investigation; Astra medium UI; Sol high review and clear complex work |
 | [codex-drive-claude](strategies/codex-drive-claude.md) | claude-drive-codex tiers under a Sol high main session |
 | [codex-first](strategies/codex-first.md) | Same pi tiers as codex-drive-claude |
 | [claude-coding-codex-doc](strategies/claude-coding-codex-doc.md) | Opus 5.5 coding, investigation, and review; Luna documents; Sol UI |
