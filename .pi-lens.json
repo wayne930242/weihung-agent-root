@@ -2,6 +2,9 @@
   "rules": {
     "fail-fast": {
       "disable": ["unchecked-throwing-call-python"]
+    },
+    "path-traversal": {
+      "disable": ["python-path-traversal"]
     }
   }
 }

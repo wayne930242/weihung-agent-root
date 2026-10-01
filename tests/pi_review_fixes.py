@@ -191,8 +191,10 @@ class PiReviewFixes(unittest.TestCase):
                 (agent / "settings.json").write_text(json.dumps({"packages": [earlier]}))
                 run_script("install.sh", home, "--skip-external")
                 installed = json.loads((agent / "settings.json").read_text())["packages"]
-                pin = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', PI_TARGET.read_text()).group(1)
-                self.assertEqual([item for item in installed if "straw-boss" in item], [pin])
+                declaration = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', PI_TARGET.read_text())
+                if declaration is None:
+                    self.fail("STRAW_BOSS_SOURCE is not declared in pi-target.py")
+                self.assertEqual([item for item in installed if "straw-boss" in item], [declaration.group(1)])
 
     def test_company_plugins_are_managed_when_present_and_skipped_when_absent(self):
         variables = {"mp-infra": "PI_MP_INFRA_ROOT", "sdlc": "PI_SDLC_ROOT"}

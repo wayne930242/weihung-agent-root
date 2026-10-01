@@ -49,6 +49,8 @@ fresh_install_creates_expected_links() {
   assert_symlink_target "$fake_home/.pi/agent/rules" "$REPO_ROOT/rules"
   assert_symlink_target "$fake_home/.pi/agent/agents" "$REPO_ROOT/agents"
   [[ -f "$fake_home/.pi/agent/AGENTS.md" ]] || fail "expected generated pi instructions"
+  # The literal tilde is the text the generated instructions contain, not a path to expand.
+  # shellcheck disable=SC2088
   grep -q '~/.pi/agent/rules/' "$fake_home/.pi/agent/AGENTS.md" || fail "expected pi instructions to point to the rules"
   assert_absent "$fake_home/.claude"
   assert_absent "$fake_home/.codex"
