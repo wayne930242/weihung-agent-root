@@ -78,6 +78,7 @@ PACKAGES = [
     "npm:pi-robot-hand@0.1.1",
     "npm:@pify/memory@0.13.0",
     "npm:pi-loop-monitor@0.2.1",
+    "npm:@narumitw/pi-goal@0.54.8",
     "npm:pi-phoenix-otel@0.2.0",
     CLAUDE_RULES_PACKAGE,
 ]
