@@ -22,7 +22,7 @@ LEGACY_RENAMES = (
     (Path(".local/state/weihung-user-claude"), Path(".local/state/weihung-agent-root")),
 )
 LEGACY_ROOT = ROOT.parent / "weihung-user-claude"
-BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@08f0e83bd0032cf9dd4acb5664591d589327ea45"
+BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@b2735123eb51862136667b5f829ce1343bb7f93b"
 LEGACY_BRIDGE = "npm:pi-claude-bridge"
 # Fork branch of upstream PR latentminds-ai/pi-quotas#51 (claude-bridge support); switch to
 # npm:@latentminds/pi-quotas once released.

@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 24, settings
-    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@08f0e83bd0032cf9dd4acb5664591d589327ea45", settings
+    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@b2735123eb51862136667b5f829ce1343bb7f93b", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
@@ -229,7 +229,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
-    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@08f0e83") for package in installed_packages), installed_packages
+    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@b273512") for package in installed_packages), installed_packages
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
     assert not (agent / "mcp.json").exists(), "the legacy file moves to mcp-adapter.json"
     installed_mcp = json.loads((agent / "mcp-adapter.json").read_text())
