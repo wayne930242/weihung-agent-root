@@ -24,9 +24,9 @@ Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` 
 
 ## Model and dispatch
 
-Use `managing-model-preferences` to change model strategy. Read its profile before selecting a delegated model. Use the active Pi tier's full model list and thinking level; the user's explicit model choice takes precedence.
+Use `managing-model-preferences` to change model strategy. Each model tier is a `pi-herdr-agents` role that carries the active strategy's model and thinking level: `docs`, `recon`, `ui`, `review`, `simple`, `coding`, `complex_clear`, `complex_unclear`, and `academic`. Choose the tier with the tier guide in that skill's profile, dispatch with `agent: "<tier>"`, and omit `model` and `thinking`; pass them only when the user chooses a model explicitly.
 
-Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, model, and thinking level.
+Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, and tier agent.
 
 In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and `intercom` to find and message related main sessions. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Report the worker's actual result after it arrives.
 

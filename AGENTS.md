@@ -8,8 +8,8 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 
 ## Layout
 
-- `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`; `pi-target.py` appends the active model strategy's tiers.
-- `pi/model-profiles.json`: the executable pi model and thinking tiers for each strategy.
+- `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`. It names tiers but no model.
+- `pi/model-profiles.json`: the executable pi model and thinking tiers for each strategy. `pi-target.py` turns the active one into pi's default model, one `pi-herdr-agents` role per tier in `~/.pi/agent/herdr-agents/roles/`, and `models.agents` and `models.tasks`.
 - `pi/extensions/`: this repository's pi package, registered through `package.json`. Dispatch recovery, handoff, and pane balancing live in straw-boss.
 - `skills/`: user skills linked into `~/.agents/skills/`. `managing-model-preferences` owns the strategy catalog.
 - `agents/`: global `pi-herdr-agents` role overrides linked to `~/.pi/agent/agents/`. Each is the bundled role without its `tools:` allowlist; re-derive them when the `pi-herdr-agents` pin changes.

@@ -126,6 +126,11 @@ with tempfile.TemporaryDirectory() as directory:
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
     assert config["status"] == {"enabled": True}, config
     assert config["panes"] == {"mode": "split", "direction": "right"}, config
+    assert config["models"]["agents"]["worker"] == "claude-bridge/claude-sonnet-5-5, openai-codex/gpt-6.1-sol", config
+    roles = home / ".pi/agent/herdr-agents/roles"
+    assert sorted(path.stem for path in roles.glob("*.md")) == sorted(["docs", "recon", "ui", "review", "simple", "coding", "complex_clear", "complex_unclear", "academic"])
+    assert "\nmodel: claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6-astra\nthinking: high\n" in (roles / "complex_unclear.md").read_text()
+    assert "claude-bridge/" not in (home / ".pi/agent/AGENTS.md").read_text()
 PY
 }
 
@@ -239,7 +244,10 @@ with tempfile.TemporaryDirectory() as directory:
     assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": "cbm", "disabled": True}, installed_mcp
     assert installed_mcp["settings"]["namespaceProxyTools"] is False, installed_mcp
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
-    assert json.loads(config.read_text())["models"]["agents"] == original_models["agents"]
+    installed_agents = json.loads(config.read_text())["models"]["agents"]
+    assert installed_agents["scout"] == "user/scout", "a role model the user set stays"
+    assert installed_agents["worker"].startswith("claude-bridge/claude-sonnet-5-5"), installed_agents
+    assert (agent / "herdr-agents/roles/coding.md").exists()
     installed_compaction = json.loads((agent / "settings.json").read_text())["compaction"]
     assert installed_compaction == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}, "claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, installed_compaction
     subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
@@ -256,6 +264,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["powerline"] == {"welcome": False}, settings
     assert settings["compaction"] == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}, settings
     assert json.loads(config.read_text()) == {"models": original_models, "panes": {"mode": "tab"}, "other": True}
+    assert not (agent / "herdr-agents/roles").exists(), "uninstall removes the tier roles"
 PY
 }
 
@@ -290,7 +299,10 @@ with tempfile.TemporaryDirectory() as directory:
     assert (settings["defaultProvider"], settings["defaultModel"]) == ("openai-codex", "gpt-6.1-sol")
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
     assert config["models"]["tasks"]["recon"][0] == "openai-codex/gpt-6-luna"
-    assert "Active model strategy: codex-first" in (home / ".pi/agent/AGENTS.md").read_text()
+    assert "gpt-6.1-sol" not in (home / ".pi/agent/AGENTS.md").read_text()
+    coding = (home / ".pi/agent/herdr-agents/roles/coding.md").read_text()
+    assert "\nmodel: claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6.1-sol\nthinking: medium\n" in coding, coding
+    assert config["models"]["agents"]["worker"] == "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6.1-sol", config
 PY
 }
 

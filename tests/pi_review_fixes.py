@@ -105,9 +105,17 @@ class PiReviewFixes(unittest.TestCase):
                     self.assertEqual(len(candidates), len(set(candidates)))
                 self.assertEqual(len(target.default_candidates(default)), len(set(target.default_candidates(default))))
                 instructions = target.instructions()
+                roles = target.tier_roles(tiers)
+                self.assertEqual(set(roles), {f"{tier}.md" for tier in tiers if tier != "main"})
                 for tier, (model, thinking) in tiers.items():
+                    self.assertNotIn(model, instructions)
+                    if tier == "main":
+                        continue
                     expected = ", ".join(target.candidates(model, tier))
-                    self.assertIn(f"model `{expected}`; thinking `{thinking}`", instructions)
+                    self.assertIn(f"\nname: {tier}\n", roles[f"{tier}.md"])
+                    self.assertIn(f"\nmodel: {expected}\nthinking: {thinking}\n", roles[f"{tier}.md"])
+                for role, tier in target.ROLE_TIERS.items():
+                    self.assertIn(tier, tiers, role)
 
     def test_only_main_falls_back_to_opus_1m(self):
         target = load_target()

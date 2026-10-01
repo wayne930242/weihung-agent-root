@@ -10,13 +10,13 @@ Rationale: Claude carries the main load and Codex stays on the $20 plan; Opus 5.
 - Codex Astra (gpt-6-astra) medium handles UI/UX design and review; Codex Sol (gpt-6.1-sol) high handles routine review and complex work with clear instructions.
 - Fallbacks: Opus 5.5 1M backs up a Codex main session only; Opus 5.5 200K backs up the other Codex tiers, Haiku 4.5 backs up Luna, and Codex backs up Claude tiers.
 
-Before selecting a delegated model, read this entrypoint and the active strategy's Pi tiers. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatches retain their settings.
+Before dispatching, choose the tier with the guide below and launch its `pi-herdr-agents` role with `agent: "<tier>"`; the role carries the active strategy's model list and thinking level. The user's explicit choice for the current task takes priority. New dispatches use the current strategy; existing dispatches retain their settings.
 
-[pi/model-profiles.json](../../pi/model-profiles.json) holds each strategy's exact `provider/model-id` and thinking level per tier. After switching the active strategy, run `python3 scripts/pi-target.py apply-profile --home "$HOME"` from the repository and reload pi; it regenerates `~/.pi/agent/AGENTS.md` and updates the pi default model and `pi-herdr-agents` task candidates.
+[pi/model-profiles.json](../../pi/model-profiles.json) holds each strategy's exact `provider/model-id` and thinking level per tier. After switching the active strategy, run `python3 scripts/pi-target.py apply-profile --home "$HOME"` from the repository and reload pi; it updates the pi default model, regenerates the tier roles in `~/.pi/agent/herdr-agents/roles/`, and updates the `pi-herdr-agents` behavior-role models and task candidates.
 
 ## Tier guide
 
-1. Apply the user's explicit model and thinking override first; fill unspecified fields from the matching tier.
+1. Apply the user's explicit model and thinking override first by passing `model` and `thinking` beside the tier agent; unspecified fields come from the tier role.
 2. `main` is the coordinating session: requirements, routing, dispatch, tracking, and result integration.
 3. Treat work as complex when its environment is unpredictable: external systems, runtime state, or data behave in ways the task cannot foresee, so the work must probe and adapt as it proceeds. Code volume, file count, cross-component edits, and verification strictness alone do not establish complexity.
 4. Academic research and forward-looking hard problems use `academic`. Other complex work uses `complex_unclear` when the instructions are unclear and the situation is ambiguous, otherwise `complex_clear`. Verify the choice against the task's reality anchor.
@@ -28,7 +28,7 @@ Before selecting a delegated model, read this entrypoint and the active strategy
    - `simple`: simple, localized, or mechanical code changes.
    - `coding`: standard feature implementation, refactoring, and large code work in a predictable environment.
 6. For a mixed task, choose the tier that owns its main deliverable. Pass evidence and unresolved questions forward when findings establish environmental unpredictability or ambiguity.
-7. If the selected model is unavailable, use the next candidate in the tier's list from `~/.pi/agent/AGENTS.md` and report the substitution.
+7. When the tier's model fails with a provider error, `pi-herdr-agents` launches the next candidate in the role's model list; report the substitution from its completion metadata.
 
 ## Strategies
 

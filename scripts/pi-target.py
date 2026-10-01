@@ -33,7 +33,7 @@ WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.0"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
-STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@d48d6a5b9dd0e996627b3a009043287ae28a7630"
+STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@86405a0fefb49ec3cf32c5372449aaca15e863a0"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 # The pi-web-access and pi-code forks are retired for their npm releases, which include the fork fixes.
 PINNED_GIT = {
@@ -50,6 +50,23 @@ HAIKU = "claude-bridge/claude-haiku-4-5"
 LUNA = "openai-codex/gpt-6-luna"
 # Only the coordinating session falls back to a 1M Opus; complex tiers fall back to the 200K twin.
 ONE_M_TIERS = {"main"}
+# Each tier except main is a pi-herdr-agents role; pi/extensions/tier-roles.ts registers this directory as a role pack.
+# A tier role keeps a bare spawn's behavior: every tool, nested dispatch, and autonomous exit.
+ROLES_DIR = Path(".pi/agent/herdr-agents/roles")
+TIER_ROLES = {
+    "docs": "Documentation, technical writing, formatting, and document conversion",
+    "recon": "Investigation, codebase research, information organization, and source data processing",
+    "ui": "UI/UX design review and visual inspection",
+    "review": "Routine checks and code review",
+    "simple": "Simple, localized, or mechanical code changes",
+    "coding": "Standard feature implementation, refactoring, and large code work in a predictable environment",
+    "complex_clear": "Complex work in an unpredictable environment, with clear instructions",
+    "complex_unclear": "Complex work in an unpredictable environment, with unclear instructions or an ambiguous situation",
+    "academic": "Academic research and forward-looking hard problems",
+}
+# Behavior roles carry no model of their own, so each uses the model of the tier that matches its work.
+ROLE_TIERS = {"scout": "recon", "worker": "coding", "reviewer": "review", "adversarial-reviewer": "review",
+              "visual-tester": "ui", "planner": "complex_unclear", "poteto": "complex_clear"}
 # Versioned specs keep every machine on the same release; `pi update` skips them, so bump them here.
 # The theme collection loads only Catppuccin Mocha, which matches the Herdr theme, and none of its skills.
 THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []}
@@ -432,15 +449,47 @@ def enabled_models(default, tiers):
 
 
 def instructions():
-    body = (ROOT / "pi/AGENTS.md.in").read_text().rstrip()
-    strategy, default, profile_tiers, _tasks = routing()
-    tier_lines = [f"- Main: model `{', '.join(default_candidates(default))}`; thinking `{default[1]}`."]
-    for name, (model, thinking) in profile_tiers.items():
-        if name == "main":
-            continue
-        tier_lines.append(f"- {name}: model `{', '.join(candidates(model, name))}`; thinking `{thinking}`.")
-    guidance = "For subagent dispatch, pass the selected tier's full comma-separated list as the `model` value and its thinking level as `thinking`. The `task:<category>` shorthand is available only for coding, review, recon, qa, architecture, and docs."
-    return body + f"\n\n## Active model strategy: {strategy}\n\n" + guidance + "\n\n" + "\n".join(tier_lines) + "\n"
+    return (ROOT / "pi/AGENTS.md.in").read_text().rstrip() + "\n"
+
+
+def tier_roles(tiers):
+    """The role definition of every tier but main, keyed by file name."""
+    roles = {}
+    for name, description in TIER_ROLES.items():
+        model, thinking = tiers[name]
+        roles[f"{name}.md"] = (f"---\nname: {name}\ndescription: {description}\n"
+                               f"model: {', '.join(candidates(model, name))}\nthinking: {thinking}\n"
+                               "auto-exit: true\nsystem-prompt: append\n---\n\n"
+                               f"# {name} tier\n\nComplete the task in your task message within its stated scope, "
+                               "verify the result, and report what you did and what you observed.\n")
+    return roles
+
+
+def write_tier_roles(home, state, tiers):
+    """Replace the role files an earlier run wrote; a file this repository did not write stops the run."""
+    roles_dir = home / ROLES_DIR
+    owned = state.get("installed_roles", {})
+    roles = tier_roles(tiers)
+    for name in roles:
+        path = roles_dir / name
+        if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() != owned.get(name):
+            raise ValueError(f"{path} was not written by this repository; move it, then rerun")
+    for name in set(owned) - set(roles):
+        (roles_dir / name).unlink(missing_ok=True)
+    roles_dir.mkdir(parents=True, exist_ok=True)
+    for name, content in roles.items():
+        (roles_dir / name).write_text(content)
+    state["installed_roles"] = {name: hashlib.sha256(content.encode()).hexdigest() for name, content in roles.items()}
+
+
+def remove_tier_roles(home, state):
+    roles_dir = home / ROLES_DIR
+    for name, digest in state.pop("installed_roles", {}).items():
+        path = roles_dir / name
+        if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() == digest:
+            path.unlink()
+    if roles_dir.exists() and not any(roles_dir.iterdir()):
+        roles_dir.rmdir()
 
 
 def update_profile(home, state):
@@ -458,11 +507,18 @@ def update_profile(home, state):
                     enabledModels=enabled_models(default, tiers))
     models = config.setdefault("models", {})
     models["default"] = ", ".join(default_candidates(default))
-    models.setdefault("agents", {})
+    # A role's model the user set by hand wins; only values an earlier run wrote follow the strategy.
+    ours = state.get("installed_agent_models", {})
+    agents = models.get("agents", {})
+    managed = {role: ", ".join(candidates(tiers[tier][0], tier)) for role, tier in ROLE_TIERS.items()
+               if role not in agents or agents[role] == ours.get(role)}
+    models["agents"] = {**agents, **managed}
+    state["installed_agent_models"] = managed
     models["tasks"] = tasks
     config.setdefault("status", {"enabled": True})
     write_json(settings_path, settings)
     write_json(config_path, config)
+    write_tier_roles(home, state, tiers)
     state["installed_settings"] = {key: settings[key] for key in FIELDS}
     state["installed_models"] = deepcopy(models)
     state["installed_status"] = deepcopy(config["status"])
@@ -730,6 +786,7 @@ def uninstall(home, skip_external):
         return
     state = read_json(marker_path)
     uninstall_ported_resources(home, state)
+    remove_tier_roles(home, state)
     settings_path = agent_dir / "settings.json"
     mcp_path = mcp_config_path(agent_dir)
     instructions_path = agent_dir / "AGENTS.md"
