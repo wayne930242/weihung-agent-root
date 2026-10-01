@@ -56,9 +56,10 @@ THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1",
 # pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
 # its other extensions duplicate the todo, MCP, subagent, and web packages below.
 CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}
+HERDR_AGENTS_SOURCE = "npm:pi-herdr-agents@2.0.4"
 PACKAGES = [
     BRIDGE_SOURCE,
-    "npm:pi-herdr-agents@2.0.4",
+    HERDR_AGENTS_SOURCE,
     STRAW_BOSS_SOURCE,
     "npm:pi-mcp-adapter@2.37.0",
     "npm:pi-intercom@0.14.0",
@@ -81,6 +82,8 @@ PACKAGES = [
     CLAUDE_RULES_PACKAGE,
 ]
 LOCAL_PACKAGE = str(ROOT)
+# Testing an unreleased pi-herdr-agents fix: this variable names a checkout that replaces the pinned release.
+HERDR_AGENTS_ROOT_VARIABLE = "PI_HERDR_AGENTS_ROOT"
 # The Playwriter CLI drives the user's own Chrome through its extension; playwriter-relay.ts starts its relay.
 PLAYWRITER = "playwriter@0.7.0"
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
@@ -250,6 +253,28 @@ def plugin_source(name: str, variable: str, default: Path) -> str | None:
         return str(root)
     print(f"{name} not found at {root}; skipped. Set {variable} to the plugin checkout and rerun to add it.", file=sys.stderr)
     return None
+
+
+def herdr_agents_root():
+    """The checkout named by PI_HERDR_AGENTS_ROOT, or None when the variable is unset; a wrong value fails the install."""
+    value = os.environ.get(HERDR_AGENTS_ROOT_VARIABLE)
+    if not value:
+        return None
+    root = Path(value).expanduser().resolve()
+    manifest = root / "package.json"
+    if not manifest.is_file():
+        raise ValueError(f"{HERDR_AGENTS_ROOT_VARIABLE}={value} has no package.json at {manifest}; "
+                         f"point it at a pi-herdr-agents checkout or unset it to use {HERDR_AGENTS_SOURCE}")
+    name = read_json(manifest).get("name")
+    if name != "pi-herdr-agents":
+        raise ValueError(f"{HERDR_AGENTS_ROOT_VARIABLE}={value} is the package {name!r}, not pi-herdr-agents")
+    return str(root)
+
+
+def owned_packages(state):
+    """PACKAGES, with the pinned pi-herdr-agents release swapped for the override checkout the install recorded."""
+    return [state["herdr_agents"] if package == HERDR_AGENTS_SOURCE and state.get("herdr_agents") else package
+            for package in PACKAGES]
 
 
 def local_packages(state):
@@ -571,12 +596,24 @@ def restore_compaction(settings, state):
         settings.pop("compaction")
 
 
-def install(home, skip_external, force):
+def install(home, skip_external, force, herdr_root=None):
     agent_dir = home / ".pi/agent"
     marker_path = home / MARKER
     first_install = not marker_path.exists()
     state = read_json(marker_path)
     state["aaaav"] = aaaav_source()
+    # pi identifies an npm package by name but a local one by path, so whichever form the other mode used must leave settings.
+    # Old checkouts stay recorded until a run completes, so a run that fails midway still removes them on the next one.
+    old_roots = [root for root in dict.fromkeys([*state.get("herdr_agents_displaced", []), state.get("herdr_agents")])
+                 if root and root != herdr_root]
+    state["herdr_agents_displaced"] = old_roots
+    if herdr_root:
+        state["herdr_agents"] = herdr_root
+        print(f"{HERDR_AGENTS_ROOT_VARIABLE}: using {herdr_root} instead of {HERDR_AGENTS_SOURCE}. "
+              "The agents/ role overrides were derived from the 2.0.4 bundled roles; "
+              "compare them with the checkout's agents/ if it differs.", file=sys.stderr)
+    else:
+        state.pop("herdr_agents", None)
     gone = []
     for key, (name, variable, default) in COMPANY_PLUGINS.items():
         if source := plugin_source(name, variable, default):
@@ -619,6 +656,9 @@ def install(home, skip_external, force):
     write_json(marker_path, state)
     previous_ids = {package_id(value, agent_dir) for value in state["previous_packages"]}
     retired_ids = {package_id(value, agent_dir) for value in RETIRED_PACKAGES} - previous_ids
+    # Unlike a retired package, the other form of pi-herdr-agents leaves settings even when the user had declared it first.
+    retired_ids |= {package_id(value, agent_dir) for value in old_roots + ([HERDR_AGENTS_SOURCE] if herdr_root else [])}
+    packages = owned_packages(state)
     if not skip_external:
         run(["npm", "install", "-g", "@earendil-works/pi-coding-agent@latest"], home)
         if "playwriter_preinstalled" not in state:
@@ -629,7 +669,7 @@ def install(home, skip_external, force):
         run(["herdr", "integration", "install", "pi"], home)
         state["integration_installed"] = True
         write_json(marker_path, state)
-        for package in PACKAGES:
+        for package in packages:
             run(["pi", "install", package_source(package)], home)
         for package in state["retired_packages"]:
             settings = read_json(settings_path)
@@ -652,11 +692,11 @@ def install(home, skip_external, force):
                 run_company_plugin("install", home, state[key])
     else:
         settings = read_json(settings_path)
-        settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + PACKAGES + local_packages(state), agent_dir) if not obsolete_pin(package)]
+        settings["packages"] = [package for package in unique_packages(settings.get("packages", []) + packages + local_packages(state), agent_dir) if not obsolete_pin(package)]
         write_json(settings_path, settings)
     settings = read_json(settings_path)
     current = settings.get("packages", [])
-    owned = PACKAGES + local_packages(state)
+    owned = packages + local_packages(state)
     owned_ids = {package_id(value, agent_dir) for value in owned}
     unmanaged = [value for value in current
                  if package_id(value, agent_dir) not in owned_ids | retired_ids and not obsolete_pin(value)]
@@ -668,6 +708,7 @@ def install(home, skip_external, force):
     settings["packages"] = [value for value in unique_packages(unmanaged + managed, agent_dir)
                             if package_id(value, agent_dir) not in gone_ids]
     write_json(settings_path, settings)
+    state.pop("herdr_agents_displaced")
     write_json(marker_path, state)
 
 
@@ -688,7 +729,7 @@ def uninstall(home, skip_external):
         shutil.move(backup, instructions_path)
     previous_packages = state.get("previous_packages", [])
     previous_ids = {package_id(value, agent_dir) for value in previous_packages}
-    managed_packages = PACKAGES + local_packages(state)
+    managed_packages = owned_packages(state) + local_packages(state)
     company = [state[key] for key in COMPANY_PLUGINS if state.get(key)]
     owned = {package_id(value, agent_dir) for value in managed_packages} - previous_ids
     if not skip_external:
@@ -709,7 +750,10 @@ def uninstall(home, skip_external):
     prior = {package_id(value, agent_dir): value for value in previous_packages}
     settings["packages"] = [prior.get(package_id(package, agent_dir), package) for package in settings.get("packages", [])
                             if package_id(package, agent_dir) not in owned]
-    for package in state.get("retired_packages", []):
+    # The override replaced a release the user had declared before install; put that spec back like a retired package.
+    displaced = [package for package in previous_packages if state.get("herdr_agents")
+                 and package_id(package, agent_dir) == package_id(HERDR_AGENTS_SOURCE, agent_dir)]
+    for package in [*state.get("retired_packages", []), *displaced]:
         if package not in settings["packages"]:
             if not skip_external:
                 run(["pi", "install", package], home)
@@ -822,9 +866,11 @@ def main():
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     home = args.home.expanduser().resolve()
+    # install.sh runs `migrate` first, so a wrong override stops there, before any link or the legacy-name migration changes a file.
+    herdr_root = herdr_agents_root() if args.action in ("migrate", "install") else None
     migrate_legacy_name(home)
     if args.action == "install":
-        install(home, args.skip_external, args.force)
+        install(home, args.skip_external, args.force, herdr_root)
     elif args.action == "uninstall":
         uninstall(home, args.skip_external)
     elif args.action == "apply-profile":
