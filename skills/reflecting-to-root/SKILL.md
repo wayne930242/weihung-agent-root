@@ -25,11 +25,17 @@ documentation. Update an existing source of truth before proposing a new one.
 
 ## 3. Confirm
 
-Present the proposed learning, destination, and exact behavioral change. Wait for
-the user to accept, revise, or reject each durable change.
+Present the proposed learning, destination, and exact behavioral change. State
+that approval of a user-root change also covers its commit, push, and install in
+step 4. Wait for the user to accept, revise, or reject each durable change.
 
 ## 4. Integrate
 
-Apply only approved changes, keep them concise, and verify the affected agent
-configuration. Report approved changes and rejected or already-covered learnings
-separately.
+Apply only approved changes, keep them concise, and report approved changes and
+rejected or already-covered learnings separately.
+
+Edit user-root changes in the source repository `~/projects/weihung-agent-root`:
+`pi/AGENTS.md.in` (generates `~/.pi/agent/AGENTS.md`), `rules/`, and `skills/`;
+the installed copies are generated output. Stage the changed files by name, commit
+with a Conventional Commit message, push, run `bash scripts/install.sh`, and
+verify that the installed file shows the change.
