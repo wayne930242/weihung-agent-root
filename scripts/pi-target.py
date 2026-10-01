@@ -31,7 +31,7 @@ QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e
 QUOTAS_GIT_PREFIXES = ("git:github.com/wayne930242/pi-quotas", "git:github.com/wayne930242/pi-usage")
 WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
-CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.0"
+CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.1"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
 STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@f3e0c791061da4bc8c709236c7907a25e778d071"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
@@ -89,11 +89,11 @@ PACKAGES = [
     QUOTAS_SOURCE,
     "npm:@moyai/pi-session-hoarder@0.2.0",
     "npm:pi-jev-compaction@1.0.0",
-    "npm:cc-safety-net@2.4.14",
+    "npm:cc-safety-net@2.5.0",
     "npm:pi-codex-image-gen@0.1.13",
     "npm:pi-secret-drop@0.1.6",
     "npm:pi-robot-hand@0.1.1",
-    "npm:@pify/memory@0.13.0",
+    "npm:@pify/memory@0.13.1",
     "npm:pi-loop-monitor@0.2.1",
     "npm:@narumitw/pi-goal@0.54.8",
     "npm:pi-phoenix-otel@0.2.0",
