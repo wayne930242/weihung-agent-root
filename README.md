@@ -45,7 +45,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so u
 
 | Home path | Source |
 |---|---|
-| `~/.agents/skills/<name>` | [skills/](skills/): `managing-model-preferences`, `providing-knowledge`, `publishing-pi-extensions`, `reflecting-to-root`, `using-sessionflow`, `writing-great-skills` |
+| `~/.agents/skills/<name>` | [skills/](skills/): `managing-model-preferences`, `providing-knowledge`, `publishing-pi-extensions`, `reflecting-to-root`, `using-sessionflow` |
 | `~/.pi/agent/rules` | [rules/](rules/): user-global rules |
 | `~/.pi/agent/agents` | [agents/](agents/): global overrides of the `pi-herdr-agents` 2.0.4 bundled roles. Each file is the bundled role with its `tools:` allowlist removed, so a child loads every installed tool; the bundled `spawning:` policy still limits nested subagents. Re-derive them when the `pi-herdr-agents` pin changes. |
 | `~/.pi/agent/skills/pi-skills` | A clone of [badlogic/pi-skills](https://github.com/badlogic/pi-skills) in `~/.local/share/weihung-agent-root/pi-skills`, pulled on each install. Its skills (`brave-search`, `browser-tools`, `gccli`, `gdcli`, `gmcli`, `transcribe`, `vscode`, `youtube-transcript`) need their own CLIs or keys as each `SKILL.md` describes. |
