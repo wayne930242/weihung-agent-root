@@ -65,6 +65,7 @@ staleHandlers.get("session_start")({}, {
   get ui() { if (shutDown) throw staleError(); return { notify: () => {} }; },
 });
 shutDown = true;
+staleHandlers.get("session_shutdown")?.();
 const unhandled = [];
 const onUnhandled = (error) => unhandled.push(error);
 process.on("unhandledRejection", onUnhandled);
@@ -72,5 +73,18 @@ releaseStale();
 await new Promise((resolve) => setTimeout(resolve, 20));
 process.off("unhandledRejection", onUnhandled);
 assert.deepEqual(unhandled, [], "a stale ctx after shutdown does not throw");
+
+// A live session whose notify fails still surfaces the error instead of hiding it.
+const liveHandlers = new Map();
+run = fake({ initiallyUp: true, status: { extensions: [] } });
+playwriterRelay({ on(event, handler) { liveHandlers.set(event, handler); } }, { ...run.deps, sleep: async () => {} });
+const surfaced = [];
+const onSurfaced = (error) => surfaced.push(error);
+process.on("unhandledRejection", onSurfaced);
+liveHandlers.get("session_start")({}, { hasUI: true, ui: { notify: () => { throw new Error("notify broke"); } } });
+await new Promise((resolve) => setTimeout(resolve, 20));
+process.off("unhandledRejection", onSurfaced);
+assert.equal(surfaced.length, 1, "a non-stale notify error is not swallowed");
+assert.match(String(surfaced[0]), /notify broke/);
 
 console.log("pi playwriter relay: pass");
