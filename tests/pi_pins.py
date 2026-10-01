@@ -66,7 +66,7 @@ class PinTests(unittest.TestCase):
             self.assertIn("npm:pi-lens@9.9.9", text["pi-target.py"])
             self.assertNotIn("npm:pi-lens@4.3.0", text["install.sh"])
             self.assertIn("playwriter@8.8.8", text["README.md"])
-            self.assertIn("straw-boss@86405a0f", text["pi-target.py"])
+            self.assertIn("straw-boss@f3e0c791", text["pi-target.py"])
 
     def test_bump_updates_a_named_git_pin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
