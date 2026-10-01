@@ -35,7 +35,8 @@ LAUNCHD_PLIST = Path.home() / "Library/LaunchAgents" / f"{LAUNCHD_LABEL}.plist"
 SCHEDULE = {"Hour": 6, "Minute": 0}
 SMOKE_TIMEOUT_SECONDS = 120
 # Tools install.sh calls; launchd starts jobs with a bare PATH, so the schedule records where each lives.
-REQUIRED_TOOLS = ("pi", "npm", "node", "git", "python3", "bash")
+# python3 comes first so its directory precedes /usr/bin, whose Python is too old for pi-target.py.
+REQUIRED_TOOLS = ("python3", "pi", "npm", "node", "git", "bash")
 OPTIONAL_TOOLS = ("herdr", "playwriter")
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 
@@ -371,7 +372,11 @@ def main() -> None:
     if args.action == "outdated":
         outdated()
     elif args.action == "auto":
-        auto()
+        try:
+            auto()
+        except Exception as error:
+            notify(f"Crashed: {str(error).splitlines()[0]} See {LOG_FILE}.")
+            raise
     elif args.action == "schedule":
         schedule()
     elif args.action == "unschedule":

@@ -205,6 +205,14 @@ class SmokeAndScheduleTests(unittest.TestCase):
         with self.assertRaisesRegex(pins.StepFailed, "no command list"):
             self.run_smoke(0, "{\"type\":\"extension_ui_request\"}\n")
 
+    def test_a_crashed_run_notifies_and_still_fails(self) -> None:
+        messages: list[str] = []
+        with mock.patch.object(pins, "auto", side_effect=pins.RestoreFailed("restore install failed: x\ndetail")), \
+                mock.patch.object(pins, "notify", messages.append), mock.patch.object(pins.sys, "argv", ["pi-pins.py", "auto"]), \
+                self.assertRaises(pins.RestoreFailed):
+            pins.main()
+        self.assertRegex(messages[0], r"^Crashed: restore install failed: x See ")
+
     def test_plist_runs_auto_daily_with_the_tool_directories_on_path(self) -> None:
         located = {"pi": "/nvm/bin/pi", "npm": "/nvm/bin/npm", "node": "/nvm/bin/node", "git": "/usr/bin/git",
                    "python3": "/opt/homebrew/bin/python3", "bash": "/bin/bash", "herdr": "/Users/x/.local/bin/herdr"}
@@ -213,8 +221,9 @@ class SmokeAndScheduleTests(unittest.TestCase):
         self.assertEqual(plist["ProgramArguments"][1:], [str(ROOT / "scripts/pi-pins.py"), "auto"])
         self.assertEqual(plist["StartCalendarInterval"], {"Hour": 6, "Minute": 0})
         self.assertEqual(plist["EnvironmentVariables"]["PATH"],
-                         "/nvm/bin:/usr/bin:/opt/homebrew/bin:/bin:/Users/x/.local/bin:/usr/sbin:/sbin")
-        with mock.patch.object(pins.shutil, "which", {"pi": "/nvm/bin/pi"}.get), self.assertRaisesRegex(ValueError, "npm is not on PATH"):
+                         "/opt/homebrew/bin:/nvm/bin:/usr/bin:/bin:/Users/x/.local/bin:/usr/sbin:/sbin")
+        with mock.patch.object(pins.shutil, "which", {"python3": "/opt/homebrew/bin/python3", "pi": "/nvm/bin/pi"}.get), \
+                self.assertRaisesRegex(ValueError, "npm is not on PATH"):
             pins.launchd_plist()
 
 
