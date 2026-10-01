@@ -60,8 +60,13 @@ export async function ensureRelay(deps: RelayDeps = defaultDeps, attempts = 20, 
 export default function playwriterRelay(pi: ExtensionAPI, deps: RelayDeps = defaultDeps): void {
   pi.on("session_start", (_event, ctx) => {
     // Session start must not wait on Chrome; the warning arrives when the check settles.
+    // A session that ends before the check settles leaves ctx stale, and pi throws on any access; nobody is left to warn.
     void ensureRelay(deps).then((warning) => {
-      if (warning && ctx.hasUI) ctx.ui.notify(warning, "warning");
+      try {
+        if (warning && ctx.hasUI) ctx.ui.notify(warning, "warning");
+      } catch {
+        return;
+      }
     });
   });
 }

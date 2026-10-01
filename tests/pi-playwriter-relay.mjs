@@ -52,4 +52,25 @@ await new Promise((resolve) => setTimeout(resolve, 20));
 assert.equal(notices.length, 1, "the warning arrives after the check settles");
 assert.equal(notices[0][1], "warning");
 
+// The check settles after the session shut down: pi's stale ctx throws on every access.
+const staleHandlers = new Map();
+let releaseStale;
+const staleGate = new Promise((resolve) => { releaseStale = resolve; });
+run = fake({ initiallyUp: true, status: { extensions: [] } });
+playwriterRelay({ on(event, handler) { staleHandlers.set(event, handler); } }, { ...run.deps, sleep: () => staleGate });
+let shutDown = false;
+const staleError = () => new Error("This extension ctx is stale after session replacement or reload.");
+staleHandlers.get("session_start")({}, {
+  get hasUI() { if (shutDown) throw staleError(); return true; },
+  get ui() { if (shutDown) throw staleError(); return { notify: () => {} }; },
+});
+shutDown = true;
+const unhandled = [];
+const onUnhandled = (error) => unhandled.push(error);
+process.on("unhandledRejection", onUnhandled);
+releaseStale();
+await new Promise((resolve) => setTimeout(resolve, 20));
+process.off("unhandledRejection", onUnhandled);
+assert.deepEqual(unhandled, [], "a stale ctx after shutdown does not throw");
+
 console.log("pi playwriter relay: pass");
