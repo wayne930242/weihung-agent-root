@@ -301,7 +301,7 @@ class PiReviewFixes(unittest.TestCase):
             upgraded = json.loads(settings.read_text())
             self.assertNotIn("npm:pi-powerline-footer", upgraded["packages"])
             self.assertNotIn("npm:pi-notify", upgraded["packages"])
-            self.assertIn("npm:pi-open-tui@0.3.9", upgraded["packages"])
+            self.assertIn("npm:pi-open-tui@0.3.10", upgraded["packages"])
             self.assertIn("npm:user-package", upgraded["packages"])
             self.assertEqual(upgraded["powerline"], {"welcome": False})
             run_script("uninstall.sh", home, "--skip-external")
@@ -326,7 +326,7 @@ class PiReviewFixes(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             upgraded = json.loads(settings.read_text())["packages"]
             self.assertEqual([package for package in upgraded if "pi-code@" in json.dumps(package)],
-                             [{"source": "npm:pi-code@1.2.1",
+                             [{"source": "npm:pi-code@1.4.0",
                                "extensions": ["extensions/claude-rules.ts"]}])
             self.assertIn("npm:user-package", upgraded)
 
@@ -376,7 +376,7 @@ class PiReviewFixes(unittest.TestCase):
             self.assertFalse(any("pi-todo" in item or "catppuccin" in item for item in sources), sources)
             self.assertIn("npm:@juicesharp/rpiv-todo@2.12.0", sources)
             self.assertEqual([item for item in sources if "pi-web-access" in item],
-                             ["npm:pi-web-access@0.33.0"])
+                             ["npm:pi-web-access@0.35.0"])
             self.assertIs(upgraded["enableInstallTelemetry"], False)
             run_script("uninstall.sh", home, "--skip-external")
             restored = json.loads(settings.read_text())

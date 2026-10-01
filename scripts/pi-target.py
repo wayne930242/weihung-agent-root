@@ -29,9 +29,9 @@ LEGACY_BRIDGE = "npm:pi-claude-bridge"
 QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e8de1f856f7ee6b"
 # pi-quotas replaces the pi-usage fork, so every pi-usage fork revision is retired with its other revisions.
 QUOTAS_GIT_PREFIXES = ("git:github.com/wayne930242/pi-quotas", "git:github.com/wayne930242/pi-usage")
-WEB_ACCESS_SOURCE = "npm:pi-web-access@0.33.0"
+WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
 BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
-CLAUDE_RULES_SOURCE = "npm:pi-code@1.2.1"
+CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.0"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
 STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@d48d6a5b9dd0e996627b3a009043287ae28a7630"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
@@ -61,18 +61,18 @@ PACKAGES = [
     BRIDGE_SOURCE,
     HERDR_AGENTS_SOURCE,
     STRAW_BOSS_SOURCE,
-    "npm:pi-mcp-adapter@2.37.0",
-    "npm:pi-intercom@0.14.0",
+    "npm:pi-mcp-adapter@4.0.0",
+    "npm:pi-intercom@0.16.0",
     "npm:pi-ask-user@0.15.1",
     "npm:@juicesharp/rpiv-todo@2.12.0",
     THEME_PACKAGE,
-    "npm:pi-open-tui@0.3.9",
+    "npm:pi-open-tui@0.3.10",
     WEB_ACCESS_SOURCE,
     "npm:pi-lens@4.3.0",
     QUOTAS_SOURCE,
     "npm:@moyai/pi-session-hoarder@0.2.0",
     "npm:pi-jev-compaction@1.0.0",
-    "npm:cc-safety-net@2.4.7",
+    "npm:cc-safety-net@2.4.14",
     "npm:pi-codex-image-gen@0.1.13",
     "npm:pi-secret-drop@0.1.6",
     "npm:pi-robot-hand@0.1.1",

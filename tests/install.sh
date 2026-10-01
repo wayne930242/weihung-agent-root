@@ -97,13 +97,13 @@ with tempfile.TemporaryDirectory() as directory:
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
     assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []} in settings["packages"], settings
-    assert "npm:@juicesharp/rpiv-todo@2.12.0" in sources and "npm:cc-safety-net@2.4.7" in sources, sources
-    assert "npm:pi-codex-image-gen@0.1.13" in sources and "npm:pi-web-access@0.33.0" in sources, sources
+    assert "npm:@juicesharp/rpiv-todo@2.12.0" in sources and "npm:cc-safety-net@2.4.14" in sources, sources
+    assert "npm:pi-codex-image-gen@0.1.13" in sources and "npm:pi-web-access@0.35.0" in sources, sources
     assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.1" in sources, sources
     assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
     assert "npm:@pify/memory@0.13.0" in sources, sources
     assert "npm:pi-loop-monitor@0.2.1" in sources, sources
-    assert {"source": "npm:pi-code@1.2.1", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
+    assert {"source": "npm:pi-code@1.4.0", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
     assert settings["defaultProvider"] == "claude-bridge", settings
     assert settings["enabledModels"][0] == "claude-bridge/claude-sonnet-5-5", settings
@@ -114,7 +114,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["collapseChangelog"] is True, settings
     assert settings["terminal"]["showTerminalProgress"] is True, settings
     assert settings["compaction"] == {"modelOverrides": {"claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, settings
-    assert "powerline" not in settings and "npm:pi-open-tui@0.3.9" in settings["packages"], settings
+    assert "powerline" not in settings and "npm:pi-open-tui@0.3.10" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp.json").read_text())
     assert mcp["settings"] == {"hostConfigDiscovery": "on", "namespaceProxyTools": False}, mcp
     assert mcp["mcpServers"] == {"codebase-memory-mcp": {"disabled": True}}, mcp
