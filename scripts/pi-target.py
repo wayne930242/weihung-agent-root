@@ -64,7 +64,7 @@ PACKAGES = [
     "npm:pi-mcp-adapter@2.37.0",
     "npm:pi-intercom@0.14.0",
     "npm:pi-ask-user@0.15.1",
-    "npm:@juicesharp/rpiv-todo@2.11.0",
+    "npm:@juicesharp/rpiv-todo@2.12.0",
     THEME_PACKAGE,
     "npm:pi-open-tui@0.3.9",
     WEB_ACCESS_SOURCE,

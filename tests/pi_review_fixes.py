@@ -374,7 +374,7 @@ class PiReviewFixes(unittest.TestCase):
             sources = [item["source"] if isinstance(item, dict) else item for item in upgraded["packages"]]
             self.assertEqual([item for item in sources if "pi-lens" in item], ["npm:pi-lens@4.3.0"])
             self.assertFalse(any("pi-todo" in item or "catppuccin" in item for item in sources), sources)
-            self.assertIn("npm:@juicesharp/rpiv-todo@2.11.0", sources)
+            self.assertIn("npm:@juicesharp/rpiv-todo@2.12.0", sources)
             self.assertEqual([item for item in sources if "pi-web-access" in item],
                              ["npm:pi-web-access@0.33.0"])
             self.assertIs(upgraded["enableInstallTelemetry"], False)
