@@ -18,6 +18,8 @@ Then start `pi` inside Herdr and run `/login` for OpenAI Codex. Claude models ne
 
 Clone beside the related checkouts when they exist: the installer uses `~/projects/aaaav` when present (otherwise `github.com/wayne930242/aaaav`) and the mp-infra and sdlc plugins from `~/projects/moldplan-center` (or `PI_MP_INFRA_ROOT`, `PI_SDLC_ROOT`).
 
+To test an unreleased `pi-herdr-agents` fix, set `PI_HERDR_AGENTS_ROOT` to a checkout of it (its `package.json` must be named `pi-herdr-agents`): the installer then registers that directory instead of the pinned npm release, never both, and fails when the variable points at a missing directory or another package. Unset it and re-run to return to the pinned release. The variable is not auto-detected and exists only for testing: once the upstream release carrying the fix is pinned in `PACKAGES`, stop using it. The `agents/` overrides match the pinned release's bundled roles, so compare them with the checkout's `agents/` when it differs.
+
 Installer options:
 
 - `--home PATH` installs into another home directory, for example a throwaway smoke test.
