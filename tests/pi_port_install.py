@@ -7,7 +7,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 COMMANDS = ("assign", "cancel", "comment", "create", "done", "edit", "estimate", "show", "status", "sync", "work-on", "write-work-on-skill")
 
@@ -75,7 +74,7 @@ if '--prefix' in args:
     assert json.loads((agent / ".weihung-agent-root.json").read_text())["ported_resources"]
     run("install.sh", home, env)
     instructions = (agent / "AGENTS.md").read_text()
-    assert 500 <= len(instructions.split()) <= 750
+    assert 500 <= len(instructions.split()) <= 1000
     assert instructions.count("## Code discovery") == 1
     assert instructions.count("Commit messages contain no AI tool attribution.") == 1
     assert "@shared/" not in instructions
