@@ -38,7 +38,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 - installs the pinned [Playwriter](https://github.com/remorses/playwriter) CLI (`npm install -g playwriter@0.7.0`), which drives the user's own Chrome through the Playwriter extension; uninstall removes it only when this install added it;
 - installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in);
-- sets the default model, thinking level, `pi-herdr-agents` tier roles and task models, UI settings, and MCP host-config discovery;
+- sets UI settings, `pi-herdr-agents` pane placement, and MCP host-config discovery;
 - ports resources pi cannot install as packages: team-toon-tack and pi-skills.
 
 Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so uninstall removes exactly those files and restores the previous settings values.
@@ -47,7 +47,7 @@ Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so u
 
 | Home path | Source |
 |---|---|
-| `~/.agents/skills/<name>` | [skills/](skills/): `managing-model-preferences`, `providing-knowledge`, `publishing-pi-extensions`, `reflecting-to-root`, `using-sessionflow` |
+| `~/.agents/skills/<name>` | [skills/](skills/): `providing-knowledge`, `publishing-pi-extensions`, `reflecting-to-root`, `using-sessionflow`, `writing-in-weihung-voice` |
 | `~/.pi/agent/rules` | [rules/](rules/): user-global rules |
 | `~/.pi/agent/agents` | [agents/](agents/): global overrides of the `pi-herdr-agents` 2.0.4 bundled roles. Each file is the bundled role with its `tools:` allowlist removed, so a child loads every installed tool; the bundled `spawning:` policy still limits nested subagents. Re-derive them when the `pi-herdr-agents` pin changes. |
 | `~/.pi/agent/skills/pi-skills` | A clone of [badlogic/pi-skills](https://github.com/badlogic/pi-skills) in `~/.local/share/weihung-agent-root/pi-skills`, pulled on each install. Its skills (`brave-search`, `browser-tools`, `gccli`, `gdcli`, `gmcli`, `transcribe`, `vscode`, `youtube-transcript`) need their own CLIs or keys as each `SKILL.md` describes. |
@@ -60,7 +60,7 @@ Registry packages are pinned to exact versions in [scripts/pi_root/pins.py](scri
 
 | Package | Role |
 |---|---|
-| `pi-claude-bridge` | The `claude-bridge` provider: Claude models through the local Claude Code login. Pinned to the fork commit `wayne930242/pi-claude-bridge@b273512` on `weihung-integration`, rebuilt on upstream 0.9.1. It merges four upstream PRs still open upstream: 200K twins such as `claude-200k-opus-5-5` beside each 1M model ([#131](https://github.com/elidickinson/pi-claude-bridge/pull/131)), so main and complex tiers run Opus 5.5 1M while other tiers run 200K; `provider.reportApiCost`, which prices usage at API list prices ([#133](https://github.com/elidickinson/pi-claude-bridge/pull/133)); one-shot calls from extensions, such as `fetch_content`'s answer mode, served on an isolated Claude Code process instead of failing prompt capture ([#123](https://github.com/elidickinson/pi-claude-bridge/pull/123)); and tools an extension activates mid-turn, such as `web_enable` and `pi_lens_activate_tools`, reaching Claude in the same turn ([#125](https://github.com/elidickinson/pi-claude-bridge/pull/125)). Claude subscription usage comes from `pi-quotas`. |
+| `pi-claude-bridge` | The `claude-bridge` provider: Claude models through the local Claude Code login. Pinned to the fork commit `wayne930242/pi-claude-bridge@b273512` on `weihung-integration`, rebuilt on upstream 0.9.1. It merges four upstream PRs still open upstream: 200K twins such as `claude-200k-opus-5-5` beside each 1M model ([#131](https://github.com/elidickinson/pi-claude-bridge/pull/131)), so a role can run Opus 5.5 at 200K while the main session runs 1M; `provider.reportApiCost`, which prices usage at API list prices ([#133](https://github.com/elidickinson/pi-claude-bridge/pull/133)); one-shot calls from extensions, such as `fetch_content`'s answer mode, served on an isolated Claude Code process instead of failing prompt capture ([#123](https://github.com/elidickinson/pi-claude-bridge/pull/123)); and tools an extension activates mid-turn, such as `web_enable` and `pi_lens_activate_tools`, reaching Claude in the same turn ([#125](https://github.com/elidickinson/pi-claude-bridge/pull/125)). Claude subscription usage comes from `pi-quotas`. |
 | `pi-herdr-agents` | The `subagent` tool: dispatches workers into visible Herdr panes or isolated Git worktrees, with per-task model routing and a status widget. |
 | `pi-mcp-adapter` | The `mcp` gateway for MCP servers. Servers come from `~/.config/mcp/mcp.json`, `~/.agents/mcp.json`, or pi's own config; host configs of other tools on the machine load as a lowest-precedence fallback because the installer sets `hostConfigDiscovery` to `on`. The installer registers `research-hub` (literature search, open-access download, and bibliography saves) launched through the pinned `npx thesis-toolkit`, with downloads in research-hub's default `~/downloads/papers`; a project `.mcp.json` entry of the same name takes precedence. It keeps `codebase-memory-mcp` disabled in case another tool's config still registers it, and turns off the per-server `mcp__<server>` proxy tools, so MCP servers are reached through `mcp` alone. These settings live in `~/.pi/agent/mcp-adapter.json`. pi-mcp-adapter 5.0.0 also reads pi's own `~/.pi/agent/mcp.json`, so servers added with `pi mcp add` work too; the installer leaves that file alone. It also adds `-builtin:mcp` to the settings `extensions`, because the adapter replaces pi's built-in MCP support, which would otherwise warn on every start. |
 | `pi-intercom` | The `intercom` tool: messages and questions between pi sessions on the same machine. |
@@ -91,7 +91,6 @@ Registry packages are pinned to exact versions in [scripts/pi_root/pins.py](scri
 
 - [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn. The installer also sets pi's native threshold for the 1M `claude-bridge/claude-opus-5-5` to 500k (`compaction.modelOverrides` with `reserveTokens: 500000`), which only a long running turn reaches.
 - [playwriter-relay.ts](pi/extensions/playwriter-relay.ts): at session start, starts the Playwriter relay on `127.0.0.1:19988` when it is down and warns when the Chrome extension is not connected, without delaying the session.
-- [tier-roles.ts](pi/extensions/tier-roles.ts): registers `~/.pi/agent/herdr-agents/roles/`, where the installer writes one role per model tier, as a `pi-herdr-agents` role pack.
 
 ### Ported resources
 
@@ -102,9 +101,8 @@ Registry packages are pinned to exact versions in [scripts/pi_root/pins.py](scri
 
 | File | Keys |
 |---|---|
-| `~/.pi/agent/settings.json` | `packages`, `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `enabledModels` (every model the active strategy's tiers use), `theme`, `editorPaddingX`, `collapseChangelog`, `enableInstallTelemetry` (`false`), `terminal.showTerminalProgress` |
-| `~/.pi/agent/herdr-agents/config.json` | `models.default`, `models.agents` (the behavior roles below), `models.tasks`, `status`, `panes.mode` (`split`), `panes.direction` (`right`) |
-| `~/.pi/agent/herdr-agents/roles/<tier>.md` | One generated role per tier; uninstall removes the files it wrote |
+| `~/.pi/agent/settings.json` | `packages`, `theme`, `editorPaddingX`, `collapseChangelog`, `enableInstallTelemetry` (`false`), `terminal.showTerminalProgress` |
+| `~/.pi/agent/herdr-agents/config.json` | `panes.mode` (`split`), `panes.direction` (`right`) |
 | `~/.pi/agent/mcp-adapter.json` | `settings.hostConfigDiscovery`, `settings.namespaceProxyTools`, `mcpServers.codebase-memory-mcp.disabled`, `mcpServers.research-hub` |
 | `~/.pi-lens/config.json` | `tools.project_report`, `tools.symbol_search`, and `tools.module_report` `.enabled` |
 
@@ -112,30 +110,13 @@ Other keys in these files stay as the user wrote them.
 
 ## Instructions and rules
 
-`~/.pi/agent/AGENTS.md` is generated, not linked: edit [pi/AGENTS.md.in](pi/AGENTS.md.in) and re-run the installer. It covers language, work routing through skills, dispatch in Herdr, code discovery through LSP and ast-grep, and verification. It names the tier roles but no model: models live in pi and `pi-herdr-agents` configuration.
+`~/.pi/agent/AGENTS.md` is generated, not linked: edit [pi/AGENTS.md.in](pi/AGENTS.md.in) and re-run the installer. It covers language, work routing through skills, dispatch in Herdr, code discovery through LSP and ast-grep, and verification. It names the `pi-herdr-agents` roles but no model: models live in pi and `pi-herdr-agents` configuration.
 
 The files in [rules/](rules/) (git safety, deployment, dependencies, clean architecture, UI design, skill writing, Chinese writing, and Go, Python, shell, TypeScript, and Markdown conventions) are not loaded into every session. The instructions list each file with the work it covers, and pi reads the matching file from `~/.pi/agent/rules/` before that work. A new rule file needs its entry in that list.
 
-## Model strategies
+## Models
 
-[skills/managing-model-preferences](skills/managing-model-preferences/) keeps a catalog of named strategies. [model-preference-profile.md](skills/managing-model-preferences/model-preference-profile.md) names the active one and holds the tier guide: which kind of work goes to `main`, `docs`, `recon`, `ui`, `review`, `simple`, `coding`, `complex_clear`, `complex_unclear`, or `academic`. [pi/model-profiles.json](pi/model-profiles.json) holds each strategy's exact `provider/model-id` and thinking level per tier, and each `strategies/<name>.md` mirrors its table with the rationale.
-
-`scripts/pi-target.py` turns the active strategy into pi configuration:
-
-- the `main` tier becomes pi's default model and thinking level;
-- every other tier becomes a `pi-herdr-agents` role in `~/.pi/agent/herdr-agents/roles/<tier>.md` whose frontmatter carries the tier's ordered model list and thinking level, so a dispatch names only `agent: "<tier>"`;
-- the behavior roles take their work's tier model through `models.agents`: `scout` from `recon`, `worker` from `coding`, `reviewer` and `adversarial-reviewer` from `review`, `visual-tester` from `ui`, `planner` from `complex_unclear`, and `poteto` from `complex_clear`; their thinking level comes from frontmatter or the caller;
-- `pi-herdr-agents` task categories get the same candidates: `coding`, `review`, `recon`, and `docs` from their tiers, `qa` from `review`, and `architecture` from `complex_unclear`.
-
-Each list pairs the tier's model with a fallback from the other provider: a `claude-bridge` tier falls back to the matching OpenAI Codex model; a Luna tier falls back to `claude-bridge/claude-haiku-4-5`, and any other `openai-codex` tier to `claude-bridge/claude-opus-5-5` (1M) for main and complex tiers or `claude-bridge/claude-200k-opus-5-5` otherwise.
-
-To switch, run `/managing-model-preferences <strategy>` in pi, or change the active link yourself and run:
-
-```bash
-python3 scripts/pi-target.py apply-profile --home "$HOME"
-```
-
-then reload pi.
+The installer leaves models to the user. pi's default model and thinking level live in `~/.pi/agent/settings.json` (`defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `enabledModels`); each `pi-herdr-agents` role's model lives in `~/.pi/agent/herdr-agents/config.json` under `models.agents`, with `models.default` for a bare spawn and `models.tasks` for `task:<category>` candidates. Edit those files directly and reload pi.
 
 ## Phone access with Moshi (optional)
 
@@ -172,6 +153,6 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 - 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、Phoenix 追蹤（pi-phoenix-otel）、Claude Code rules 載入（pi-code 的 claude-rules）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、Playwriter CLI（操作使用者自己的 Chrome，需另外安裝 Chrome 擴充套件）、本 repo 的擴充（閒置時自動壓縮、pi 啟動時確保 Playwriter 中繼服務在跑），公司 plugin mp-infra（含安全 hook）與 sdlc（有 checkout 時作為 Pi package，缺席或安裝失敗只警告），以及 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
-- 模型策略：profile 指定啟用策略，`pi/model-profiles.json` 定義各 tier 的模型與 thinking，`apply-profile` 會更新 pi 預設模型、每個 tier 的 `pi-herdr-agents` 角色與派工候選；AGENTS.md 不列模型。
+- 模型：安裝程式不管模型。pi 預設模型在 `~/.pi/agent/settings.json`，各 `pi-herdr-agents` 角色的模型在 `~/.pi/agent/herdr-agents/config.json` 的 `models.agents`，直接編輯後重新載入 pi；AGENTS.md 不列模型。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。
 - 舊的 Claude Code、Codex、Gemini 多平台版本保存在 `legacy-claude-codex` tag。

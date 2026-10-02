@@ -51,13 +51,3 @@ def restore(ctx: Context) -> None:
     if backup and Path(backup).exists() and not target.exists():
         shutil.move(backup, target)
 
-
-def require_unchanged(ctx: Context) -> None:
-    """Stop apply-profile before it changes anything when the file was edited since install."""
-    if hashlib.sha256(path(ctx.home).read_bytes()).hexdigest() != ctx.state.get("instructions_hash"):
-        raise ValueError("Pi instructions changed since installation; inspect the file before applying a profile")
-
-
-def rewrite(ctx: Context) -> None:
-    path(ctx.home).write_text(instructions())
-    ctx.state["instructions_hash"] = digest(instructions())

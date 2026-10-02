@@ -6,8 +6,7 @@
   "pi": {
     "extensions": [
       "./pi/extensions/idle-compaction.ts",
-      "./pi/extensions/playwriter-relay.ts",
-      "./pi/extensions/tier-roles.ts"
+      "./pi/extensions/playwriter-relay.ts"
     ]
   },
   "devDependencies": {

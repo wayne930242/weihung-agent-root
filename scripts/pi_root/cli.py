@@ -8,7 +8,7 @@ from . import packages, steps
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("migrate", "install", "uninstall", "apply-profile"))
+    parser.add_argument("action", choices=("migrate", "install", "uninstall"))
     parser.add_argument("--home", type=Path, default=Path.home())
     parser.add_argument("--skip-external", action="store_true")
     parser.add_argument("--force", action="store_true")
@@ -20,5 +20,3 @@ def main() -> None:
         steps.install(home, args.skip_external, args.force, herdr_root)
     elif args.action == "uninstall":
         steps.uninstall(home, args.skip_external)
-    elif args.action == "apply-profile":
-        steps.apply_profile(home)

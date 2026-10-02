@@ -35,7 +35,7 @@ class StepTests(unittest.TestCase):
             home = Path(directory)
             run_script("install.sh", home, "--skip-external")
             self.assertEqual((home / ".pi/agent/rules").readlink(), ROOT / "rules")
-            self.assertEqual((home / ".agents/skills/managing-model-preferences").readlink(), ROOT / "skills/managing-model-preferences")
+            self.assertEqual((home / ".agents/skills/providing-knowledge").readlink(), ROOT / "skills/providing-knowledge")
             instructions = (home / ".pi/agent/AGENTS.md").read_text()
             for rule in (ROOT / "rules").glob("*.md"):
                 self.assertIn(f"`{rule.name}`", instructions)

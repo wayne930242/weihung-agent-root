@@ -4,7 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import NamedTuple
 
-from . import configs, instructions, packages, profile
+from . import configs, instructions, packages
 from .context import Context
 from .jsonfile import read_json
 from .paths import MARKER
@@ -23,7 +23,6 @@ STEPS = (
     Step("mcp-adapter", configs.apply_mcp, configs.restore_mcp),
     Step("pi-lens", configs.apply_lens, configs.restore_lens),
     Step("open-tui", configs.apply_open_tui, configs.restore_open_tui),
-    Step("profile", profile.apply, profile.restore),
     Step("ui", configs.apply_ui, configs.restore_ui),
     Step("compaction", configs.apply_compaction, configs.restore_compaction),
     # Last to apply and first to restore: pi packages, the tools they need, and the resources ported beside them.
@@ -50,14 +49,3 @@ def uninstall(home: Path, skip_external: bool) -> None:
         step.restore(ctx)
     marker.unlink()
 
-
-def apply_profile(home: Path) -> None:
-    """Re-point an installed home at the active strategy without reinstalling packages."""
-    marker = home / MARKER
-    ctx = Context(home, read_json(marker))
-    if not ctx.state:
-        raise ValueError("Pi target is not installed")
-    instructions.require_unchanged(ctx)
-    profile.apply(ctx)
-    instructions.rewrite(ctx)
-    ctx.save()

@@ -8,10 +8,11 @@ from .jsonfile import read_json, write_json
 from .managed import record_keys, remember_keys, restore_keys, restore_nested, restore_value
 from .paths import LENS_CONFIG, OPEN_TUI_CONFIG
 from .pins import THESIS_TOOLKIT
-from .profile import OPUS_1M, SONNET_1M
 
 # pi's native compaction fires at contextWindow - reserveTokens: 500K for the 1M Opus and Sonnet, a
 # ceiling for a long running turn; idle-compaction.ts compacts at 300K between turns.
+OPUS_1M = "claude-bridge/claude-opus-5-5"
+SONNET_1M = "claude-bridge/claude-sonnet-5-5"
 COMPACTION_OVERRIDES = {OPUS_1M: {"reserveTokens": 500_000}, SONNET_1M: {"reserveTokens": 500_000}}
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
 # codebase-memory is no longer installed, but other agents' configs may still register its server;

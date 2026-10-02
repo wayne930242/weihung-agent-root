@@ -108,9 +108,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "npm:@narumitw/pi-goal@0.54.8" in sources, sources
     assert {"source": "npm:pi-code@1.4.1", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
-    assert settings["defaultProvider"] == "claude-bridge", settings
-    assert settings["enabledModels"][0] == "claude-bridge/claude-opus-5-5", settings
-    assert "openai-codex/gpt-6-luna" in settings["enabledModels"], settings
+    assert not {"defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels"} & set(settings), settings
     assert settings["theme"] == "catppuccin-mocha", settings
     assert settings["enableInstallTelemetry"] is False, settings
     assert settings["editorPaddingX"] == 1, settings
@@ -128,12 +126,8 @@ with tempfile.TemporaryDirectory() as directory:
     open_tui = json.loads((home / ".pi/agent/open-tui.json").read_text())
     assert open_tui == {"footerSegments": {"runtime": False, "cost": False, "extensionStatuses": False}}, open_tui
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
-    assert config["status"] == {"enabled": True}, config
-    assert config["panes"] == {"mode": "split", "direction": "right"}, config
-    assert config["models"]["agents"]["worker"] == "claude-bridge/claude-sonnet-5-5, openai-codex/gpt-6.1-sol", config
-    roles = home / ".pi/agent/herdr-agents/roles"
-    assert sorted(path.stem for path in roles.glob("*.md")) == sorted(["docs", "recon", "ui", "review", "simple", "coding", "complex_clear", "complex_unclear", "academic"])
-    assert "\nmodel: claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6-astra\nthinking: high\n" in (roles / "complex_unclear.md").read_text()
+    assert config == {"panes": {"mode": "split", "direction": "right"}}, config
+    assert not (home / ".pi/agent/herdr-agents/roles").exists()
     assert "claude-bridge/" not in (home / ".pi/agent/AGENTS.md").read_text()
 PY
 }
@@ -255,13 +249,10 @@ with tempfile.TemporaryDirectory() as directory:
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
     installed_open_tui = json.loads(open_tui_path.read_text())
     assert installed_open_tui == {"cursorStyle": "bar", "footerSegments": {"cwd": True, "cost": False, "runtime": False, "extensionStatuses": False}}, installed_open_tui
-    installed_agents = json.loads(config.read_text())["models"]["agents"]
-    assert installed_agents["scout"] == "user/scout", "a role model the user set stays"
-    assert installed_agents["worker"].startswith("claude-bridge/claude-sonnet-5-5"), installed_agents
-    assert (agent / "herdr-agents/roles/coding.md").exists()
+    assert json.loads(config.read_text())["models"] == original_models, "herdr-agents models are the user's"
+    assert json.loads((agent / "settings.json").read_text())["enabledModels"] == ["user/model"], "pi's model settings are the user's"
     installed_compaction = json.loads((agent / "settings.json").read_text())["compaction"]
     assert installed_compaction == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}, "claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, installed_compaction
-    subprocess.run(["python3", str(Path(install).with_name("pi-target.py")), "apply-profile", "--home", str(home)], check=True)
     run(uninstall, home)
     assert (agent / "AGENTS.md").read_text() == "user instructions\n"
     settings = json.loads((agent / "settings.json").read_text())
@@ -277,46 +268,6 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["powerline"] == {"welcome": False}, settings
     assert settings["compaction"] == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}, settings
     assert json.loads(config.read_text()) == {"models": original_models, "panes": {"mode": "tab"}, "other": True}
-    assert not (agent / "herdr-agents/roles").exists(), "uninstall removes the tier roles"
-PY
-}
-
-apply_profile_follows_the_active_strategy() {
-  python3 - "$REPO_ROOT" <<'PY'
-import json
-import shutil
-import subprocess
-import sys
-import tempfile
-from pathlib import Path
-
-source = Path(sys.argv[1])
-with tempfile.TemporaryDirectory() as directory:
-    temporary = Path(directory)
-    clone = temporary / "repo"
-    for relative in ("pi/AGENTS.md.in", "pi/model-profiles.json", "scripts/pi-target.py",
-                     "skills/managing-model-preferences/model-preference-profile.md"):
-        destination = clone / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source / relative, destination)
-    shutil.copytree(source / "scripts/pi_root", clone / "scripts/pi_root", ignore=shutil.ignore_patterns("__pycache__"))
-    home = temporary / "home"
-    script = clone / "scripts/pi-target.py"
-    subprocess.run(["python3", str(script), "install", "--home", str(home), "--skip-external"], check=True)
-    profile = clone / "skills/managing-model-preferences/model-preference-profile.md"
-    profile.write_text(profile.read_text().replace(
-        "Active strategy: [claude-drive-codex](strategies/claude-drive-codex.md).",
-        "Active strategy: [codex-first](strategies/codex-first.md).",
-    ))
-    subprocess.run(["python3", str(script), "apply-profile", "--home", str(home)], check=True)
-    settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert (settings["defaultProvider"], settings["defaultModel"]) == ("openai-codex", "gpt-6.1-sol")
-    config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
-    assert config["models"]["tasks"]["recon"][0] == "openai-codex/gpt-6-luna"
-    assert "gpt-6.1-sol" not in (home / ".pi/agent/AGENTS.md").read_text()
-    coding = (home / ".pi/agent/herdr-agents/roles/coding.md").read_text()
-    assert "\nmodel: claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6.1-sol\nthinking: medium\n" in coding, coding
-    assert config["models"]["agents"]["worker"] == "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6.1-sol", config
 PY
 }
 
@@ -328,7 +279,6 @@ run_all_tests() {
   force_replaces_and_backs_up_conflicts
   install_prunes_retired_links_and_retires_skill_copies
   install_preserves_user_pi_state
-  apply_profile_follows_the_active_strategy
 }
 
 if [[ "${1:-}" == "" ]]; then

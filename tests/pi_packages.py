@@ -61,13 +61,12 @@ class PackageTests(unittest.TestCase):
             # Reproduce the unpinned packages and marker an install before pinning left behind.
             marker = agent / ".weihung-agent-root.json"
             state = json.loads(marker.read_text())
-            for key in ("previous_settings", "previous_ui_settings"):
-                state[key] = {name: value for name, value in state[key].items() if name not in ("enabledModels", "enableInstallTelemetry")}
-                state.pop(f"{key}_present")
+            state["previous_ui_settings"] = {name: value for name, value in state["previous_ui_settings"].items()
+                                             if name != "enableInstallTelemetry"}
+            state.pop("previous_ui_settings_present")
             marker.write_text(json.dumps(state))
             current = json.loads(settings.read_text())
             current["packages"] = ["npm:user-package", "npm:pi-lens", "npm:pi-web-access@0.31.0"]
-            current.pop("enabledModels")
             current.pop("enableInstallTelemetry")
             settings.write_text(json.dumps(current))
             run_script("install.sh", home, "--skip-external")

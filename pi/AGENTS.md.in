@@ -24,9 +24,9 @@ Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` 
 
 ## Model and dispatch
 
-Use `managing-model-preferences` to change model strategy. Each model tier is a `pi-herdr-agents` role that carries the active strategy's model and thinking level: `docs`, `recon`, `ui`, `review`, `simple`, `coding`, `complex_clear`, `complex_unclear`, and `academic`. Choose the tier with the tier guide in that skill's profile, dispatch with `agent: "<tier>"`, and omit `model` and `thinking`; pass them only when the user chooses a model explicitly.
+Dispatch with the `pi-herdr-agents` role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review, `adversarial-reviewer` for adversarial review, and `visual-tester` for UI checks. The user sets each role's model in `~/.pi/agent/herdr-agents/config.json` under `models.agents`, so omit `model` unless the user names one for the task. Set `thinking` for the work: `low` for bounded mechanical tasks, `medium` for ordinary implementation and review, `high` for architecture, security, or hard diagnosis.
 
-Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, and tier agent.
+Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and thinking level.
 
 In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and `intercom` to find and message related main sessions. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Report the worker's actual result after it arrives.
 

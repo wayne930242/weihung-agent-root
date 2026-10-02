@@ -9,10 +9,6 @@ LOCAL_PACKAGE = str(ROOT)
 # Testing an unreleased pi-herdr-agents fix: this variable names a checkout that replaces the pinned release.
 HERDR_AGENTS_ROOT_VARIABLE = "PI_HERDR_AGENTS_ROOT"
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
-PROFILE = ROOT / "skills/managing-model-preferences/model-preference-profile.md"
-# Each tier except main is a pi-herdr-agents role; pi/extensions/tier-roles.ts registers this directory as a role pack.
-# A tier role keeps a bare spawn's behavior: every tool, nested dispatch, and autonomous exit.
-ROLES_DIR = Path(".pi/agent/herdr-agents/roles")
 LENS_CONFIG = Path(".pi-lens/config.json")
 OPEN_TUI_CONFIG = Path(".pi/agent/open-tui.json")
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
