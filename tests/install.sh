@@ -126,7 +126,8 @@ with tempfile.TemporaryDirectory() as directory:
     open_tui = json.loads((home / ".pi/agent/open-tui.json").read_text())
     assert open_tui == {"footerSegments": {"runtime": False, "cost": False, "extensionStatuses": False}}, open_tui
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
-    assert config == {"panes": {"mode": "split", "direction": "right"}}, config
+    repo_models = json.loads((Path(install).resolve().parents[1] / "pi/herdr-agents-models.json").read_text())
+    assert config == {"panes": {"mode": "split", "direction": "right"}, "models": repo_models}, config
     assert not (home / ".pi/agent/herdr-agents/roles").exists()
     assert "claude-bridge/" not in (home / ".pi/agent/AGENTS.md").read_text()
 PY
@@ -249,7 +250,8 @@ with tempfile.TemporaryDirectory() as directory:
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
     installed_open_tui = json.loads(open_tui_path.read_text())
     assert installed_open_tui == {"cursorStyle": "bar", "footerSegments": {"cwd": True, "cost": False, "runtime": False, "extensionStatuses": False}}, installed_open_tui
-    assert json.loads(config.read_text())["models"] == original_models, "herdr-agents models are the user's"
+    repo_models = json.loads((Path(install).resolve().parents[1] / "pi/herdr-agents-models.json").read_text())
+    assert json.loads(config.read_text())["models"] == repo_models, "--force replaces the user's herdr-agents models"
     assert json.loads((agent / "settings.json").read_text())["enabledModels"] == ["user/model"], "pi's model settings are the user's"
     installed_compaction = json.loads((agent / "settings.json").read_text())["compaction"]
     assert installed_compaction == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}, "claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, installed_compaction

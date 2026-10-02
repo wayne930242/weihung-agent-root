@@ -38,7 +38,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 - installs the pinned [Playwriter](https://github.com/remorses/playwriter) CLI (`npm install -g playwriter@0.7.0`), which drives the user's own Chrome through the Playwriter extension; uninstall removes it only when this install added it;
 - installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in);
-- sets UI settings, `pi-herdr-agents` pane placement, and MCP host-config discovery;
+- sets UI settings, `pi-herdr-agents` pane placement and models, and MCP host-config discovery;
 - ports resources pi cannot install as packages: team-toon-tack and pi-skills.
 
 Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so uninstall removes exactly those files and restores the previous settings values.
@@ -102,7 +102,7 @@ Registry packages are pinned to exact versions in [scripts/pi_root/pins.py](scri
 | File | Keys |
 |---|---|
 | `~/.pi/agent/settings.json` | `packages`, `theme`, `editorPaddingX`, `collapseChangelog`, `enableInstallTelemetry` (`false`), `terminal.showTerminalProgress` |
-| `~/.pi/agent/herdr-agents/config.json` | `panes.mode` (`split`), `panes.direction` (`right`) |
+| `~/.pi/agent/herdr-agents/config.json` | `models` (from [pi/herdr-agents-models.json](pi/herdr-agents-models.json)), `panes.mode` (`split`), `panes.direction` (`right`) |
 | `~/.pi/agent/mcp-adapter.json` | `settings.hostConfigDiscovery`, `settings.namespaceProxyTools`, `mcpServers.codebase-memory-mcp.disabled`, `mcpServers.research-hub` |
 | `~/.pi-lens/config.json` | `tools.project_report`, `tools.symbol_search`, and `tools.module_report` `.enabled` |
 
@@ -116,7 +116,11 @@ The files in [rules/](rules/) (git safety, deployment, dependencies, clean archi
 
 ## Models
 
-The installer leaves models to the user. pi's default model and thinking level live in `~/.pi/agent/settings.json` (`defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `enabledModels`); each `pi-herdr-agents` role's model lives in `~/.pi/agent/herdr-agents/config.json` under `models.agents`, with `models.default` for a bare spawn and `models.tasks` for `task:<category>` candidates. Edit those files directly and reload pi.
+[pi/herdr-agents-models.json](pi/herdr-agents-models.json) is the `pi-herdr-agents` `models` object: `agents` sets each role's ordered model list, `default` a bare spawn's, and `tasks` the `task:<category>` candidates. The installer writes it into `~/.pi/agent/herdr-agents/config.json`; edit the repository file, run `bash scripts/install.sh`, and reload pi. An install stops when the home `models` changed since the last install, so a hand edit is never overwritten silently; move it into the repository file or rerun with `--force`. Thinking levels are set per dispatch, not in configuration.
+
+pi's own default model and thinking level stay in `~/.pi/agent/settings.json` (`defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `enabledModels`), managed by hand.
+
+There is no model strategy profile or tier role any more; the installer removes the tier roles and marker keys an earlier install left behind.
 
 ## Phone access with Moshi (optional)
 
@@ -153,6 +157,6 @@ The installer tests run against temporary homes with `--skip-external`; `tests/p
 
 - 安裝內容：pi 本體與 Herdr 整合、上表的 pi 套件（Herdr pane 派工、intercom、ask_user、todo、介面（pi-open-tui）與主題、MCP、網路搜尋、pi-lens、用量、session 備份、Jev 壓縮、危險指令防護（cc-safety-net）、Codex 畫圖（pi-codex-image-gen）、秘密輸入（pi-secret-drop）、指令交給使用者（pi-robot-hand）、Phoenix 追蹤（pi-phoenix-otel）、Claude Code rules 載入（pi-code 的 claude-rules）、pi-skills，npm 套件皆鎖定版本）、aaaav、straw-boss（派工工作流、派工紀錄與復原、主代理移交、pane 平均分配）、Playwriter CLI（操作使用者自己的 Chrome，需另外安裝 Chrome 擴充套件）、本 repo 的擴充（閒置時自動壓縮、pi 啟動時確保 Playwriter 中繼服務在跑），公司 plugin mp-infra（含安全 hook）與 sdlc（有 checkout 時作為 Pi package，缺席或安裝失敗只警告），以及 team-toon-tack。
 - 使用者規則在 `~/.pi/agent/rules/`，AGENTS.md 只列出每個檔案對應的工作，需要時才讀取。
-- 模型：安裝程式不管模型。pi 預設模型在 `~/.pi/agent/settings.json`，各 `pi-herdr-agents` 角色的模型在 `~/.pi/agent/herdr-agents/config.json` 的 `models.agents`，直接編輯後重新載入 pi；AGENTS.md 不列模型。
+- 模型：各 `pi-herdr-agents` 角色、預設與 task 的模型寫在 `pi/herdr-agents-models.json`，安裝程式會寫入 `~/.pi/agent/herdr-agents/config.json`；改模型請改 repo 的檔案再跑 `bash scripts/install.sh` 並重新載入 pi。pi 本身的預設模型在 `~/.pi/agent/settings.json`，手動維護。已不再有 model strategy profile 或 tier 角色；AGENTS.md 不列模型。
 - 手機存取：可選用 Moshi（`moshi-hook`）搭配 Tailscale。
 - 舊的 Claude Code、Codex、Gemini 多平台版本保存在 `legacy-claude-codex` tag。

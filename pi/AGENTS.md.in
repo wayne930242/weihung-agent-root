@@ -24,7 +24,7 @@ Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` 
 
 ## Model and dispatch
 
-Dispatch with the `pi-herdr-agents` role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review, `adversarial-reviewer` for adversarial review, and `visual-tester` for UI checks. The user sets each role's model in `~/.pi/agent/herdr-agents/config.json` under `models.agents`, so omit `model` unless the user names one for the task. Set `thinking` for the work: `low` for bounded mechanical tasks, `medium` for ordinary implementation and review, `high` for architecture, security, or hard diagnosis.
+Dispatch with the `pi-herdr-agents` role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review, `adversarial-reviewer` for adversarial review, and `visual-tester` for UI checks. Each role's model comes from `pi-herdr-agents` configuration, so omit `model` unless the user names one for the task. Set `thinking` for the work: `low` for bounded mechanical tasks, `medium` for ordinary implementation and review, `high` for architecture, security, or hard diagnosis.
 
 Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and thinking level.
 

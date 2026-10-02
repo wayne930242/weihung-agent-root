@@ -1,12 +1,13 @@
-"""The small managed settings: UI, terminal, panes, built-in MCP, mcp-adapter, pi-lens, open-tui, compaction."""
+"""The small managed settings: UI, terminal, panes, herdr-agents models, built-in MCP, mcp-adapter, pi-lens, open-tui, compaction."""
 
+import hashlib
 from copy import deepcopy
 from pathlib import Path
 
 from .context import Context, State
 from .jsonfile import read_json, write_json
 from .managed import record_keys, remember_keys, restore_keys, restore_nested, restore_value
-from .paths import LENS_CONFIG, OPEN_TUI_CONFIG
+from .paths import HERDR_MODELS, LENS_CONFIG, OPEN_TUI_CONFIG, RETIRED_ROLES_DIR
 from .pins import THESIS_TOOLKIT
 
 # pi's native compaction fires at contextWindow - reserveTokens: 500K for the 1M Opus and Sonnet, a
@@ -70,6 +71,50 @@ def restore_ui(ctx: Context) -> None:
     write_json(ctx.settings_path, settings)
     config = read_json(ctx.herdr_config_path)
     restore_nested(config, "panes", state.get("installed_panes"), state.get("previous_panes"), ("mode", "direction"))
+    write_or_remove(ctx.herdr_config_path, config)
+
+
+# Marker keys the removed model strategy profile wrote; none of them is read or restored any more.
+RETIRED_PROFILE_KEYS = ("installed_agent_models", "installed_models", "installed_roles", "installed_settings",
+                        "installed_status", "previous_models", "previous_settings", "previous_settings_present",
+                        "previous_status", "strategy")
+
+
+def retire_model_profile(ctx: Context) -> None:
+    """Remove the tier roles an install with the model strategy profile wrote, and its marker keys."""
+    state = ctx.state
+    roles_dir = ctx.home / RETIRED_ROLES_DIR
+    for name, digest in state.get("installed_roles", {}).items():
+        path = roles_dir / name
+        if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() == digest:
+            path.unlink()
+    if roles_dir.exists() and not any(roles_dir.iterdir()):
+        roles_dir.rmdir()
+    for key in RETIRED_PROFILE_KEYS:
+        state.pop(key, None)
+
+
+def apply_herdr_models(ctx: Context) -> None:
+    """Write pi/herdr-agents-models.json as the pi-herdr-agents `models`; a hand edit since the last install stops the run."""
+    retire_model_profile(ctx)
+    state = ctx.state
+    config = read_json(ctx.herdr_config_path)
+    desired = read_json(HERDR_MODELS)
+    current = config.get("models")
+    edited = current not in (None, desired, state.get("installed_herdr_models"))
+    if edited and not ctx.force:
+        raise ValueError(f"{ctx.herdr_config_path} `models` differs from {HERDR_MODELS}; move the change into the "
+                         "repository file, or rerun with --force to replace it")
+    state.setdefault("previous_herdr_models", deepcopy(current))
+    config["models"] = desired
+    write_json(ctx.herdr_config_path, config)
+    state["installed_herdr_models"] = deepcopy(desired)
+
+
+def restore_herdr_models(ctx: Context) -> None:
+    state = ctx.state
+    config = read_json(ctx.herdr_config_path)
+    restore_value(config, "models", state.get("installed_herdr_models"), state.get("previous_herdr_models"))
     write_or_remove(ctx.herdr_config_path, config)
 
 

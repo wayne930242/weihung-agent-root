@@ -9,7 +9,8 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 ## Layout
 
 - `scripts/pi_root/`: the logic behind `scripts/pi-target.py`, one module per managed part; pinned package versions live in `pins.py`.
-- `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`. It names `pi-herdr-agents` roles but no model; the user keeps role models in `~/.pi/agent/herdr-agents/config.json` and pi's default model in `~/.pi/agent/settings.json`, outside this repository.
+- `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`. It names `pi-herdr-agents` roles but no model.
+- `pi/herdr-agents-models.json`: the `pi-herdr-agents` `models` object (`default`, `agents` per role, `tasks` per category). The installer writes it into `~/.pi/agent/herdr-agents/config.json`. pi's default model stays in `~/.pi/agent/settings.json`, outside this repository. There is no model strategy profile or tier role; do not reintroduce one (`tests/pi_configs.py` guards this).
 - `pi/extensions/`: this repository's pi package, registered through `package.json`. Dispatch recovery, handoff, and pane balancing live in straw-boss.
 - `skills/`: user skills linked into `~/.agents/skills/`.
 - `agents/`: global `pi-herdr-agents` role overrides linked to `~/.pi/agent/agents/`. Each is the bundled role without its `tools:` allowlist; re-derive them when the `pi-herdr-agents` pin changes.
@@ -22,7 +23,7 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 - Keep the user-root layer thin: manage only behavior that is stable across projects and worth versioning. Machine credentials, login state, and project-specific workflows stay outside this repository.
 - Installers never overwrite user files silently. A conflict fails unless `--force` is passed, which moves the old target to `~/.local/state/weihung-agent-root/backups/`, and uninstall restores what install replaced.
 - Run the tests that cover a change before committing: `bash tests/install.sh`, `bash tests/uninstall.sh`, `python3 tests/<name>.py`, and `node --experimental-strip-types --test tests/<name>.mjs`. Exercise installer changes with `--home` pointing at a temporary directory before running them on the real home.
-- After changing `pi/AGENTS.md.in`, run `bash scripts/install.sh` and reload pi.
+- After changing `pi/AGENTS.md.in` or `pi/herdr-agents-models.json`, run `bash scripts/install.sh` and reload pi. Change role models in `pi/herdr-agents-models.json`, not in the home config: an install stops when the home `models` was edited since the last install.
 
 ## Commits
 

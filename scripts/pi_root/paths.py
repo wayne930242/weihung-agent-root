@@ -9,6 +9,10 @@ LOCAL_PACKAGE = str(ROOT)
 # Testing an unreleased pi-herdr-agents fix: this variable names a checkout that replaces the pinned release.
 HERDR_AGENTS_ROOT_VARIABLE = "PI_HERDR_AGENTS_ROOT"
 AAAAV = Path(os.environ.get("PI_AAAAV_ROOT", ROOT.parent / "aaaav"))
+# The pi-herdr-agents `models` object (role, default, and task models) this repository writes into its config.
+HERDR_MODELS = ROOT / "pi/herdr-agents-models.json"
+# The model strategy profile was removed; its generated tier roles and marker keys are retired on install.
+RETIRED_ROLES_DIR = Path(".pi/agent/herdr-agents/roles")
 LENS_CONFIG = Path(".pi-lens/config.json")
 OPEN_TUI_CONFIG = Path(".pi/agent/open-tui.json")
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"

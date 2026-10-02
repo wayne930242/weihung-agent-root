@@ -24,6 +24,7 @@ STEPS = (
     Step("pi-lens", configs.apply_lens, configs.restore_lens),
     Step("open-tui", configs.apply_open_tui, configs.restore_open_tui),
     Step("ui", configs.apply_ui, configs.restore_ui),
+    Step("herdr-models", configs.apply_herdr_models, configs.restore_herdr_models),
     Step("compaction", configs.apply_compaction, configs.restore_compaction),
     # Last to apply and first to restore: pi packages, the tools they need, and the resources ported beside them.
     Step("packages", packages.apply, packages.restore),
