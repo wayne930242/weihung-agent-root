@@ -84,8 +84,6 @@ if '--prefix' in args:
     assert len(list((agent / "prompts").glob("ttt-*.md"))) == 12
     assert str(home / ".local/bin/ttt") in (agent / "prompts/ttt-show.md").read_text()
     assert "`.agents/skills/`" in (agent / "prompts/ttt-write-work-on-skill.md").read_text()
-    assert not (agent / "extensions/cbmem.ts").exists()
-    assert not (agent / "skills/codebase-memory").exists()
     assert (home / ".local/bin/ttt").is_symlink()
     assert (agent / "extensions/moshi-hooks.ts").read_text() == "user extension\n"
     first = snapshot(agent)
@@ -94,7 +92,6 @@ if '--prefix' in args:
     run("uninstall.sh", home, env)
     assert (agent / "prompts/ttt-status.md").read_text() == "user prompt\n"
     assert (agent / "skills/infra-owner/SKILL.md").read_text() == "user skill\n"
-    assert not (agent / "extensions/cbmem.ts").exists()
     assert not (home / ".local/bin/ttt").exists()
     assert not (agent / "skills/pi-skills").exists()
     assert not (home / ".local/share/weihung-agent-root/pi-skills").exists()

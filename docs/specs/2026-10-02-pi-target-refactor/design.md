@@ -88,3 +88,10 @@ It checks out a base ref with `git worktree add` into a temporary directory, the
 - Tests that patch module attributes (`mock.patch.object(target, "update_mcp")`) must patch the module that defines the name after the split.
 
 ## Friction Notes
+
+- Tried: comparing base and working-tree homes after replacing the temporary checkout path.
+  Found: macOS resolves `/var` to `/private/var`, and `pi-target.py` resolves `ROOT` and `--home`, so outputs hold the resolved spelling; normalize both.
+  Led by: none
+- Tried: `git checkout <file>` to undo a deliberate mutation in the golden self-test.
+  Found: CC Safety Net blocks it; revert a scripted mutation with the inverse edit instead.
+  Led by: none

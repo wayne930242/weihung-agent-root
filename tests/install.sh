@@ -225,7 +225,7 @@ with tempfile.TemporaryDirectory() as directory:
     agent = home / ".pi/agent"
     agent.mkdir(parents=True)
     (agent / "AGENTS.md").write_text("user instructions\n")
-    (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], "theme": "light", "enabledModels": ["user/model"], "terminal": {"showImages": False}, "powerline": {"welcome": False}, "compaction": {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}}))
+    (agent / "settings.json").write_text(json.dumps({"packages": ["git:github.com/wayne930242/pi-claude-bridge@old-commit", "npm:user-package", "npm:pi-lens"], "theme": "light", "enabledModels": ["user/model"], "terminal": {"showImages": False}, "powerline": {"welcome": False}, "compaction": {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}}))
     original_mcp = {"settings": {"namespaceProxyTools": True}, "mcpServers": {"codebase-memory-mcp": {"command": "cbm"}, "user": {"url": "https://example.test/mcp"}}}
     (agent / "mcp-adapter.json").write_text(json.dumps(original_mcp))
     pi_mcp = {"mcpServers": {"docs": {"url": "https://example.test/docs"}}}
@@ -243,7 +243,7 @@ with tempfile.TemporaryDirectory() as directory:
     config.write_text(json.dumps({"models": original_models, "panes": {"mode": "tab"}, "other": True}))
     run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
-    assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
+    assert "git:github.com/wayne930242/pi-claude-bridge@old-commit" not in installed_packages, "an earlier revision of a git pin is retired"
     assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@b273512") for package in installed_packages), installed_packages
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
     assert json.loads((agent / "mcp.json").read_text()) == pi_mcp, "pi's mcp.json stays untouched"
@@ -263,7 +263,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(uninstall, home)
     assert (agent / "AGENTS.md").read_text() == "user instructions\n"
     settings = json.loads((agent / "settings.json").read_text())
-    assert settings["packages"] == ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], settings
+    assert settings["packages"] == ["git:github.com/wayne930242/pi-claude-bridge@old-commit", "npm:user-package", "npm:pi-lens"], settings
     assert settings["theme"] == "light", settings
     assert settings["enabledModels"] == ["user/model"], settings
     assert "enableInstallTelemetry" not in settings, settings

@@ -15,33 +15,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MARKER = Path(".pi/agent/.weihung-agent-root.json")
-# Before its rename this repository was weihung-user-claude; installs from then keep state and links under that name.
-LEGACY_RENAMES = (
-    (Path(".pi/agent/.weihung-user-claude.json"), MARKER),
-    (Path(".local/share/weihung-user-claude"), Path(".local/share/weihung-agent-root")),
-    (Path(".local/state/weihung-user-claude"), Path(".local/state/weihung-agent-root")),
-)
-LEGACY_ROOT = ROOT.parent / "weihung-user-claude"
 BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@b2735123eb51862136667b5f829ce1343bb7f93b"
-LEGACY_BRIDGE = "npm:pi-claude-bridge"
 # Fork branch of upstream PR latentminds-ai/pi-quotas#51 (claude-bridge support); switch to
 # npm:@latentminds/pi-quotas once released.
 QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e8de1f856f7ee6b"
-# pi-quotas replaces the pi-usage fork, so every pi-usage fork revision is retired with its other revisions.
-QUOTAS_GIT_PREFIXES = ("git:github.com/wayne930242/pi-quotas", "git:github.com/wayne930242/pi-usage")
 WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
-BRIDGE_GIT_PREFIXES = ("git:github.com/elidickinson/pi-claude-bridge@", "git:github.com/wayne930242/pi-claude-bridge@")
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.1"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
 STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@f3e0c791061da4bc8c709236c7907a25e778d071"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
-# The pi-web-access and pi-code forks are retired for their npm releases, which include the fork fixes.
 PINNED_GIT = {
-    BRIDGE_SOURCE: BRIDGE_GIT_PREFIXES,
+    BRIDGE_SOURCE: ("git:github.com/wayne930242/pi-claude-bridge@",),
     STRAW_BOSS_SOURCE: ("git:github.com/wayne930242/straw-boss",),
-    QUOTAS_SOURCE: QUOTAS_GIT_PREFIXES,
-    WEB_ACCESS_SOURCE: ("git:github.com/wayne930242/pi-web-access",),
-    CLAUDE_RULES_SOURCE: ("git:github.com/wayne930242/pi-code",),
+    QUOTAS_SOURCE: ("git:github.com/wayne930242/pi-quotas",),
 }
 OPUS_1M = "claude-bridge/claude-opus-5-5"
 OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
@@ -112,11 +98,6 @@ FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledMod
 # ceiling for a long running turn; idle-compaction.ts compacts at 300K between turns.
 COMPACTION_OVERRIDES = {OPUS_1M: {"reserveTokens": 500_000}, SONNET_1M: {"reserveTokens": 500_000}}
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
-# Packages earlier installs registered and this configuration dropped: pi-open-tui replaces the
-# powerline footer, pi-notify wrote escapes into `pi -p` output from every worker pane, pi-quotas
-# replaces pi-usage, rpiv-todo replaces pi-todo's minified-only bundle, and the curated themes
-# collection replaces the standalone Catppuccin theme.
-RETIRED_PACKAGES = ["npm:pi-powerline-footer", "npm:pi-notify", "npm:pi-usage", "npm:@capdiem/pi-todo", "npm:catppuccin-pi-theme"]
 # codebase-memory is no longer installed, but other agents' configs may still register its server;
 # keeping it disabled stops pi-mcp-adapter from importing it through host config discovery.
 MCP_DISABLED_SERVER = "codebase-memory-mcp"
@@ -165,9 +146,7 @@ def unique_packages(values, agent_dir):
 
 def obsolete_pin(value):
     source = package_source(value)
-    return source == LEGACY_BRIDGE or any(
-        source.startswith(prefixes) and source != current for current, prefixes in PINNED_GIT.items()
-    )
+    return any(source.startswith(prefixes) and source != current for current, prefixes in PINNED_GIT.items())
 
 
 def read_json(path):
@@ -366,29 +345,6 @@ def restore_resource(home, key, record):
         shutil.move(backup, destination)
 
 
-def retire_mp_infra_port(home, state):
-    # mp-infra used to be ported here as a settings file plus one skill link each; the plugin is a Pi package now,
-    # and leaving those links would load every skill twice.
-    records = state.get("ported_resources", {})
-    for key in [key for key, record in records.items()
-                if key == ".pi/agent/mp-infra.json" or "/plugins/mp-infra/skills/" in str(record.get("installed", ""))]:
-        restore_resource(home, key, records.pop(key))
-    write_json(home / MARKER, state)
-
-
-def retire_codebase_memory_port(home, state):
-    # codebase-memory used to be ported here as an extension and a skill; discovery goes through pi-lens now,
-    # and the leftovers would keep listing a skill no instruction routes to.
-    records = state.get("ported_resources", {})
-    for key in (".pi/agent/extensions/cbmem.ts", ".pi/agent/skills/codebase-memory/SKILL.md"):
-        if key in records:
-            restore_resource(home, key, records.pop(key))
-    skill_dir = home / ".pi/agent/skills/codebase-memory"
-    if skill_dir.is_dir() and not any(skill_dir.iterdir()):
-        skill_dir.rmdir()
-    write_json(home / MARKER, state)
-
-
 def uninstall_ported_resources(home, state):
     for key, record in reversed(list(state.get("ported_resources", {}).items())):
         restore_resource(home, key, record)
@@ -528,18 +484,6 @@ def update_profile(home, state):
     state["strategy"] = strategy
 
 
-def retire_powerline(settings, state):
-    """Return the powerline queue setting an earlier install managed to its prior value."""
-    current = settings.get("powerline")
-    if isinstance(current, dict) and "installed_powerline" in state:
-        previous = state.get("previous_powerline") or {}
-        restore_managed_keys(current, "queue", (state.get("installed_powerline") or {}).get("queue"), previous.get("queue"), ("compactPromptMode",))
-        if not current:
-            settings.pop("powerline", None)
-    state.pop("installed_powerline", None)
-    state.pop("previous_powerline", None)
-
-
 def update_ui(home, state):
     agent_dir = home / ".pi/agent"
     settings_path = agent_dir / "settings.json"
@@ -551,7 +495,6 @@ def update_ui(home, state):
     state.setdefault("previous_panes", deepcopy(config.get("panes")))
     settings.update(UI_SETTINGS)
     settings.setdefault("terminal", {})["showTerminalProgress"] = True
-    retire_powerline(settings, state)
     disable_builtin_mcp(settings, state)
     config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
     write_json(settings_path, settings)
@@ -709,8 +652,6 @@ def install(home, skip_external, force, herdr_root=None):
             state[key] = source
         elif key in state:
             gone.append(state.pop(key))
-    retire_mp_infra_port(home, state)
-    retire_codebase_memory_port(home, state)
     settings_path = agent_dir / "settings.json"
     mcp_path = mcp_config_path(agent_dir)
     instructions_path = agent_dir / "AGENTS.md"
@@ -744,10 +685,8 @@ def install(home, skip_external, force, herdr_root=None):
     update_ui(home, state)
     update_compaction(home, state)
     write_json(marker_path, state)
-    previous_ids = {package_id(value, agent_dir) for value in state["previous_packages"]}
-    retired_ids = {package_id(value, agent_dir) for value in RETIRED_PACKAGES} - previous_ids
-    # Unlike a retired package, the other form of pi-herdr-agents leaves settings even when the user had declared it first.
-    retired_ids |= {package_id(value, agent_dir) for value in old_roots + ([HERDR_AGENTS_SOURCE] if herdr_root else [])}
+    # The other form of pi-herdr-agents leaves settings even when the user had declared it first.
+    retired_ids = {package_id(value, agent_dir) for value in old_roots + ([HERDR_AGENTS_SOURCE] if herdr_root else [])}
     packages = owned_packages(state)
     if not skip_external:
         run(["npm", "install", "-g", "@earendil-works/pi-coding-agent@latest"], home)
@@ -873,7 +812,6 @@ def uninstall(home, skip_external):
             else:
                 settings.pop(key, None)
     restore_managed_keys(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
-    retire_powerline(settings, state)
     restore_builtin_mcp(settings, state)
     restore_compaction(settings, state)
     write_json(settings_path, settings)
@@ -907,49 +845,6 @@ def uninstall(home, skip_external):
     marker_path.unlink()
 
 
-def migrate_legacy_name(home):
-    """Move state from the repository's former name and repoint what referenced it."""
-    for old, new in LEGACY_RENAMES:
-        old, new = home / old, home / new
-        if not old.exists():
-            continue
-        if new.exists():
-            raise ValueError(f"both {old} and {new} exist; merge them by hand, then rerun")
-        new.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(old, new)
-    moved = {str(home / old): str(home / new) for old, new in LEGACY_RENAMES[1:]}
-    if LEGACY_ROOT != ROOT and not LEGACY_ROOT.exists():
-        moved[str(LEGACY_ROOT)] = str(ROOT)
-
-    def relocate(value):
-        if isinstance(value, dict):
-            return {key: relocate(item) for key, item in value.items()}
-        if isinstance(value, list):
-            return [relocate(item) for item in value]
-        if isinstance(value, str):
-            for old, new in moved.items():
-                if value == old or value.startswith(old + "/"):
-                    return new + value[len(old):]
-        return value
-
-    marker = home / MARKER
-    if marker.exists():
-        write_json(marker, relocate(read_json(marker)))
-    for directory in (".agents/skills", ".pi/agent/skills", ".pi/agent", ".local/bin"):
-        directory = home / directory
-        for link in (directory.iterdir() if directory.is_dir() else ()):
-            if link.is_symlink() and (target := relocate(os.readlink(link))) != os.readlink(link):
-                link.unlink()
-                link.symlink_to(target)
-    settings_path = home / ".pi/agent/settings.json"
-    if str(LEGACY_ROOT) in moved and settings_path.exists():
-        agent_dir = home / ".pi/agent"
-        settings = read_json(settings_path)
-        settings["packages"] = [str(ROOT) if package_id(value, agent_dir) == str(LEGACY_ROOT) else value
-                                for value in settings.get("packages", [])]
-        write_json(settings_path, settings)
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("migrate", "install", "uninstall", "apply-profile"))
@@ -958,9 +853,8 @@ def main():
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     home = args.home.expanduser().resolve()
-    # install.sh runs `migrate` first, so a wrong override stops there, before any link or the legacy-name migration changes a file.
+    # install.sh runs `migrate` first, so a wrong override stops there, before any link changes a file.
     herdr_root = herdr_agents_root() if args.action in ("migrate", "install") else None
-    migrate_legacy_name(home)
     if args.action == "install":
         install(home, args.skip_external, args.force, herdr_root)
     elif args.action == "uninstall":

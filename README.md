@@ -39,7 +39,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 - installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in);
 - sets the default model, thinking level, `pi-herdr-agents` tier roles and task models, UI settings, and MCP host-config discovery;
-- ports resources pi cannot install as packages: team-toon-tack and pi-skills; it retires the `cbmem.ts` extension and `codebase-memory` skill that earlier installs ported.
+- ports resources pi cannot install as packages: team-toon-tack and pi-skills.
 
 Every file it writes is recorded in `~/.pi/agent/.weihung-agent-root.json`, so uninstall removes exactly those files and restores the previous settings values.
 

@@ -31,17 +31,17 @@ Out:
 |---|---|
 | `LEGACY_RENAMES`, `LEGACY_ROOT`, `migrate_legacy_name`, the `migrate` action's rename step | repository renamed from weihung-user-claude |
 | `LEGACY_BRIDGE` (`npm:pi-claude-bridge`) | npm bridge replaced by the git fork pin |
-| pi-usage, pi-web-access fork, and pi-code fork prefixes in `PINNED_GIT` | forks replaced by pi-quotas and npm releases |
+| upstream `elidickinson/pi-claude-bridge`, pi-usage, pi-web-access fork, and pi-code fork prefixes in `PINNED_GIT` | upstream and forks replaced by the bridge fork, pi-quotas, and npm releases |
 | `RETIRED_PACKAGES` and its removal loop | powerline, notify, pi-usage, pi-todo, standalone Catppuccin theme |
 | `retire_powerline` | powerline footer settings |
 | `retire_mp_infra_port`, `retire_codebase_memory_port` | resources once ported by hand, now packages or dropped |
-| `previous_*_present` absent fallback in uninstall | markers written before that key existed |
 
 Kept, because they serve current behavior rather than old state:
 
 - Retiring other revisions of each current git pin (`PINNED_GIT` with only current prefixes): needed on every pin bump.
 - `PI_HERDR_AGENTS_ROOT` override and its displaced-root cleanup.
 - Uninstall reading `previous_packages` and `retired_packages` from the marker to restore what the user had before install.
+- The fallback for markers without `previous_settings_present` / `previous_ui_settings_present`: this machine's marker has neither key, so its uninstall depends on it.
 
 ## Decisions
 
