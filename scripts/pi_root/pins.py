@@ -7,7 +7,7 @@ QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e
 WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.1"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
-STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@f3e0c791061da4bc8c709236c7907a25e778d071"
+STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@9de8a707a118b4936474c888325bfb2af25a9841"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 PINNED_GIT = {
     BRIDGE_SOURCE: ("git:github.com/wayne930242/pi-claude-bridge@",),
