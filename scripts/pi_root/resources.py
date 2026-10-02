@@ -6,12 +6,14 @@ from datetime import datetime
 from pathlib import Path
 
 from . import external
+from .context import State
 from .jsonfile import write_json
 from .paths import MARKER, PI_SKILLS_CLONE, PI_SKILLS_GIT, TTT_PREFIX
 
 
-def managed_resource(home, state, destination, source, force=False, link=False):
-    """Install a file or link while retaining a user-owned predecessor."""
+def managed_resource(home: Path, state: State, destination: Path, source: Path | bytes, force: bool = False, link: bool = False) -> None:
+    """Install a file or link while retaining a user-owned predecessor; a link takes a path, a file its bytes."""
+    wanted = str(source) if isinstance(source, Path) else hashlib.sha256(source).hexdigest()
     key = str(destination.relative_to(home))
     records = state.setdefault("ported_resources", {})
     record = records.get(key)
@@ -20,8 +22,7 @@ def managed_resource(home, state, destination, source, force=False, link=False):
                    hashlib.sha256(destination.read_bytes()).hexdigest() if destination.is_file() else None)
         if record and current == record.get("installed"):
             destination.unlink()
-        elif not record and ((link and destination.is_symlink() and current == str(source)) or
-                             (not link and destination.is_file() and current == hashlib.sha256(source).hexdigest())):
+        elif not record and current == wanted and (destination.is_symlink() if link else destination.is_file()):
             return
         else:
             if not force:
@@ -34,17 +35,15 @@ def managed_resource(home, state, destination, source, force=False, link=False):
             records[key] = record
             write_json(home / MARKER, state)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if link:
+    if isinstance(source, Path):
         destination.symlink_to(source)
-        installed = str(source)
     else:
         destination.write_bytes(source)
-        installed = hashlib.sha256(source).hexdigest()
-    records[key] = {**(record or {}), "installed": installed, "link": link}
+    records[key] = {**(record or {}), "installed": wanted, "link": link}
     write_json(home / MARKER, state)
 
 
-def install_ported_resources(home, state, force):
+def install_ported_resources(home: Path, state: State, force: bool) -> None:
     agent_dir = home / ".pi/agent"
     prefix = home / TTT_PREFIX
     external.run(["npm", "install", "--prefix", str(prefix), "--no-save", "--no-package-lock", "team-toon-tack@latest"], home)
@@ -79,7 +78,7 @@ def install_ported_resources(home, state, force):
     managed_resource(home, state, agent_dir / "skills/pi-skills", clone, force, link=True)
 
 
-def restore_resource(home, key, record):
+def restore_resource(home: Path, key: str, record: dict) -> None:
     destination = home / key
     if destination.is_symlink():
         current = destination.readlink().as_posix()
@@ -100,7 +99,7 @@ def restore_resource(home, key, record):
         shutil.move(backup, destination)
 
 
-def uninstall_ported_resources(home, state):
+def uninstall_ported_resources(home: Path, state: State) -> None:
     for key, record in reversed(list(state.get("ported_resources", {}).items())):
         restore_resource(home, key, record)
     prefix = state.get("ttt_prefix")

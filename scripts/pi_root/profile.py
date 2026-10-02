@@ -3,10 +3,14 @@
 import hashlib
 import re
 from copy import deepcopy
+from pathlib import Path
 
+from .context import Context, State
 from .jsonfile import read_json, write_json
-from .managed import remember_previous
+from .managed import record_keys, remember_keys, restore_keys, restore_value
 from .paths import PROFILE, ROLES_DIR, ROOT
+
+Tiers = dict[str, list[str]]
 
 OPUS_1M = "claude-bridge/claude-opus-5-5"
 OPUS_200K = "claude-bridge/claude-200k-opus-5-5"
@@ -32,14 +36,14 @@ ROLE_TIERS = {"scout": "recon", "worker": "coding", "reviewer": "review", "adver
 FIELDS = ("defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels")
 
 
-def active_strategy():
+def active_strategy() -> str:
     match = re.search(r"^Active strategy: \[[^]]+\]\(strategies/([^)]+)\)", PROFILE.read_text(), re.MULTILINE)
     if not match:
         raise ValueError("active strategy is missing from model-preference-profile.md")
     return match.group(1).removesuffix(".md")
 
 
-def routing():
+def routing() -> tuple[str, list[str], Tiers, dict[str, list[str]]]:
     strategy = active_strategy()
     profiles = read_json(ROOT / "pi/model-profiles.json")
     if strategy not in profiles:
@@ -52,7 +56,7 @@ def routing():
     return strategy, default, tiers, tasks
 
 
-def candidates(model, tier):
+def candidates(model: str, tier: str) -> list[str]:
     codex_fallback = {
         "docs": LUNA,
         "recon": LUNA,
@@ -70,11 +74,11 @@ def candidates(model, tier):
     return list(dict.fromkeys((model, other)))
 
 
-def default_candidates(default):
+def default_candidates(default: list[str]) -> list[str]:
     return candidates(default[0], "main")
 
 
-def enabled_models(default, tiers):
+def enabled_models(default: list[str], tiers: Tiers) -> list[str]:
     """Every model a tier can dispatch to, so model cycling stays within the active strategy."""
     models = default_candidates(default)
     for name, (model, _) in tiers.items():
@@ -83,7 +87,7 @@ def enabled_models(default, tiers):
     return list(dict.fromkeys(models))
 
 
-def tier_roles(tiers):
+def tier_roles(tiers: Tiers) -> dict[str, str]:
     """The role definition of every tier but main, keyed by file name."""
     roles = {}
     for name, description in TIER_ROLES.items():
@@ -96,7 +100,7 @@ def tier_roles(tiers):
     return roles
 
 
-def write_tier_roles(home, state, tiers):
+def write_tier_roles(home: Path, state: State, tiers: Tiers) -> None:
     """Replace the role files an earlier run wrote; a file this repository did not write stops the run."""
     roles_dir = home / ROLES_DIR
     owned = state.get("installed_roles", {})
@@ -113,7 +117,7 @@ def write_tier_roles(home, state, tiers):
     state["installed_roles"] = {name: hashlib.sha256(content.encode()).hexdigest() for name, content in roles.items()}
 
 
-def remove_tier_roles(home, state):
+def remove_tier_roles(home: Path, state: State) -> None:
     roles_dir = home / ROLES_DIR
     for name, digest in state.pop("installed_roles", {}).items():
         path = roles_dir / name
@@ -123,14 +127,15 @@ def remove_tier_roles(home, state):
         roles_dir.rmdir()
 
 
-def update_profile(home, state):
+def update_profile(home: Path, state: State) -> None:
+    """Point pi's default model, enabled models, herdr-agents models, and tier roles at the active strategy."""
     agent_dir = home / ".pi/agent"
     settings_path = agent_dir / "settings.json"
     config_path = agent_dir / "herdr-agents/config.json"
     settings = read_json(settings_path)
     config = read_json(config_path)
     strategy, default, tiers, tasks = routing()
-    remember_previous(state, "settings", settings, FIELDS)
+    remember_keys(state, "settings", settings, FIELDS)
     state.setdefault("previous_models", deepcopy(config.get("models")))
     state.setdefault("previous_status", deepcopy(config.get("status")))
     provider, model = default[0].split("/", 1)
@@ -150,7 +155,26 @@ def update_profile(home, state):
     write_json(settings_path, settings)
     write_json(config_path, config)
     write_tier_roles(home, state, tiers)
-    state["installed_settings"] = {key: settings[key] for key in FIELDS}
+    record_keys(state, "settings", settings, FIELDS)
     state["installed_models"] = deepcopy(models)
     state["installed_status"] = deepcopy(config["status"])
     state["strategy"] = strategy
+
+
+def apply(ctx: Context) -> None:
+    update_profile(ctx.home, ctx.state)
+
+
+def restore(ctx: Context) -> None:
+    state = ctx.state
+    remove_tier_roles(ctx.home, state)
+    settings = read_json(ctx.settings_path)
+    restore_keys(state, "settings", settings, FIELDS)
+    write_json(ctx.settings_path, settings)
+    config = read_json(ctx.herdr_config_path)
+    restore_value(config, "models", state.get("installed_models"), state.get("previous_models"))
+    restore_value(config, "status", state.get("installed_status"), state.get("previous_status"))
+    if config:
+        write_json(ctx.herdr_config_path, config)
+    elif ctx.herdr_config_path.exists():
+        ctx.herdr_config_path.unlink()

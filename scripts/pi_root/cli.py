@@ -1,14 +1,12 @@
 """The pi-target.py command line."""
 
 import argparse
-import hashlib
 from pathlib import Path
 
-from . import instructions, jsonfile, packages, profile, steps
-from .paths import MARKER
+from . import packages, steps
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("migrate", "install", "uninstall", "apply-profile"))
     parser.add_argument("--home", type=Path, default=Path.home())
@@ -23,14 +21,4 @@ def main():
     elif args.action == "uninstall":
         steps.uninstall(home, args.skip_external)
     elif args.action == "apply-profile":
-        marker_path = home / MARKER
-        state = jsonfile.read_json(marker_path)
-        if not state:
-            raise ValueError("Pi target is not installed")
-        instructions_path = home / ".pi/agent/AGENTS.md"
-        if hashlib.sha256(instructions_path.read_bytes()).hexdigest() != state.get("instructions_hash"):
-            raise ValueError("Pi instructions changed since installation; inspect the file before applying a profile")
-        profile.update_profile(home, state)
-        instructions_path.write_text(instructions.instructions())
-        state["instructions_hash"] = hashlib.sha256(instructions.instructions().encode()).hexdigest()
-        jsonfile.write_json(marker_path, state)
+        steps.apply_profile(home)

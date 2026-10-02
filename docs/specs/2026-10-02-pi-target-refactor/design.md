@@ -12,14 +12,15 @@ Spec: [spec.md](spec.md).
 | `pins.py` | every pinned source, `PACKAGES`, `PINNED_GIT` (current prefixes only), `HERDR_AGENTS_SOURCE`, `PLAYWRITER` | the constants block |
 | `paths.py` | `ROOT`, `MARKER`, config paths, company plugin defaults, env-overridable roots | the constants block |
 | `jsonfile.py` | `read_json`, `write_json` | same names |
+| `context.py` | `Context`: the home, the marker state, the run's flags, and `save()` | the locals `install` and `uninstall` passed around |
 | `managed.py` | the managed-key mechanism: record previous once, record installed, restore when unchanged | `remember_previous`, `restore_managed_keys`, and the inline restore loops in `uninstall` |
-| `packages.py` | identity (`package_source`, `package_id`, `unique_packages`, `obsolete_pin`), owned and local package lists, the install and uninstall package steps | package helpers and the package parts of `install` / `uninstall` |
-| `external.py` | `run` and the calls to npm, pi, herdr, and Playwriter | `run`, `run_company_plugin`, the external block of `install` |
+| `packages.py` | identity (`package_source`, `package_id`, `unique_packages`, `obsolete_pin`), owned and local package lists, `plan`, and the package step, which also installs pi, Playwriter, the Herdr integration, and the ported resources | package helpers and the package parts of `install` / `uninstall` |
+| `external.py` | `run`, the seam tests replace, and `run_company_plugin` | same names |
 | `profile.py` | strategy routing, candidates, enabled models, tier roles, the profile step | `routing` … `update_profile`, its restore in `uninstall` |
 | `instructions.py` | generated `AGENTS.md`, its backup and restore | the instructions parts of `install`, `uninstall`, and `apply-profile` |
 | `configs.py` | the small config steps: UI and terminal and panes, built-in MCP off, mcp-adapter, pi-lens, open-tui, compaction | `update_*` / `restore_*` pairs |
 | `resources.py` | `managed_resource`, ported team-toon-tack and pi-skills resources, their restore | same names |
-| `steps.py` | `Step` and the ordered step list; `install` and `uninstall` run it | `install`, `uninstall` |
+| `steps.py` | `Step`, the ordered step list, `install`, `uninstall`, and `apply_profile` | `install`, `uninstall`, the apply-profile branch of `main` |
 | `cli.py` | argparse and the four actions | `main` |
 
 `scripts/pi-pins.py` imports `pi_root.pins` and `pi_root.packages` and rewrites pins in `pi_root/pins.py` instead of `pi-target.py`.
@@ -27,12 +28,15 @@ Spec: [spec.md](spec.md).
 ## Step interface
 
 ```python
-class Context(NamedTuple):
+@dataclass
+class Context:
     home: Path
-    state: dict          # the marker, saved by the runner after every step
-    skip_external: bool
-    force: bool
-    herdr_root: str | None
+    state: dict          # the marker
+    skip_external: bool = False
+    force: bool = False
+    herdr_root: str | None = None
+    first_install: bool = False
+    gone_plugins: list[str] = []   # company plugins this machine no longer has
 
 class Step(NamedTuple):
     name: str
@@ -40,33 +44,33 @@ class Step(NamedTuple):
     restore: Callable[[Context], None]
 ```
 
-`install` runs `apply` in list order and saves the marker after each step.
+`install` runs `packages.plan`, then `apply` in list order, saving the marker after each step.
+`plan` records the package sources and pre-install packages without saving, so a first install that stops at the instructions step still leaves no marker.
 `uninstall` runs `restore` in reverse list order, then deletes the marker.
-The list order is today's install order, so fresh-install files keep their key order: instructions, mcp-adapter, pi-lens, open-tui, profile, UI, compaction, packages and external tools, ported resources.
+The list is today's install order, so fresh-install files keep their key order: instructions, mcp-adapter, pi-lens, open-tui, profile, UI, compaction, packages.
 
-Reverse order differs from today's uninstall order.
+The package step covers pi, Playwriter, the Herdr integration, every pi package, and the ported resources, because their external calls depend on each other's order (resources install between aaaav and this repository's package; uninstall removes packages before it rewrites the package list).
+As the last step it restores first, ported resources first within it, as today's uninstall does.
+
+Reverse order differs from today's uninstall order elsewhere.
 That is safe because every restore either reassigns an existing key, which keeps its position, or removes it; none re-adds a key, so JSON key order does not depend on step order.
 The golden check confirms it.
 
 ## Managed keys
 
-Today six places record a previous value and later restore it, each in its own shape.
-`managed.py` gives one shape, keyed by the marker names in use today so existing markers keep working:
+`managed.py` gives the shapes the restores share, keyed by the marker names markers on disk already use:
 
-```python
-def remember(state: dict, name: str, container: dict, keys: Iterable[str]) -> None
-def record_installed(state: dict, name: str, container: dict, keys: Iterable[str]) -> None
-def restore(state: dict, name: str, container: dict, keys: Iterable[str]) -> None
-```
+- `remember_keys`, `record_keys`, `restore_keys`: top-level keys of one object, with `previous_<name>`, `previous_<name>_present`, and `installed_<name>`; `restore_keys` carries the fallback for markers without the present list. Used by the profile fields and the UI settings, which each had their own copy of the loop.
+- `restore_nested`: managed keys inside a nested object, dropping it once empty (terminal, panes, mcp-adapter settings and server, pi-lens tools, open-tui segments, compaction overrides).
+- `restore_value`: a whole value install replaced (herdr-agents `models` and `status`).
 
-A step that manages keys inside a nested object passes that object as `container`.
-Marker key names (`previous_ui_settings`, `installed_terminal`, …) are fixed by the existing markers; where today's names do not fit the `previous_<name>` / `installed_<name>` pattern, the step passes them explicitly rather than renaming them.
+Where a step's marker names do not fit `previous_<name>` / `installed_<name>`, it passes them explicitly rather than renaming them.
 
 ## Phases
 
 1. **Phase 0, delete migrations**, inside `pi-target.py`, with the tests that only covered them.
 2. **Phase 1, split into the package**, moving code unchanged apart from imports; tests import modules instead of loading `pi-target.py`.
-3. **Phase 2, steps and managed keys**: `steps.py`, `managed.py`, and tests regrouped by module (`tests/pi_packages.py`, `tests/pi_profile.py`, `tests/pi_configs.py`, `tests/pi_resources.py`, `tests/pi_steps.py`), retiring `tests/pi_review_fixes.py`.
+3. **Phase 2, steps and managed keys**: `steps.py`, `managed.py`, `context.py`, and tests regrouped by module (`tests/pi_packages.py`, `tests/pi_profile.py`, `tests/pi_configs.py`, `tests/pi_resources.py`, `tests/pi_steps.py`, and the new `tests/pi_managed.py`), retiring `tests/pi_review_fixes.py`; shared helpers and the fake npm live in `tests/support/`, outside the `tests/*.py` glob `pi-pins.py` runs.
 
 Each phase is one commit with every suite green and the golden check identical.
 
@@ -94,4 +98,13 @@ It checks out a base ref with `git worktree add` into a temporary directory, the
   Led by: none
 - Tried: `git checkout <file>` to undo a deliberate mutation in the golden self-test.
   Found: CC Safety Net blocks it; revert a scripted mutation with the inverse edit instead.
+  Led by: none
+- Tried: moving function bodies unchanged and calling other modules as `module.function` from `steps.py`.
+  Found: `install` had locals named `packages` and `managed`, which shadow the modules of the same name and raise `UnboundLocalError`; pyright flagged the first, an AST scan for locals that match imported modules found the second.
+  Led by: this design's "orchestrator calls `module.function`" rule
+- Tried: checking the new package with `lens_diagnostics` after adding `pyrightconfig.json`.
+  Found: the lens Pyright server keeps the configuration it started with and reports `pi_root` imports and new modules as unresolved; `npx pyright` reads the new file and reports 0 errors.
+  Led by: ~/.pi/agent/AGENTS.md "use `lens_diagnostics` for type checks after edits"
+- Tried: a shared test helper that put `scripts/` on `sys.path` when imported.
+  Found: ruff's import sorting places `from pi_root` before `from support`, so the path must be set in each test file before its imports.
   Led by: none
