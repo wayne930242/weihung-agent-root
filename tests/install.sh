@@ -297,6 +297,7 @@ with tempfile.TemporaryDirectory() as directory:
         destination = clone / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source / relative, destination)
+    shutil.copytree(source / "scripts/pi_root", clone / "scripts/pi_root", ignore=shutil.ignore_patterns("__pycache__"))
     home = temporary / "home"
     script = clone / "scripts/pi-target.py"
     subprocess.run(["python3", str(script), "install", "--home", str(home), "--skip-external"], check=True)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List and bump the exact versions pinned in pi-target.py, and keep them current on a schedule."""
+"""List and bump the exact versions pinned in scripts/pi_root/pins.py, and keep them current on a schedule."""
 
 import argparse
 import importlib.util
@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 ROOT = Path(__file__).resolve().parent.parent
-TARGET = ROOT / "scripts/pi-target.py"
+TARGET = ROOT / "scripts/pi_root/pins.py"
 # Files that quote a pin verbatim and must move with it.
 QUOTING_FILES = (TARGET, ROOT / "README.md", *sorted((ROOT / "tests").glob("*.py")),
                  *sorted((ROOT / "tests").glob("*.sh")), *sorted((ROOT / "tests").glob("*.mjs")))
@@ -60,7 +60,7 @@ class FreshSourceLoader(SourceFileLoader):
 
 
 def load_target():
-    spec = importlib.util.spec_from_file_location("pi_target", TARGET, loader=FreshSourceLoader("pi_target", str(TARGET)))
+    spec = importlib.util.spec_from_file_location("pi_root_pins", TARGET, loader=FreshSourceLoader("pi_root_pins", str(TARGET)))
     if spec is None or spec.loader is None:
         raise ValueError(f"cannot load {TARGET}")
     module = importlib.util.module_from_spec(spec)
@@ -72,7 +72,7 @@ def collect_pins() -> list[Pin]:
     target = load_target()
     pins = []
     for value in target.PACKAGES:
-        source = target.package_source(value)
+        source = value["source"] if isinstance(value, dict) else value
         if match := NPM_PIN.match(source):
             pins.append(Pin("npm", match[1], match[2]))
         elif match := GIT_PIN.match(source):

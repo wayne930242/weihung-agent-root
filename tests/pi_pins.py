@@ -63,14 +63,14 @@ class PinTests(unittest.TestCase):
                     redirect_stdout(io.StringIO()):
                 pins.bump([])
             text = {original.name: copy.read_text() for original, copy in copies}
-            self.assertIn("npm:pi-lens@9.9.9", text["pi-target.py"])
+            self.assertIn("npm:pi-lens@9.9.9", text["pins.py"])
             self.assertNotIn("npm:pi-lens@4.3.0", text["install.sh"])
             self.assertIn("playwriter@8.8.8", text["README.md"])
-            self.assertIn("straw-boss@f3e0c791", text["pi-target.py"])
+            self.assertIn("straw-boss@f3e0c791", text["pins.py"])
 
     def test_bump_updates_a_named_git_pin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            copy = Path(tmp) / "pi-target.py"
+            copy = Path(tmp) / "pins.py"
             shutil.copy(pins.TARGET, copy)
             with mock.patch.object(pins, "latest", fake_latest), \
                     mock.patch.object(pins, "QUOTING_FILES", (copy,)), \
@@ -96,8 +96,8 @@ class AutoUpdateTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.repo = Path(tmp.name) / "repo"
-        (self.repo / "scripts").mkdir(parents=True)
-        shutil.copy(ROOT / "scripts/pi-target.py", self.repo / "scripts/pi-target.py")
+        (self.repo / "scripts/pi_root").mkdir(parents=True)
+        shutil.copy(ROOT / "scripts/pi_root/pins.py", self.repo / "scripts/pi_root/pins.py")
         shutil.copy(ROOT / "README.md", self.repo / "README.md")
         for command in (["init", "-q", "-b", "main"], ["config", "user.email", "t@example.com"], ["config", "user.name", "t"],
                         ["add", "."], ["commit", "-q", "-m", "base"]):
@@ -107,7 +107,7 @@ class AutoUpdateTests(unittest.TestCase):
         self.messages: list[str] = []
         self.rejected_install = ""
         self.smokes = 0
-        target = self.repo / "scripts/pi-target.py"
+        target = self.repo / "scripts/pi_root/pins.py"
         for name, value in {"ROOT": self.repo, "TARGET": target, "QUOTING_FILES": (target, self.repo / "README.md"),
                             "STATE_DIR": self.state, "STATE_FILE": self.state / "state.json"}.items():
             patcher = mock.patch.object(pins, name, value)
@@ -124,7 +124,7 @@ class AutoUpdateTests(unittest.TestCase):
         self.calls.append((name, command[-1]))
         if command[-1].endswith("already-red.sh"):
             raise pins.StepFailed("red before any bump")
-        if name == "install" and self.rejected_install and self.rejected_install in (self.repo / "scripts/pi-target.py").read_text():
+        if name == "install" and self.rejected_install and self.rejected_install in (self.repo / "scripts/pi_root/pins.py").read_text():
             raise pins.StepFailed("install failed: boom")
 
     def fake_smoke(self) -> None:
@@ -140,7 +140,7 @@ class AutoUpdateTests(unittest.TestCase):
     def test_commits_one_bump_when_everything_passes_and_leaves_manual_pins(self) -> None:
         self.auto()
         self.assertEqual(self.commits()[0], "chore(pi): bump pinned packages")
-        text = (self.repo / "scripts/pi-target.py").read_text()
+        text = (self.repo / "scripts/pi_root/pins.py").read_text()
         self.assertIn("npm:pi-lens@9.9.9", text)
         self.assertIn("npm:pi-herdr-agents@2.0.4", text)
         self.assertEqual(self.calls.count(("install", str(self.repo / "scripts/install.sh"))), 1)
@@ -152,7 +152,7 @@ class AutoUpdateTests(unittest.TestCase):
         self.rejected_install = "pi-lens@9.9.9"
         self.auto()
         self.assertEqual(self.commits()[:2], ["chore(pi): bump playwriter to 8.8.8", "base"])
-        text = (self.repo / "scripts/pi-target.py").read_text()
+        text = (self.repo / "scripts/pi_root/pins.py").read_text()
         self.assertIn("npm:pi-lens@4.3.0", text)
         self.assertIn("playwriter@8.8.8", text)
         self.assertEqual(json.loads((self.state / "state.json").read_text())["rejected"], {"pi-lens": "9.9.9"})

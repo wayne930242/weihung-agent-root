@@ -8,6 +8,7 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 
 ## Layout
 
+- `scripts/pi_root/`: the logic behind `scripts/pi-target.py`, one module per managed part; pinned package versions live in `pins.py`.
 - `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`. It names tiers but no model.
 - `pi/model-profiles.json`: the executable pi model and thinking tiers for each strategy. `pi-target.py` turns the active one into pi's default model, one `pi-herdr-agents` role per tier in `~/.pi/agent/herdr-agents/roles/`, and `models.agents` and `models.tasks`.
 - `pi/extensions/`: this repository's pi package, registered through `package.json`. Dispatch recovery, handoff, and pane balancing live in straw-boss.

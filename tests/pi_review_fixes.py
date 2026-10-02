@@ -1,20 +1,35 @@
 """Regression checks for the Pi migration review findings."""
 
 import hashlib
-import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 PI_TARGET = ROOT / "scripts/pi-target.py"
+PINS = ROOT / "scripts/pi_root/pins.py"
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from pi_root import (  # noqa: E402
+    configs,
+    external,
+    jsonfile,
+    packages,
+    paths,
+    profile,
+    resources,
+    steps,
+)
+from pi_root.instructions import instructions as instructions_text  # noqa: E402
+
+
 def fake_npm_install(args):
     """Produce what a successful `npm install --prefix` of team-toon-tack leaves behind."""
     if "--prefix" not in args:
@@ -27,14 +42,6 @@ def fake_npm_install(args):
     cli.parent.mkdir(parents=True, exist_ok=True)
     cli.write_text("#!/bin/sh\n")
     cli.chmod(0o755)
-
-
-def load_target() -> Any:
-    spec = importlib.util.spec_from_file_location("pi_target_under_test", PI_TARGET)
-    assert spec and spec.loader
-    target = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(target)
-    return target
 
 
 def run_script(script, home, *args, env=None, check=True):
@@ -93,45 +100,43 @@ class PiReviewFixes(unittest.TestCase):
             self.assertFalse((home / ".pi/agent/.weihung-agent-root.json").exists())
 
     def test_all_tiers_have_distinct_task_fallbacks(self):
-        target = load_target()
         profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
         for strategy, tiers in profiles.items():
             with self.subTest(strategy=strategy):
-                target.active_strategy = lambda strategy=strategy: strategy
-                _, default, _, tasks = target.routing()
+                with mock.patch.object(profile, "active_strategy", lambda strategy=strategy: strategy):
+                    _, default, _, tasks = profile.routing()
                 self.assertEqual(set(tasks), {"coding", "review", "recon", "qa", "architecture", "docs"})
                 for tier, candidates in tasks.items():
                     self.assertEqual(candidates[0], tiers.get(tier, tiers["review"] if tier == "qa" else tiers["complex_unclear"])[0])
                     self.assertEqual(len(candidates), len(set(candidates)))
-                self.assertEqual(len(target.default_candidates(default)), len(set(target.default_candidates(default))))
-                instructions = target.instructions()
-                roles = target.tier_roles(tiers)
+                self.assertEqual(len(profile.default_candidates(default)), len(set(profile.default_candidates(default))))
+                instructions = instructions_text()
+                roles = profile.tier_roles(tiers)
                 self.assertEqual(set(roles), {f"{tier}.md" for tier in tiers if tier != "main"})
                 for tier, (model, thinking) in tiers.items():
                     self.assertNotIn(model, instructions)
                     if tier == "main":
                         continue
-                    expected = ", ".join(target.candidates(model, tier))
+                    expected = ", ".join(profile.candidates(model, tier))
                     self.assertIn(f"\nname: {tier}\n", roles[f"{tier}.md"])
                     self.assertIn(f"\nmodel: {expected}\nthinking: {thinking}\n", roles[f"{tier}.md"])
-                for role, tier in target.ROLE_TIERS.items():
+                for role, tier in profile.ROLE_TIERS.items():
                     self.assertIn(tier, tiers, role)
 
     def test_only_main_falls_back_to_opus_1m(self):
-        target = load_target()
         profiles = json.loads((ROOT / "pi/model-profiles.json").read_text())
         one_m = {"main", "complex_clear", "complex_unclear", "academic"}
         for strategy, tiers in profiles.items():
             for tier, (model, _) in tiers.items():
                 with self.subTest(strategy=strategy, tier=tier):
-                    self.assertNotEqual(model == target.OPUS_1M and tier not in one_m, True)
-                    if model == target.LUNA:
-                        self.assertEqual(target.candidates(model, tier)[1], target.HAIKU)
-        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "main")[1], target.OPUS_1M)
-        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "complex_clear")[1], target.OPUS_200K)
-        self.assertEqual(target.candidates("openai-codex/gpt-6-astra", "architecture")[1], target.OPUS_200K)
-        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "review")[1], target.OPUS_200K)
-        self.assertEqual(target.candidates("openai-codex/gpt-6.1-sol", "ui")[1], target.OPUS_200K)
+                    self.assertNotEqual(model == profile.OPUS_1M and tier not in one_m, True)
+                    if model == profile.LUNA:
+                        self.assertEqual(profile.candidates(model, tier)[1], profile.HAIKU)
+        self.assertEqual(profile.candidates("openai-codex/gpt-6.1-sol", "main")[1], profile.OPUS_1M)
+        self.assertEqual(profile.candidates("openai-codex/gpt-6.1-sol", "complex_clear")[1], profile.OPUS_200K)
+        self.assertEqual(profile.candidates("openai-codex/gpt-6-astra", "architecture")[1], profile.OPUS_200K)
+        self.assertEqual(profile.candidates("openai-codex/gpt-6.1-sol", "review")[1], profile.OPUS_200K)
+        self.assertEqual(profile.candidates("openai-codex/gpt-6.1-sol", "ui")[1], profile.OPUS_200K)
 
     def test_earlier_straw_boss_revisions_are_retired_for_the_pin(self):
         for earlier in ("git:github.com/wayne930242/straw-boss", "git:github.com/wayne930242/straw-boss@old-commit"):
@@ -142,9 +147,9 @@ class PiReviewFixes(unittest.TestCase):
                 (agent / "settings.json").write_text(json.dumps({"packages": [earlier]}))
                 run_script("install.sh", home, "--skip-external")
                 installed = json.loads((agent / "settings.json").read_text())["packages"]
-                declaration = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', PI_TARGET.read_text())
+                declaration = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', PINS.read_text())
                 if declaration is None:
-                    self.fail("STRAW_BOSS_SOURCE is not declared in pi-target.py")
+                    self.fail("STRAW_BOSS_SOURCE is not declared in pins.py")
                 self.assertEqual([item for item in installed if "straw-boss" in item], [declaration.group(1)])
 
     def test_company_plugins_are_managed_when_present_and_skipped_when_absent(self):
@@ -220,10 +225,9 @@ class PiReviewFixes(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             agent = Path(directory) / ".pi/agent"
             agent.mkdir(parents=True)
-            target = load_target()
-            self.assertEqual(target.mcp_config_path(agent), agent / "mcp-adapter.json")
+            self.assertEqual(configs.mcp_config_path(agent), agent / "mcp-adapter.json")
             (agent / "mcp.json").write_text('{"mcpServers": {"user": {}}}')
-            self.assertEqual(target.mcp_config_path(agent), agent / "mcp-adapter.json")
+            self.assertEqual(configs.mcp_config_path(agent), agent / "mcp-adapter.json")
             self.assertEqual((agent / "mcp.json").read_text(), '{"mcpServers": {"user": {}}}')
             self.assertFalse((agent / "mcp-adapter.json").exists())
 
@@ -245,12 +249,11 @@ class PiReviewFixes(unittest.TestCase):
                 self.assertEqual(json.loads(settings.read_text()).get("extensions"), before)
 
     def test_package_identity_ignores_the_npm_version(self):
-        target = load_target()
         agent = Path("/unused")
-        self.assertEqual(target.package_id("npm:pi-lens@4.3.0", agent), "npm:pi-lens")
-        self.assertEqual(target.package_id("npm:@scope/name@1.0.0", agent), "npm:@scope/name")
-        self.assertEqual(target.package_id("npm:@scope/name", agent), "npm:@scope/name")
-        self.assertEqual(target.package_id({"source": "npm:pi-lens", "skills": []}, agent), "npm:pi-lens")
+        self.assertEqual(packages.package_id("npm:pi-lens@4.3.0", agent), "npm:pi-lens")
+        self.assertEqual(packages.package_id("npm:@scope/name@1.0.0", agent), "npm:@scope/name")
+        self.assertEqual(packages.package_id("npm:@scope/name", agent), "npm:@scope/name")
+        self.assertEqual(packages.package_id({"source": "npm:pi-lens", "skills": []}, agent), "npm:pi-lens")
 
     def test_previous_git_bridge_revision_is_restored(self):
         old = "git:github.com/wayne930242/pi-claude-bridge@old-commit"
@@ -267,7 +270,6 @@ class PiReviewFixes(unittest.TestCase):
             self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], [old, "npm:user-package"])
 
     def test_external_git_switch_keeps_the_new_checkout(self):
-        target = load_target()
         old = "git:github.com/wayne930242/pi-claude-bridge@old-commit"
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
@@ -287,8 +289,8 @@ class PiReviewFixes(unittest.TestCase):
                 if args[:2] == ["pi", "remove"]:
                     removals.append(args[2])
 
-            target.run = fake_run
-            target.install(home, skip_external=False, force=False)
+            with mock.patch.object(external, "run", fake_run):
+                steps.install(home, skip_external=False, force=False)
             self.assertNotIn(old, json.loads(settings.read_text())["packages"])
             self.assertNotIn(old, removals)
 
@@ -328,15 +330,13 @@ class PiReviewFixes(unittest.TestCase):
             self.assertFalse(marker.exists())
 
     def test_malformed_json_names_the_file(self):
-        target = load_target()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "settings.json"
             path.write_text("{broken")
             with self.assertRaisesRegex(ValueError, f"{path} is not valid JSON"):
-                target.read_json(path)
+                jsonfile.read_json(path)
 
     def test_backup_survives_a_failed_link_and_is_restored(self):
-        target = load_target()
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             destination = home / ".pi/agent/skills/pi-skills"
@@ -345,14 +345,13 @@ class PiReviewFixes(unittest.TestCase):
             source = home / "clone"
             source.mkdir()
             with mock.patch.object(Path, "symlink_to", side_effect=OSError("link failed")), self.assertRaises(OSError):
-                    target.managed_resource(home, {}, destination, source, force=True, link=True)
-            state = target.read_json(home / target.MARKER)
-            target.managed_resource(home, state, destination, source, force=True, link=True)
-            target.uninstall_ported_resources(home, target.read_json(home / target.MARKER))
+                    resources.managed_resource(home, {}, destination, source, force=True, link=True)
+            state = jsonfile.read_json(home / paths.MARKER)
+            resources.managed_resource(home, state, destination, source, force=True, link=True)
+            resources.uninstall_ported_resources(home, jsonfile.read_json(home / paths.MARKER))
             self.assertEqual(destination.read_text(), "user copy\n")
 
     def test_failed_restore_is_retried_by_the_next_uninstall(self):
-        target = load_target()
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             destination = home / ".pi/agent/skills/pi-skills"
@@ -360,33 +359,32 @@ class PiReviewFixes(unittest.TestCase):
             destination.write_text("user copy\n")
             source = home / "clone"
             source.mkdir()
-            target.managed_resource(home, {}, destination, source, force=True, link=True)
-            state = target.read_json(home / target.MARKER)
-            with mock.patch.object(target.shutil, "move", side_effect=OSError("move failed")), self.assertRaises(OSError):
-                    target.uninstall_ported_resources(home, state)
-            target.uninstall_ported_resources(home, state)
+            resources.managed_resource(home, {}, destination, source, force=True, link=True)
+            state = jsonfile.read_json(home / paths.MARKER)
+            with mock.patch.object(shutil, "move", side_effect=OSError("move failed")), self.assertRaises(OSError):
+                    resources.uninstall_ported_resources(home, state)
+            resources.uninstall_ported_resources(home, state)
             self.assertEqual(destination.read_text(), "user copy\n")
 
     def test_instructions_backup_survives_a_failed_install_and_uninstall(self):
-        target = load_target()
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             instructions = home / ".pi/agent/AGENTS.md"
             instructions.parent.mkdir(parents=True)
             instructions.write_text("user instructions\n")
-            with mock.patch.object(target, "update_mcp", side_effect=ValueError("broken mcp.json")), self.assertRaises(ValueError):
-                    target.install(home, skip_external=True, force=True)
-            target.install(home, skip_external=True, force=True)
-            real_move = target.shutil.move
+            with mock.patch.object(configs, "update_mcp", side_effect=ValueError("broken mcp.json")), self.assertRaises(ValueError):
+                    steps.install(home, skip_external=True, force=True)
+            steps.install(home, skip_external=True, force=True)
+            real_move = shutil.move
 
             def fail_on_instructions(source, destination):
                 if Path(destination) == instructions:
                     raise OSError("move failed")
                 return real_move(source, destination)
 
-            with mock.patch.object(target.shutil, "move", side_effect=fail_on_instructions), self.assertRaises(OSError):
-                    target.uninstall(home, skip_external=True)
-            target.uninstall(home, skip_external=True)
+            with mock.patch.object(shutil, "move", side_effect=fail_on_instructions), self.assertRaises(OSError):
+                    steps.uninstall(home, skip_external=True)
+            steps.uninstall(home, skip_external=True)
             self.assertEqual(instructions.read_text(), "user instructions\n")
 
 

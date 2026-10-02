@@ -77,7 +77,7 @@ npx -y npm@latest trust github <name> --repo wayne930242/<name> --file publish.y
 
 - During development, `pi install ~/projects/<name>` loads the working tree; `/reload` picks up edits.
 - After release, `pi remove ~/projects/<name>` then `pi install npm:<name>@<version>`, and the user runs `/reload`.
-- To install it on every machine, add the pinned spec to `PACKAGES` in `scripts/pi-target.py`; this is the user's call.
+- To install it on every machine, add the pinned spec to `PACKAGES` in `scripts/pi_root/pins.py`; this is the user's call.
 
 **Complete when:** `~/.pi/agent/settings.json` lists `npm:<name>@<version>` and `curl -sL -o /dev/null -w '%{http_code}' https://pi.dev/packages/<name>` returns `200`.
 
@@ -85,6 +85,6 @@ npx -y npm@latest trust github <name> --repo wayne930242/<name> --file publish.y
 
 1. Bump `version` in `package.json`, commit, and push `main` with a matching tag: `git tag v<version> && git push origin main v<version>`.
 2. The `Publish` workflow runs check and tests, confirms the tag matches the version, and publishes through trusted publishing.
-3. Move the install to the new pin with `pi install npm:<name>@<version>`, and bump `PACKAGES` in `scripts/pi-target.py` when it is listed there.
+3. Move the install to the new pin with `pi install npm:<name>@<version>`, and bump `PACKAGES` in `scripts/pi_root/pins.py` when it is listed there.
 
 **Complete when:** `gh run list --repo wayne930242/<name> --limit 1` shows the run succeeded and `npm view <name> version` prints the new version.
