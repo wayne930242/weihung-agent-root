@@ -40,6 +40,24 @@ class ConfigTests(unittest.TestCase):
                 run_script("uninstall.sh", home, "--skip-external")
                 self.assertEqual(json.loads(settings.read_text()).get("extensions"), before)
 
+    def test_research_hub_is_registered_and_a_user_entry_is_restored(self):
+        user_entry = {"command": "my-research-hub"}
+        for before in (None, user_entry):
+            with self.subTest(before=before), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory)
+                agent = home / ".pi/agent"
+                agent.mkdir(parents=True)
+                path = agent / "mcp-adapter.json"
+                if before is not None:
+                    path.write_text(json.dumps({"mcpServers": {"research-hub": before}}))
+                run_script("install.sh", home, "--skip-external", "--force")
+                server = json.loads(path.read_text())["mcpServers"]["research-hub"]
+                self.assertEqual(server, configs.RESEARCH_HUB_SERVER)
+                self.assertIn(configs.THESIS_TOOLKIT, server["args"])
+                run_script("uninstall.sh", home, "--skip-external")
+                restored = json.loads(path.read_text()).get("mcpServers", {}) if path.exists() else {}
+                self.assertEqual(restored.get("research-hub"), before)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -48,4 +48,6 @@ PACKAGES = [
 ]
 # The Playwriter CLI drives the user's own Chrome through its extension; playwriter-relay.ts starts its relay.
 PLAYWRITER = "playwriter@0.7.0"
+# thesis-toolkit launches the research-hub MCP server (literature search, open-access download, bibliography saves).
+THESIS_TOOLKIT = "thesis-toolkit@0.1.2"
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"

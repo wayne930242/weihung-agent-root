@@ -120,7 +120,9 @@ with tempfile.TemporaryDirectory() as directory:
     assert "powerline" not in settings and "npm:pi-open-tui@0.3.10" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp-adapter.json").read_text())
     assert mcp["settings"] == {"hostConfigDiscovery": "on", "namespaceProxyTools": False}, mcp
-    assert mcp["mcpServers"] == {"codebase-memory-mcp": {"disabled": True}}, mcp
+    assert mcp["mcpServers"]["codebase-memory-mcp"] == {"disabled": True}, mcp
+    assert mcp["mcpServers"]["research-hub"]["args"] == ["-y", "thesis-toolkit@0.1.2", "mcp", "research-hub"], mcp
+    assert set(mcp["mcpServers"]) == {"codebase-memory-mcp", "research-hub"}, mcp
     lens = json.loads((home / ".pi-lens/config.json").read_text())
     assert lens == {"tools": {name: {"enabled": False} for name in ("project_report", "symbol_search", "module_report")}}, lens
     open_tui = json.loads((home / ".pi/agent/open-tui.json").read_text())

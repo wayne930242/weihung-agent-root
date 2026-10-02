@@ -5,8 +5,9 @@ from pathlib import Path
 
 from .context import Context, State
 from .jsonfile import read_json, write_json
-from .managed import record_keys, remember_keys, restore_keys, restore_nested
+from .managed import record_keys, remember_keys, restore_keys, restore_nested, restore_value
 from .paths import LENS_CONFIG, OPEN_TUI_CONFIG
+from .pins import THESIS_TOOLKIT
 from .profile import OPUS_1M, SONNET_1M
 
 # pi's native compaction fires at contextWindow - reserveTokens: 500K for the 1M Opus and Sonnet, a
@@ -17,6 +18,14 @@ UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChange
 # keeping it disabled stops pi-mcp-adapter from importing it through host config discovery.
 MCP_DISABLED_SERVER = "codebase-memory-mcp"
 MCP_SETTINGS = {"namespaceProxyTools": False}
+# Global research-hub; a project .mcp.json entry of the same name (knowledge-base) takes precedence.
+# Downloads use research-hub's default ~/downloads/papers.
+RESEARCH_HUB = "research-hub"
+RESEARCH_HUB_SERVER = {
+    "command": "npx",
+    "args": ["-y", THESIS_TOOLKIT, "mcp", "research-hub"],
+    "env": {"RSH_LIBRARY_API_URL": "https://bib-manager-api.vercel.app", "RUST_LOG": "warn"},
+}
 # pi-mcp-adapter owns /mcp; pi's built-in MCP support would otherwise warn on every start that it stepped aside.
 BUILTIN_MCP_OFF = "-builtin:mcp"
 # These pi-lens tools stay off to keep every prompt small; `read_symbol`, `read_enclosing`, and `lens_diagnostics` cover navigation.
@@ -101,8 +110,11 @@ def update_mcp(mcp: dict, state: State) -> None:
     servers = mcp.setdefault("mcpServers", {})
     state.setdefault("previous_mcp_server", deepcopy(servers.get(MCP_DISABLED_SERVER)))
     servers[MCP_DISABLED_SERVER] = {**servers.get(MCP_DISABLED_SERVER, {}), "disabled": True}
+    state.setdefault("previous_research_hub_server", deepcopy(servers.get(RESEARCH_HUB)))
+    servers[RESEARCH_HUB] = deepcopy(RESEARCH_HUB_SERVER)
     state["installed_mcp_settings"] = dict(MCP_SETTINGS)
     state["installed_mcp_server"] = deepcopy(servers[MCP_DISABLED_SERVER])
+    state["installed_research_hub_server"] = deepcopy(servers[RESEARCH_HUB])
 
 
 def restore_mcp(ctx: Context) -> None:
@@ -118,6 +130,7 @@ def restore_mcp(ctx: Context) -> None:
     restore_nested(mcp, "settings", state.get("installed_mcp_settings"), state.get("previous_mcp_settings"), tuple(MCP_SETTINGS))
     if "mcpServers" in mcp:
         restore_nested(mcp["mcpServers"], MCP_DISABLED_SERVER, state.get("installed_mcp_server"), state.get("previous_mcp_server"), ("disabled",))
+        restore_value(mcp["mcpServers"], RESEARCH_HUB, state.get("installed_research_hub_server"), state.get("previous_research_hub_server"))
         if not mcp["mcpServers"]:
             mcp.pop("mcpServers")
     if mcp.get("settings") == {}:
