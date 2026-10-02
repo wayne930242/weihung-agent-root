@@ -66,7 +66,7 @@ Registry packages are pinned to exact versions in [scripts/pi-target.py](scripts
 | `pi-intercom` | The `intercom` tool: messages and questions between pi sessions on the same machine. |
 | `pi-ask-user` | The `ask_user` tool: structured questions with options for decisions that belong to the user. |
 | `@juicesharp/rpiv-todo` | The `todo` tool and `/todos`: a task list with dependencies shown above the editor, rebuilt from the session so it survives `/reload` and compaction. |
-| `pi-open-tui` | The interface: logo header, Starship-style footer with Git, context, tokens, and cost, and a rounded editor. `/open-tui` edits its settings in `~/.pi/agent/open-tui.json`. |
+| `pi-open-tui` | The interface: logo header, Starship-style footer with Git, context, and tokens, and a rounded editor. `/open-tui` edits its settings in `~/.pi/agent/open-tui.json`; the installer keeps the runtime, cost, and extension-status footer segments off. |
 | `@victor-software-house/pi-curated-themes` | The `catppuccin-mocha` theme, matching Herdr's `catppuccin` theme. A package filter loads only `themes/catppuccin-mocha.json` and none of the package's skills. |
 | `pi-web-access` | `web_search`, `fetch_content`, and video understanding, loaded on demand through `web_enable`. Search works without keys through Exa MCP or the Codex login; provider keys go in `~/.pi/agent/web-search.json`. |
 | `pi-lens` | Diagnostics after each edit, `lens_diagnostics`, `read_symbol`, `read_enclosing`, and on-demand ast-grep and LSP navigation tools. The installer disables `project_report`, `symbol_search`, and `module_report` in `~/.pi-lens/config.json` to keep every prompt small; `read_symbol`, `read_enclosing`, and `lens_diagnostics` cover navigation and checks. |

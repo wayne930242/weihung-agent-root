@@ -126,6 +126,9 @@ BUILTIN_MCP_OFF = "-builtin:mcp"
 # These pi-lens tools stay off to keep every prompt small; `read_symbol`, `read_enclosing`, and `lens_diagnostics` cover navigation.
 LENS_DISABLED_TOOLS = ("project_report", "symbol_search", "module_report")
 LENS_CONFIG = Path(".pi-lens/config.json")
+# pi-open-tui footer segments kept off to keep the footer to what gets read; `/open-tui` still owns every other setting.
+OPEN_TUI_HIDDEN_SEGMENTS = ("runtime", "cost", "extensionStatuses")
+OPEN_TUI_CONFIG = Path(".pi/agent/open-tui.json")
 MP_INFRA = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/mp-infra"
 SDLC = ROOT.parent / "moldplan-center/plugins/waydosoft-marketplace/plugins/sdlc"
 TTT_PREFIX = Path(".local/share/weihung-agent-root/team-toon-tack")
@@ -642,6 +645,30 @@ def restore_lens(home, state):
         path.unlink()
 
 
+def update_open_tui(home, state):
+    path = home / OPEN_TUI_CONFIG
+    config = read_json(path)
+    segments = config.setdefault("footerSegments", {})
+    state.setdefault("previous_open_tui_present", path.exists())
+    state.setdefault("previous_open_tui_segments", {name: segments[name] for name in OPEN_TUI_HIDDEN_SEGMENTS if name in segments})
+    segments.update(dict.fromkeys(OPEN_TUI_HIDDEN_SEGMENTS, False))
+    write_json(path, config)
+    state["installed_open_tui_segments"] = dict.fromkeys(OPEN_TUI_HIDDEN_SEGMENTS, False)
+
+
+def restore_open_tui(home, state):
+    path = home / OPEN_TUI_CONFIG
+    config = read_json(path)
+    if "installed_open_tui_segments" not in state:
+        return
+    restore_managed_keys(config, "footerSegments", state["installed_open_tui_segments"],
+                         state.get("previous_open_tui_segments"), OPEN_TUI_HIDDEN_SEGMENTS)
+    if config or state.get("previous_open_tui_present", True):
+        write_json(path, config)
+    elif path.exists():
+        path.unlink()
+
+
 def update_compaction(home, state):
     settings_path = home / ".pi/agent/settings.json"
     settings = read_json(settings_path)
@@ -717,6 +744,7 @@ def install(home, skip_external, force, herdr_root=None):
     update_mcp(mcp, state)
     write_json(mcp_path, mcp)
     update_lens(home, state)
+    update_open_tui(home, state)
     update_profile(home, state)
     update_ui(home, state)
     update_compaction(home, state)
@@ -855,6 +883,7 @@ def uninstall(home, skip_external):
     restore_compaction(settings, state)
     write_json(settings_path, settings)
     restore_lens(home, state)
+    restore_open_tui(home, state)
     mcp = read_json(mcp_path)
     restore_mcp(mcp, state)
     if mcp:

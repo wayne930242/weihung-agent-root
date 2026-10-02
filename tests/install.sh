@@ -123,6 +123,8 @@ with tempfile.TemporaryDirectory() as directory:
     assert mcp["mcpServers"] == {"codebase-memory-mcp": {"disabled": True}}, mcp
     lens = json.loads((home / ".pi-lens/config.json").read_text())
     assert lens == {"tools": {name: {"enabled": False} for name in ("project_report", "symbol_search", "module_report")}}, lens
+    open_tui = json.loads((home / ".pi/agent/open-tui.json").read_text())
+    assert open_tui == {"footerSegments": {"runtime": False, "cost": False, "extensionStatuses": False}}, open_tui
     config = json.loads((home / ".pi/agent/herdr-agents/config.json").read_text())
     assert config["status"] == {"enabled": True}, config
     assert config["panes"] == {"mode": "split", "direction": "right"}, config
@@ -230,6 +232,9 @@ with tempfile.TemporaryDirectory() as directory:
     lens_path.parent.mkdir()
     original_lens = {"lsp": {"enabled": False}, "tools": {"symbol_search": {"enabled": True}}}
     lens_path.write_text(json.dumps(original_lens))
+    open_tui_path = agent / "open-tui.json"
+    original_open_tui = {"cursorStyle": "bar", "footerSegments": {"cwd": True, "cost": True}}
+    open_tui_path.write_text(json.dumps(original_open_tui))
     config = agent / "herdr-agents/config.json"
     config.parent.mkdir(parents=True, exist_ok=True)
     original_models = {"default": "user/model", "agents": {"scout": "user/scout"}}
@@ -244,6 +249,8 @@ with tempfile.TemporaryDirectory() as directory:
     assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": "cbm", "disabled": True}, installed_mcp
     assert installed_mcp["settings"]["namespaceProxyTools"] is False, installed_mcp
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
+    installed_open_tui = json.loads(open_tui_path.read_text())
+    assert installed_open_tui == {"cursorStyle": "bar", "footerSegments": {"cwd": True, "cost": False, "runtime": False, "extensionStatuses": False}}, installed_open_tui
     installed_agents = json.loads(config.read_text())["models"]["agents"]
     assert installed_agents["scout"] == "user/scout", "a role model the user set stays"
     assert installed_agents["worker"].startswith("claude-bridge/claude-sonnet-5-5"), installed_agents
@@ -260,6 +267,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "enableInstallTelemetry" not in settings, settings
     assert json.loads((agent / "mcp-adapter.json").read_text()) == original_mcp
     assert json.loads(lens_path.read_text()) == original_lens
+    assert json.loads(open_tui_path.read_text()) == original_open_tui
     assert settings["terminal"] == {"showImages": False}, settings
     assert settings["powerline"] == {"welcome": False}, settings
     assert settings["compaction"] == {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}, settings
