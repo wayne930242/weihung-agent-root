@@ -78,7 +78,7 @@ PACKAGES = [
     BRIDGE_SOURCE,
     HERDR_AGENTS_SOURCE,
     STRAW_BOSS_SOURCE,
-    "npm:pi-mcp-adapter@4.0.0",
+    "npm:pi-mcp-adapter@5.0.0",
     "npm:pi-intercom@0.16.0",
     "npm:pi-ask-user@0.15.1",
     "npm:@juicesharp/rpiv-todo@2.12.0",
@@ -579,13 +579,8 @@ def restore_builtin_mcp(settings, state):
 
 
 def mcp_config_path(agent_dir):
-    """pi-mcp-adapter 4.0.0 reads only mcp-adapter.json, leaving mcp.json to pi's built-in MCP support."""
-    legacy, current = agent_dir / "mcp.json", agent_dir / "mcp-adapter.json"
-    if legacy.exists():
-        if current.exists():
-            raise ValueError(f"{legacy} and {current} both exist; pi-mcp-adapter reads only the latter, so merge them by hand")
-        shutil.move(legacy, current)
-    return current
+    """The adapter's own settings file; mcp.json stays pi's, which pi-mcp-adapter 5.0.0 also reads."""
+    return agent_dir / "mcp-adapter.json"
 
 
 def update_mcp(mcp, state):

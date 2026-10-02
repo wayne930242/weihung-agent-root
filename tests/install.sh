@@ -227,7 +227,9 @@ with tempfile.TemporaryDirectory() as directory:
     (agent / "AGENTS.md").write_text("user instructions\n")
     (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-claude-bridge", "npm:user-package", "npm:pi-lens"], "theme": "light", "enabledModels": ["user/model"], "terminal": {"showImages": False}, "powerline": {"welcome": False}, "compaction": {"keepRecentTokens": 30000, "modelOverrides": {"user/big": {"reserveTokens": 1}}}}))
     original_mcp = {"settings": {"namespaceProxyTools": True}, "mcpServers": {"codebase-memory-mcp": {"command": "cbm"}, "user": {"url": "https://example.test/mcp"}}}
-    (agent / "mcp.json").write_text(json.dumps(original_mcp))  # written by an installer older than pi-mcp-adapter 4.0.0
+    (agent / "mcp-adapter.json").write_text(json.dumps(original_mcp))
+    pi_mcp = {"mcpServers": {"docs": {"url": "https://example.test/docs"}}}
+    (agent / "mcp.json").write_text(json.dumps(pi_mcp))  # pi's own file, which the adapter also reads
     lens_path = home / ".pi-lens/config.json"
     lens_path.parent.mkdir()
     original_lens = {"lsp": {"enabled": False}, "tools": {"symbol_search": {"enabled": True}}}
@@ -244,7 +246,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "npm:pi-claude-bridge" not in installed_packages, installed_packages
     assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@b273512") for package in installed_packages), installed_packages
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
-    assert not (agent / "mcp.json").exists(), "the legacy file moves to mcp-adapter.json"
+    assert json.loads((agent / "mcp.json").read_text()) == pi_mcp, "pi's mcp.json stays untouched"
     installed_mcp = json.loads((agent / "mcp-adapter.json").read_text())
     assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": "cbm", "disabled": True}, installed_mcp
     assert installed_mcp["settings"]["namespaceProxyTools"] is False, installed_mcp
@@ -266,6 +268,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["enabledModels"] == ["user/model"], settings
     assert "enableInstallTelemetry" not in settings, settings
     assert json.loads((agent / "mcp-adapter.json").read_text()) == original_mcp
+    assert json.loads((agent / "mcp.json").read_text()) == pi_mcp
     assert json.loads(lens_path.read_text()) == original_lens
     assert json.loads(open_tui_path.read_text()) == original_open_tui
     assert settings["terminal"] == {"showImages": False}, settings
