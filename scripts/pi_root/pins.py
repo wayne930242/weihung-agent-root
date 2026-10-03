@@ -41,7 +41,7 @@ PACKAGES = [
     "npm:pi-jev-compaction@1.0.0",
     "npm:cc-safety-net@2.5.1",
     "npm:pi-codex-image-gen@0.1.15",
-    "npm:pi-robot-hand@0.2.1",
+    "npm:pi-robot-hand@0.2.2",
     "npm:@pify/memory@0.13.1",
     "npm:pi-loop-monitor@0.2.1",
     "npm:@narumitw/pi-goal@0.54.8",

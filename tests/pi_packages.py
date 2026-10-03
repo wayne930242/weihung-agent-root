@@ -60,7 +60,7 @@ class PackageTests(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertNotIn("npm:pi-secret-drop@0.1.6", installed)
-            self.assertIn("npm:pi-robot-hand@0.2.1", installed)
+            self.assertIn("npm:pi-robot-hand@0.2.2", installed)
             run_script("uninstall.sh", home, "--skip-external")
             self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], ["npm:pi-secret-drop@0.1.6", "npm:user-package"])
 
