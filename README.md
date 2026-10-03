@@ -91,6 +91,7 @@ Registry packages are pinned to exact versions in [scripts/pi_root/pins.py](scri
 
 - [idle-compaction.ts](pi/extensions/idle-compaction.ts): compacts the session once it is idle with more than 300k tokens of context, so compaction never interrupts a running turn. The installer also sets pi's native threshold for the 1M `claude-bridge/claude-opus-5-5` to 500k (`compaction.modelOverrides` with `reserveTokens: 500000`), which only a long running turn reaches.
 - [playwriter-relay.ts](pi/extensions/playwriter-relay.ts): at session start, starts the Playwriter relay on `127.0.0.1:19988` when it is down and warns when the Chrome extension is not connected, without delaying the session.
+- [user-bash-follow-up.ts](pi/extensions/user-bash-follow-up.ts): after a `!command` typed while the agent is idle finishes, starts one agent turn on its output. pi still runs the command; `!!` commands, cancelled commands, and commands typed during a turn keep pi's behavior.
 
 ### Ported resources
 

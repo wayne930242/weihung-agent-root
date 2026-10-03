@@ -6,7 +6,8 @@
   "pi": {
     "extensions": [
       "./pi/extensions/idle-compaction.ts",
-      "./pi/extensions/playwriter-relay.ts"
+      "./pi/extensions/playwriter-relay.ts",
+      "./pi/extensions/user-bash-follow-up.ts"
     ]
   },
   "devDependencies": {
