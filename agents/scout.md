@@ -1,6 +1,7 @@
 ---
 name: scout
 description: Fast codebase reconnaissance - maps existing code, conventions, and patterns for a task
+thinking: low
 spawning: false
 auto-exit: true
 system-prompt: append

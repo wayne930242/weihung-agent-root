@@ -1,7 +1,7 @@
 {
   "default": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
   "agents": {
-    "scout": "claude-bridge/claude-haiku-4-5, openai-codex/gpt-6-luna",
+    "scout": "claude-bridge/claude-sonnet-5-5, openai-codex/gpt-6-luna",
     "worker": "claude-bridge/claude-sonnet-5-5, openai-codex/gpt-6.1-sol",
     "reviewer": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
     "adversarial-reviewer": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
@@ -19,7 +19,7 @@
       "openai-codex/gpt-6.1-sol"
     ],
     "recon": [
-      "claude-bridge/claude-haiku-4-5",
+      "claude-bridge/claude-sonnet-5-5",
       "openai-codex/gpt-6-luna"
     ],
     "docs": [
