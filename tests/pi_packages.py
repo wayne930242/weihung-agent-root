@@ -51,6 +51,19 @@ class PackageTests(unittest.TestCase):
             run_script("uninstall.sh", home, "--skip-external")
             self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], [old, "npm:user-package"])
 
+    def test_merged_secret_drop_package_is_removed_and_restored(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            (agent / "settings.json").write_text(json.dumps({"packages": ["npm:pi-secret-drop@0.1.6", "npm:user-package"]}))
+            run_script("install.sh", home, "--skip-external")
+            installed = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertNotIn("npm:pi-secret-drop@0.1.6", installed)
+            self.assertIn("npm:pi-robot-hand@0.2.0", installed)
+            run_script("uninstall.sh", home, "--skip-external")
+            self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], ["npm:pi-secret-drop@0.1.6", "npm:user-package"])
+
     def test_previous_git_bridge_revision_is_restored(self):
         old = "git:github.com/wayne930242/pi-claude-bridge@old-commit"
         with tempfile.TemporaryDirectory() as directory:

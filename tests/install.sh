@@ -93,7 +93,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
     assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 25, settings
+    assert len(settings["packages"]) == 24, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@b2735123eb51862136667b5f829ce1343bb7f93b", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
@@ -101,7 +101,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert {"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]} in settings["packages"], settings
     assert "npm:@juicesharp/rpiv-todo@2.12.0" in sources and "npm:cc-safety-net@2.5.1" in sources, sources
     assert "npm:pi-codex-image-gen@0.1.15" in sources and "npm:pi-web-access@0.35.0" in sources, sources
-    assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.1" in sources, sources
+    assert "npm:pi-robot-hand@0.2.0" in sources and not any("pi-secret-drop" in source for source in sources), sources
     assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
     assert "npm:@pify/memory@0.13.1" in sources, sources
     assert "npm:pi-loop-monitor@0.2.1" in sources, sources

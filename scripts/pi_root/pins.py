@@ -18,8 +18,8 @@ PINNED_GIT = {
 # Catppuccin Mocha with only official palette colors, matching Herdr, Ghostty, and SketchyBar; the filter loads Mocha alone.
 THEME_PACKAGE = {"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]}
 # Registry packages this setup installed before and now drops; install removes them from settings.
-# pi-curated-themes shipped a catppuccin-mocha with off-palette accents.
-RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes",)
+# pi-curated-themes shipped a catppuccin-mocha with off-palette accents; pi-secret-drop is now part of pi-robot-hand.
+RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes", "npm:pi-secret-drop")
 # pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
 # its other extensions duplicate the todo, MCP, subagent, and web packages below.
 CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}
@@ -41,8 +41,7 @@ PACKAGES = [
     "npm:pi-jev-compaction@1.0.0",
     "npm:cc-safety-net@2.5.1",
     "npm:pi-codex-image-gen@0.1.15",
-    "npm:pi-secret-drop@0.1.6",
-    "npm:pi-robot-hand@0.1.1",
+    "npm:pi-robot-hand@0.2.0",
     "npm:@pify/memory@0.13.1",
     "npm:pi-loop-monitor@0.2.1",
     "npm:@narumitw/pi-goal@0.54.8",
