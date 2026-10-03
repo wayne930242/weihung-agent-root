@@ -15,8 +15,11 @@ PINNED_GIT = {
     QUOTAS_SOURCE: ("git:github.com/wayne930242/pi-quotas",),
 }
 # Versioned specs keep every machine on the same release; `pi update` skips them, so bump them here.
-# The theme collection loads only Catppuccin Mocha, which matches the Herdr theme, and none of its skills.
-THEME_PACKAGE = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []}
+# Catppuccin Mocha with only official palette colors, matching Herdr, Ghostty, and SketchyBar; the filter loads Mocha alone.
+THEME_PACKAGE = {"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]}
+# Registry packages this setup installed before and now drops; install removes them from settings.
+# pi-curated-themes shipped a catppuccin-mocha with off-palette accents.
+RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes",)
 # pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
 # its other extensions duplicate the todo, MCP, subagent, and web packages below.
 CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}

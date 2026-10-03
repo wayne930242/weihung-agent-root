@@ -98,7 +98,7 @@ with tempfile.TemporaryDirectory() as directory:
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
-    assert {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []} in settings["packages"], settings
+    assert {"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]} in settings["packages"], settings
     assert "npm:@juicesharp/rpiv-todo@2.12.0" in sources and "npm:cc-safety-net@2.5.1" in sources, sources
     assert "npm:pi-codex-image-gen@0.1.15" in sources and "npm:pi-web-access@0.35.0" in sources, sources
     assert "npm:pi-secret-drop@0.1.6" in sources and "npm:pi-robot-hand@0.1.1" in sources, sources
@@ -107,7 +107,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "npm:pi-loop-monitor@0.2.1" in sources, sources
     assert "npm:@narumitw/pi-goal@0.54.8" in sources, sources
     assert {"source": "npm:pi-code@1.4.1", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
-    assert not any("pi-todo" in source or "catppuccin" in source for source in sources), sources
+    assert not any("pi-todo" in source or "pi-curated-themes" in source for source in sources), sources
     assert not {"defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels"} & set(settings), settings
     assert settings["theme"] == "catppuccin-mocha", settings
     assert settings["enableInstallTelemetry"] is False, settings

@@ -36,6 +36,21 @@ class PackageTests(unittest.TestCase):
                     self.fail("STRAW_BOSS_SOURCE is not declared in pins.py")
                 self.assertEqual([item for item in installed if "straw-boss" in item], [declaration.group(1)])
 
+    def test_retired_theme_package_is_replaced_and_restored(self):
+        old = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []}
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            (agent / "settings.json").write_text(json.dumps({"packages": [old, "npm:user-package"]}))
+            run_script("install.sh", home, "--skip-external")
+            installed = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertNotIn(old, installed)
+            self.assertIn({"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]}, installed)
+            self.assertIn("npm:user-package", installed)
+            run_script("uninstall.sh", home, "--skip-external")
+            self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], [old, "npm:user-package"])
+
     def test_previous_git_bridge_revision_is_restored(self):
         old = "git:github.com/wayne930242/pi-claude-bridge@old-commit"
         with tempfile.TemporaryDirectory() as directory:

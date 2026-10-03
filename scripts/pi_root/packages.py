@@ -9,7 +9,7 @@ from . import external, resources
 from .context import Context, State
 from .jsonfile import read_json, write_json
 from .paths import AAAAV, COMPANY_PLUGINS, HERDR_AGENTS_ROOT_VARIABLE, LOCAL_PACKAGE
-from .pins import AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT, PLAYWRITER
+from .pins import AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT, PLAYWRITER, RETIRED_SOURCES
 
 Package = str | dict
 
@@ -42,7 +42,8 @@ def unique_packages(values: list[Package], agent_dir: Path) -> list[Package]:
 
 def obsolete_pin(value: Package) -> bool:
     source = package_source(value)
-    return any(source.startswith(prefixes) and source != current for current, prefixes in PINNED_GIT.items())
+    return (any(source.startswith(prefixes) and source != current for current, prefixes in PINNED_GIT.items())
+            or source.startswith(RETIRED_SOURCES))
 
 
 def aaaav_source() -> str:
