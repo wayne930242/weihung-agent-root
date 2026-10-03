@@ -79,6 +79,25 @@ class PinTests(unittest.TestCase):
             self.assertIn("straw-boss@" + "f" * 40, copy.read_text())
             self.assertIn("npm:pi-lens@4.3.0", copy.read_text())
 
+    def test_fork_pin_follows_its_integration_branch(self) -> None:
+        pin = pins.Pin("git", "git:github.com/wayne930242/pi-herdr-agents", "a" * 40)
+        with mock.patch.object(pins, "run", return_value="b" * 40 + "\trefs/heads/weihung/integration") as run:
+            self.assertEqual(pins.latest(pin), "b" * 40)
+        self.assertEqual(run.call_args.args[0][-2:], ["https://github.com/wayne930242/pi-herdr-agents", "refs/heads/weihung/integration"])
+
+    def test_herdr_agents_stays_a_git_pin_through_bump_and_auto(self) -> None:
+        collected = {pin.name: pin for pin in pins.collect_pins()}
+        self.assertEqual(collected["github.com/wayne930242/pi-herdr-agents"].kind, "git")
+        self.assertNotIn("pi-herdr-agents", collected)
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = Path(tmp) / "pins.py"
+            shutil.copy(pins.TARGET, copy)
+            with mock.patch.object(pins, "latest", fake_latest), \
+                    mock.patch.object(pins, "QUOTING_FILES", (copy,)), \
+                    redirect_stdout(io.StringIO()):
+                pins.bump([])
+            self.assertIn("git:github.com/wayne930242/pi-herdr-agents@24a0eb3069f13dcee1b8bc15b180891d97063ac8", copy.read_text())
+
     def test_bump_rejects_an_unpinned_name(self) -> None:
         with self.assertRaisesRegex(ValueError, "not a pinned package"):
             pins.bump(["no-such-package"])
@@ -90,7 +109,7 @@ class PinTests(unittest.TestCase):
 
 
 class AutoUpdateTests(unittest.TestCase):
-    NEWEST = {"pi-lens": "9.9.9", "playwriter": "8.8.8", "pi-herdr-agents": "9.0.0"}
+    NEWEST = {"pi-lens": "9.9.9", "playwriter": "8.8.8", "github.com/wayne930242/pi-herdr-agents": "f" * 40}
 
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
@@ -142,7 +161,8 @@ class AutoUpdateTests(unittest.TestCase):
         self.assertEqual(self.commits()[0], "chore(pi): bump pinned packages")
         text = (self.repo / "scripts/pi_root/pins.py").read_text()
         self.assertIn("npm:pi-lens@9.9.9", text)
-        self.assertIn("npm:pi-herdr-agents@2.0.4", text)
+        self.assertIn("git:github.com/wayne930242/pi-herdr-agents@24a0eb3069f13dcee1b8bc15b180891d97063ac8", text)
+        self.assertNotIn('"npm:pi-herdr-agents@', text)
         self.assertEqual(self.calls.count(("install", str(self.repo / "scripts/install.sh"))), 1)
         self.assertEqual(self.smokes, 1)
         self.assertEqual(self.calls.count(("tests", "tests/already-red.sh")), 1, "the red file runs only as the baseline")

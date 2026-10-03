@@ -97,7 +97,7 @@ def plan(ctx: Context) -> None:
     if herdr_root:
         state["herdr_agents"] = herdr_root
         print(f"{HERDR_AGENTS_ROOT_VARIABLE}: using {herdr_root} instead of {HERDR_AGENTS_SOURCE}. "
-              "The agents/ role overrides were derived from the 2.0.4 bundled roles; "
+              "The agents/ role overrides match the bundled roles of the pinned commit; "
               "compare them with the checkout's agents/ if it differs.", file=sys.stderr)
     else:
         state.pop("herdr_agents", None)

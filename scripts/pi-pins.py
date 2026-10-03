@@ -27,6 +27,10 @@ PLAIN_NPM_PIN = re.compile(r"^([^/@:]+)@(.+)$")
 MAIN_BRANCH = "main"
 # npm pins `auto` leaves alone: bumping pi-herdr-agents also means re-deriving agents/ from its bundled roles.
 MANUAL_PINS = {"pi-herdr-agents"}
+# Fork pins follow an integration branch instead of the remote HEAD, so `outdated` and a named `bump` never move them
+# to the default branch. pi-herdr-agents is a fork pin until upstream merges giuseppecrj/pi-herdr-agents#66, #67, #68;
+# then it returns to the npm release (and `auto` keeps leaving it alone through MANUAL_PINS).
+FORK_BRANCHES = {"github.com/wayne930242/pi-herdr-agents": "weihung/integration"}
 STATE_DIR = Path.home() / ".local/state/weihung-agent-root"
 STATE_FILE = STATE_DIR / "pi-autoupdate.json"
 LOG_FILE = STATE_DIR / "pi-autoupdate.log"
@@ -93,9 +97,10 @@ def run(command: list[str]) -> str:
 def latest(pin: Pin) -> str:
     if pin.kind == "npm":
         return run(["npm", "view", pin.name, "version"])
-    heads = run(["git", "ls-remote", f"https://{pin.name}", "HEAD"])
+    ref = f"refs/heads/{FORK_BRANCHES[pin.name]}" if pin.name in FORK_BRANCHES else "HEAD"
+    heads = run(["git", "ls-remote", f"https://{pin.name}", ref])
     if not heads:
-        raise ValueError(f"{pin.name} has no HEAD")
+        raise ValueError(f"{pin.name} has no {ref}")
     return heads.split()[0]
 
 
@@ -115,7 +120,7 @@ def outdated() -> None:
     for pin, newest in zip(pins, latest_all(pins), strict=True):
         status = "ok" if newest == pin.current else "differs"
         behind += status != "ok"
-        suffix = " (git: remote HEAD)" if pin.kind == "git" else ""
+        suffix = f" (git: {FORK_BRANCHES.get(pin.name, 'remote HEAD')})" if pin.kind == "git" else ""
         print(f"{pin.name:<{width}}  {short(pin, pin.current):<9} {short(pin, newest):<9} {status}{suffix}")
     print(f"\n{behind} of {len(pins)} pins differ from the registry.")
 
@@ -154,8 +159,8 @@ def bump(names: list[str]) -> None:
     if not bumped:
         print("Nothing to bump.")
         return
-    if "pi-herdr-agents" in bumped:
-        print("pi-herdr-agents changed: re-derive agents/ from the new bundled roles and update the version quoted in README.md.")
+    if any(name.endswith("pi-herdr-agents") for name in bumped):
+        print("pi-herdr-agents changed: diff its agents/ against ours, re-derive any changed role, and update the pin quoted in README.md.")
     if not names:
         print("Git pins were left alone; name them explicitly to bump them.")
     print("Review `git diff`, run the tests, then `bash scripts/install.sh` and reload pi.")

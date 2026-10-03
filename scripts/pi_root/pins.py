@@ -8,22 +8,27 @@ WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.1"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
 STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@9de8a707a118b4936474c888325bfb2af25a9841"
+# Fork pin of giuseppecrj/pi-herdr-agents: upstream v2.0.5 plus PRs #66, #67, #68 (branch weihung/integration).
+# Once upstream merges them, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
+# entry and the FORK_BRANCHES entry in scripts/pi-pins.py, and move "npm:pi-herdr-agents" out of RETIRED_SOURCES.
+HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@24a0eb3069f13dcee1b8bc15b180891d97063ac8"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 PINNED_GIT = {
     BRIDGE_SOURCE: ("git:github.com/wayne930242/pi-claude-bridge@",),
     STRAW_BOSS_SOURCE: ("git:github.com/wayne930242/straw-boss",),
     QUOTAS_SOURCE: ("git:github.com/wayne930242/pi-quotas",),
+    HERDR_AGENTS_SOURCE: ("git:github.com/wayne930242/pi-herdr-agents",),
 }
 # Versioned specs keep every machine on the same release; `pi update` skips them, so bump them here.
 # Catppuccin Mocha with only official palette colors, matching Herdr, Ghostty, and SketchyBar; the filter loads Mocha alone.
 THEME_PACKAGE = {"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]}
 # Registry packages this setup installed before and now drops; install removes them from settings.
-# pi-curated-themes shipped a catppuccin-mocha with off-palette accents; pi-secret-drop is now part of pi-robot-hand.
-RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes", "npm:pi-secret-drop")
+# pi-curated-themes shipped a catppuccin-mocha with off-palette accents; pi-secret-drop is now part of pi-robot-hand;
+# the npm pi-herdr-agents release is replaced by the fork pin above, and pi must never load both.
+RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes", "npm:pi-secret-drop", "npm:pi-herdr-agents")
 # pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
 # its other extensions duplicate the todo, MCP, subagent, and web packages below.
 CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}
-HERDR_AGENTS_SOURCE = "npm:pi-herdr-agents@2.0.4"
 PACKAGES = [
     BRIDGE_SOURCE,
     HERDR_AGENTS_SOURCE,

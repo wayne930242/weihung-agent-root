@@ -8,7 +8,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NPM_SPEC = "npm:pi-herdr-agents@2.0.4"
+PINNED_SPEC = "git:github.com/wayne930242/pi-herdr-agents@24a0eb3069f13dcee1b8bc15b180891d97063ac8"
+RETIRED_NPM = "npm:pi-herdr-agents@2.0.4"
 VARIABLE = "PI_HERDR_AGENTS_ROOT"
 
 
@@ -58,14 +59,14 @@ class HerdrAgentsRoot(unittest.TestCase):
     def install(self, override=None, *args):
         return run_script("install.sh", self.home, "--skip-external", *args, override=override)
 
-    def test_default_pins_the_npm_release(self):
+    def test_default_pins_the_fork_commit(self):
         self.install()
-        self.assertEqual(herdr_entries(self.home), [NPM_SPEC])
+        self.assertEqual(herdr_entries(self.home), [PINNED_SPEC])
         self.assertNotIn("herdr_agents", state(self.home))
 
     def test_empty_variable_counts_as_unset(self):
         self.install(override="")
-        self.assertEqual(herdr_entries(self.home), [NPM_SPEC])
+        self.assertEqual(herdr_entries(self.home), [PINNED_SPEC])
 
     def test_override_replaces_the_npm_release_with_the_local_path(self):
         local = checkout(self.base)
@@ -83,18 +84,18 @@ class HerdrAgentsRoot(unittest.TestCase):
         self.install(local)
         self.assertEqual(snapshot(self.home), first)
 
-    def test_switching_from_npm_to_local_removes_the_npm_entry(self):
+    def test_switching_from_the_pin_to_local_removes_the_pinned_entry(self):
         local = checkout(self.base)
         self.install()
-        self.assertEqual(herdr_entries(self.home), [NPM_SPEC])
+        self.assertEqual(herdr_entries(self.home), [PINNED_SPEC])
         self.install(local)
         self.assertEqual(herdr_entries(self.home), [str(local)])
 
-    def test_unsetting_the_override_restores_the_npm_pin_without_a_duplicate(self):
+    def test_unsetting_the_override_restores_the_pin_without_a_duplicate(self):
         local = checkout(self.base)
         self.install(local)
         self.install()
-        self.assertEqual(herdr_entries(self.home), [NPM_SPEC])
+        self.assertEqual(herdr_entries(self.home), [PINNED_SPEC])
         self.assertNotIn("herdr_agents", state(self.home))
         self.assertNotIn("herdr_agents_displaced", state(self.home))
 
@@ -144,6 +145,17 @@ class HerdrAgentsRoot(unittest.TestCase):
         run_script("uninstall.sh", self.home, "--skip-external")
         self.assertFalse((self.home / ".pi/agent/.weihung-agent-root.json").exists())
         self.assertEqual(herdr_entries(self.home), [])
+
+    def test_install_retires_the_npm_release_so_only_the_fork_pin_loads(self):
+        agent = self.home / ".pi/agent"
+        agent.mkdir(parents=True)
+        (agent / "settings.json").write_text(json.dumps({"packages": [RETIRED_NPM]}))
+        self.install()
+        self.assertEqual(herdr_entries(self.home), [PINNED_SPEC])
+        self.install()
+        self.assertEqual(herdr_entries(self.home), [PINNED_SPEC])
+        run_script("uninstall.sh", self.home, "--skip-external")
+        self.assertEqual(herdr_entries(self.home), [RETIRED_NPM])
 
     def test_uninstall_restores_a_prior_npm_spec_the_override_displaced(self):
         agent = self.home / ".pi/agent"
@@ -227,13 +239,13 @@ if '--prefix' in args:
     def test_override_installs_the_path_not_the_npm_release_and_removes_a_recorded_npm_entry(self):
         local = checkout(self.base)
         self.run_install()
-        self.assertIn(f"install {NPM_SPEC}", self.pi_calls())
+        self.assertIn(f"install {PINNED_SPEC}", self.pi_calls())
         self.calls.write_text("")
         self.run_install(local)
         calls = self.pi_calls()
         self.assertIn(f"install {local}", calls)
-        self.assertNotIn(f"install {NPM_SPEC}", calls)
-        self.assertIn(f"remove {NPM_SPEC}", calls)
+        self.assertNotIn(f"install {PINNED_SPEC}", calls)
+        self.assertIn(f"remove {PINNED_SPEC}", calls)
         self.assertEqual(herdr_entries(self.home), [str(local)])
 
     def test_unsetting_the_override_removes_the_local_entry_and_reinstalls_the_npm_pin(self):
@@ -242,9 +254,9 @@ if '--prefix' in args:
         self.calls.write_text("")
         self.run_install()
         calls = self.pi_calls()
-        self.assertIn(f"install {NPM_SPEC}", calls)
+        self.assertIn(f"install {PINNED_SPEC}", calls)
         self.assertIn(f"remove {local}", calls)
-        self.assertEqual(herdr_entries(self.home), [NPM_SPEC])
+        self.assertEqual(herdr_entries(self.home), [PINNED_SPEC])
 
     def test_uninstall_removes_the_local_package_through_pi(self):
         local = checkout(self.base)
@@ -255,7 +267,7 @@ if '--prefix' in args:
         subprocess.run(["bash", str(ROOT / "scripts/uninstall.sh"), "--home", str(self.home)],
                        env=env, text=True, capture_output=True, check=True)
         self.assertIn(f"remove {local}", self.pi_calls())
-        self.assertNotIn(f"remove {NPM_SPEC}", self.pi_calls())
+        self.assertNotIn(f"remove {PINNED_SPEC}", self.pi_calls())
         self.assertEqual(herdr_entries(self.home), [])
 
 
