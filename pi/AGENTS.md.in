@@ -42,4 +42,4 @@ Search with `memory_search` before assuming something was never recorded. When t
 
 ## Verification and delivery
 
-Follow `aaaav-do` through Align, Advance, Anchor, Act, and Verify. Exercise the Reality anchor, review the diff against the contract, and report remaining gaps. Keep tests, builds, interactive checks, CI, deployment, and release evidence distinct. Deliver complete code without TODOs, stubs, or mocks. Run relevant tests before deployment. Commit messages contain no AI tool attribution.
+Follow `aaaav-do` through Align, Advance, Anchor, Act, and Verify. Its Verify section owns the evidence rules; report remaining gaps. Deliver complete code without TODOs, stubs, or mocks. Run relevant tests before deployment. Commit messages contain no AI tool attribution.
