@@ -7,7 +7,7 @@ QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e
 WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.1"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
-STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@dd93524770a9fca9dba6de7b27b987726a6d18bc"
+STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@bb17ef7b9f5d59d61573e31ac9bc548763aa1faf"
 # Fork pin of giuseppecrj/pi-herdr-agents: upstream v2.0.5 plus PRs #66, #67, #68 and a local orchestrate trim (branch weihung/integration).
 # Once upstream merges them, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
 # entry and the FORK_BRANCHES entry in scripts/pi-pins.py, and move "npm:pi-herdr-agents" out of RETIRED_SOURCES.

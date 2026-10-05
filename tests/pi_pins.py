@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
-from types import ModuleType
+from types import MappingProxyType, ModuleType
 from typing import Any
 from unittest import mock
 
@@ -66,7 +66,7 @@ class PinTests(unittest.TestCase):
             self.assertIn("npm:pi-lens@9.9.9", text["pins.py"])
             self.assertNotIn("npm:pi-lens@4.3.0", text["install.sh"])
             self.assertIn("playwriter@8.8.8", text["README.md"])
-            self.assertIn("straw-boss@dd935247", text["pins.py"])
+            self.assertIn("straw-boss@bb17ef7", text["pins.py"])
 
     def test_bump_updates_a_named_git_pin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -109,7 +109,7 @@ class PinTests(unittest.TestCase):
 
 
 class AutoUpdateTests(unittest.TestCase):
-    NEWEST = {"pi-lens": "9.9.9", "playwriter": "8.8.8", "github.com/wayne930242/pi-herdr-agents": "f" * 40}
+    NEWEST = MappingProxyType({"pi-lens": "9.9.9", "playwriter": "8.8.8", "github.com/wayne930242/pi-herdr-agents": "f" * 40})
 
     def setUp(self) -> None:
         tmp = tempfile.TemporaryDirectory()
