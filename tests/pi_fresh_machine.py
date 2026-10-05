@@ -10,6 +10,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 STRAW_BOSS_GIT = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', (ROOT / "scripts/pi_root/pins.py").read_text()).group(1)
+PINS = (ROOT / "scripts/pi_root/pins.py").read_text()
+HERDR_WEB_UI_ID, HERDR_WEB_UI_REPO, HERDR_WEB_UI_REF = (re.search(rf'{name} = "([^"]+)"', PINS).group(1)
+                                                     for name in ("HERDR_WEB_UI_ID", "HERDR_WEB_UI_REPO", "HERDR_WEB_UI_REF"))
 
 
 def write(path, content, executable=False):
@@ -56,7 +59,8 @@ if '--prefix' in args:
     subprocess.run(["git", "-C", str(pi_skills), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "fixture"], check=True)
     # A company plugin whose `pi` calls fail must not stop the install or uninstall.
     write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{calls}'\ncase \"$*\" in */sdlc) exit 1;; esac\n", True)
-    write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n", True)
+    herdr_calls = base / "herdr-calls"
+    write(bin_dir / "herdr", f"#!/bin/sh\necho \"$@\" >> '{herdr_calls}'\n", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
            "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"), "PI_SDLC_ROOT": str(base / "no-sdlc"),
            "TEST_TTT_FIXTURE": str(fixture), "PI_SKILLS_GIT": str(pi_skills), "TEST_NPM_CALLS": str(npm_calls)}
@@ -71,6 +75,7 @@ if '--prefix' in args:
     assert f"install {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
     assert STRAW_BOSS_GIT in json.loads((agent / "settings.json").read_text())["packages"]
     assert "install -g playwriter@0.7.0" in npm_calls.read_text().splitlines()
+    assert f"plugin install {HERDR_WEB_UI_REPO} --ref {HERDR_WEB_UI_REF} --yes" in herdr_calls.read_text().splitlines()
 
     plugin = base / "plugins/sdlc"
     write(plugin / "package.json", "{}")
@@ -81,6 +86,7 @@ if '--prefix' in args:
     result = run("uninstall.sh", home, env)
     assert f"could not run pi remove for {plugin.resolve()}" in result.stderr, result.stderr
     assert "uninstall -g playwriter" in npm_calls.read_text().splitlines()
+    assert f"plugin uninstall {HERDR_WEB_UI_ID}" in herdr_calls.read_text().splitlines()
     assert f"remove {AAAAV_GIT}" in calls.read_text().splitlines()
     assert f"remove {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
     print("pi fresh machine: pass")

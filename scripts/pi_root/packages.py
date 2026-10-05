@@ -1,6 +1,7 @@
 """Pi packages: identity, the packages this repository owns, and the install step that also brings the tools they need."""
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -9,7 +10,8 @@ from . import external, resources
 from .context import Context, State
 from .jsonfile import read_json, write_json
 from .paths import AAAAV, COMPANY_PLUGINS, HERDR_AGENTS_ROOT_VARIABLE, LOCAL_PACKAGE
-from .pins import AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT, PLAYWRITER, RETIRED_SOURCES
+from .pins import (AAAAV_GIT, HERDR_AGENTS_SOURCE, HERDR_WEB_UI_ID, HERDR_WEB_UI_REF, HERDR_WEB_UI_REPO, PACKAGES, PINNED_GIT,
+                   PLAYWRITER, RETIRED_SOURCES)
 
 Package = str | dict
 
@@ -112,6 +114,23 @@ def plan(ctx: Context) -> None:
     state.setdefault("integration_installed", not ctx.first_install)
 
 
+# herdr's server keeps the minimal PATH of the app that launched it, so its plugins only find tools in these directories.
+HERDR_SERVER_PATH = "/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
+
+
+def install_herdr_web_ui(ctx: Context) -> None:
+    home, state = ctx.home, ctx.state
+    if "herdr_web_ui_preinstalled" not in state:
+        listed = subprocess.run(["herdr", "plugin", "list"], capture_output=True, text=True, check=False)
+        state["herdr_web_ui_preinstalled"] = HERDR_WEB_UI_ID in listed.stdout
+        ctx.save()
+    external.run(["herdr", "plugin", "install", HERDR_WEB_UI_REPO, "--ref", HERDR_WEB_UI_REF, "--yes"], home)
+    missing = [tool for tool in ("bun", "node") if shutil.which(tool, path=HERDR_SERVER_PATH) is None]
+    if missing:
+        links = " && ".join(f"sudo ln -s \"$(command -v {tool})\" /usr/local/bin/{tool}" for tool in missing)
+        print(f"herdr web ui needs {', '.join(missing)} on herdr's PATH ({HERDR_SERVER_PATH}); run: {links}", file=sys.stderr)
+
+
 def apply(ctx: Context) -> None:
     """Install pi, its tools, and every owned package, then write the package list in the order pi expects."""
     home, state, agent_dir, settings_path = ctx.home, ctx.state, ctx.agent_dir, ctx.settings_path
@@ -129,6 +148,7 @@ def apply(ctx: Context) -> None:
         external.run(["herdr", "integration", "install", "pi"], home)
         state["integration_installed"] = True
         ctx.save()
+        install_herdr_web_ui(ctx)
         for package in pinned:
             external.run(["pi", "install", package_source(package)], home)
         for package in state["retired_packages"]:
@@ -192,6 +212,8 @@ def restore(ctx: Context) -> None:
                     external.run(["pi", "remove", package_source(package)], home)
         if state.get("integration_installed", True):
             external.run(["herdr", "integration", "uninstall", "pi"], home)
+        if not state.get("herdr_web_ui_preinstalled", True):
+            external.run(["herdr", "plugin", "uninstall", HERDR_WEB_UI_ID], home)
         if not state.get("playwriter_preinstalled", True):
             external.run(["npm", "uninstall", "-g", "playwriter"], home)
     settings = read_json(settings_path)
