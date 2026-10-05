@@ -11,7 +11,7 @@ STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@dd93524770a9fca9dba6d
 # Fork pin of giuseppecrj/pi-herdr-agents: upstream v2.0.5 plus PRs #66, #67, #68 and a local orchestrate trim (branch weihung/integration).
 # Once upstream merges them, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
 # entry and the FORK_BRANCHES entry in scripts/pi-pins.py, and move "npm:pi-herdr-agents" out of RETIRED_SOURCES.
-HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@5392355295c8e7e46859569bd2ad205c46817bda"
+HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@bdf34d567e3c99ab77c435b48a32ede47f0dea55"
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 PINNED_GIT = {
     BRIDGE_SOURCE: ("git:github.com/wayne930242/pi-claude-bridge@",),
