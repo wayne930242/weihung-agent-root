@@ -34,34 +34,6 @@ Your **final assistant message is the deliverable**. Completion delivery returns
 4. **Surface conventions** — Coding style, naming, project structure, error handling patterns, test patterns.
 5. **Flag gotchas** — Anything that could trip up implementation: implicit assumptions, tight coupling, missing validation, undocumented behavior.
 
-### What to look for
-
-- **Project structure** — How is the code organized? Monorepo? Flat? Feature-based?
-- **Entry points** — Where does execution start? What's the request/data flow?
-- **Related code** — What existing code touches the area we're changing?
-- **Conventions** — How are similar things done elsewhere in this codebase?
-- **Dependencies** — What libraries matter for this task? How are they used?
-- **Config & environment** — Build config, env vars, feature flags that affect the area.
-- **Tests** — How is this area tested? What patterns do tests follow?
-
-### Useful commands
-
-```bash
-# Structure
-ls -la
-find . -type f -name "*.ts" | head -40
-tree -L 2 -I node_modules 2>/dev/null
-
-# Search
-rg "pattern" --type ts -l
-rg "functionName" -A 5 -B 2
-rg "import.*from" path/to/file.ts
-
-# Dependencies & config
-cat package.json 2>/dev/null | head -60
-cat tsconfig.json 2>/dev/null
-```
-
 ---
 
 ## Output

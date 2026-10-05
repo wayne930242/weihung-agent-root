@@ -20,21 +20,16 @@ repository instructions.
 
 1. Read the task or specification evidence and the repository guidance named by
    the assignment.
-2. Record the parent-pinned repository identity and exact comparison base and
-   head SHAs from the assignment. When a shell is available, confirm them with
-   safe Git inspection and use `INCOMPLETE` if they differ. Without a shell,
-   consume the pinned inventory and diff or before/after evidence; do not
-   fabricate Git output.
-3. State whether staged, unstaged, and untracked files are included. Inventory
-   each included class from supplied evidence. A clean worktree does not mean
-   the branch has no diff.
-4. Inspect the exact supplied range. The assignment must materialize the changed
-   file inventory and unified diff, or complete before/after excerpts for every
-   relevant change. A head checkout cannot supply deleted or base-only blobs
-   through file reads alone.
+2. Record the repository identity and the comparison base and head SHAs from
+   the assignment. When a shell is available, run `git diff base..head` yourself
+   to obtain the inventory and unified diff, and use `INCOMPLETE` if the
+   assignment's SHAs do not resolve. Without a shell, consume the supplied
+   inventory and diff or before/after evidence; do not fabricate Git output.
+3. State whether staged, unstaged, and untracked files are included. A clean
+   worktree does not mean the branch has no diff.
 
-For non-Git or non-local sources, require the same complete parent-materialized
-source set and comparison evidence; a URL or source label alone is not evidence.
+For non-Git or non-local sources, require the supplied source set and comparison
+evidence; a URL or source label alone is not evidence.
 If the assignment does not provide enough information to fix the review range,
 scope, or applicable specification, report the missing prerequisite. Do not
 silently choose a convenient range.

@@ -8,27 +8,31 @@ Use Traditional Chinese for user communication. Write prompts and agent instruct
 
 Before significant work, choose one owner: use the exact specialized skill for its task; use `providing-knowledge` for explanations and comparisons, `investigating` for research, `inspecting` for checks and reviews, `human-feedback` for feedback on working output, or `grilling` for unresolved user-owned decisions. Source changes use `aaaav-do`, including work handed back by another skill. State Alignment and Reality anchor before the first production edit.
 
-Read before editing. Follow the user's chosen architecture and explain tradeoffs when they affect the result. Keep changes within scope, use the smallest useful approach, fail fast instead of degrading silently, and verify changed behavior. Clean up only changes made by this work. Resolve execution choices within the assigned scope; bring user-owned decisions to the user with context and a recommendation. Ask the user every question through `ask_user`, never as plain chat text, and gather related pending questions into one round.
+Follow the user's chosen architecture and explain tradeoffs when they affect the result. Keep changes within scope, use the smallest useful approach, and fail fast instead of degrading silently. Clean up only changes made by this work. Resolve execution choices within the assigned scope; bring user-owned decisions to the user with context and a recommendation. Ask the user every question through `ask_user`, never as plain chat text, and gather related pending questions into one round.
 
-For multi-step work, set a verifiable goal and track it with `todo`. Summarize and checkpoint after research, hard debugging, or a failed approach, and carry the live implementation context into verification. After repeated failures or corrections, reassess the task and evidence before continuing.
+For multi-step work, set a verifiable goal and track it with `todo`. After repeated failures or corrections, reassess the task and evidence before continuing.
 
-Use the current app's `AGENTS.md` or `GEMINI.md` before app-specific work. If neither exists, use its `CLAUDE.md` when present. Check `.claude/skills/` for relevant project workflows and follow applicable language, Git, deployment, and UI rules in the repository's `rules/` directory.
-
-On WSL, translate Windows attachment paths with `wslpath -u` when available and quote the translated path.
+Check `.claude/skills/` for relevant project workflows and follow applicable language, Git, deployment, and UI rules in the repository's `rules/` directory.
 
 Start a dev server, watcher, or any process that must outlive its command with `MonitorCreate`, never with `&` or `nohup` in `bash`: pi stops a monitor's process group when the session ends, while a backgrounded `bash` child keeps running after its command returns and after the session closes. Record the PID and port of what you start; when the work ends, stop it with `MonitorStop` and confirm by PID and port that nothing of yours remains. An `agent-browser` session lives in a daemon pi does not manage, so close your own with `agent-browser --session <name> close`.
 
+## Git safety
+
+- Force push to any remote branch needs explicit user confirmation: state the exact command and target and wait.
+- Stage specific files by name; never `git add .` or `git add -A`, and keep machine-local state (plans, memory, analysis snapshots) out of commits.
+- Before committing a new `.gitignore` pattern, run `git check-ignore -v <tracked-file>` on tracked files it could match.
+
 ## User rules
 
-Read the matching rule in `~/.pi/agent/rules/` before its work: `git-safety.md` (git), `deployment.md` (deploys), `dependencies.md` (packages and libraries), `clean-architecture.md` (design and refactoring), `ui-design.md` (UI), `browser.md` (browser automation), `chinese-writing.md` (Chinese prose), and the language files `go.md`, `python.md`, `shell.md`, `typescript.md`, and `markdown.md`.
+For Traditional Chinese articles and documents (not chat replies), load the `writing-in-weihung-voice` skill first. Read the matching rule in `~/.pi/agent/rules/` before its work: `deployment.md` (deploys), `dependencies.md` (packages and libraries), `clean-architecture.md` (design and refactoring), `ui-design.md` (UI), `browser.md` (browser automation), and the language files `go.md`, `python.md`, `shell.md`, `typescript.md`, and `markdown.md`.
 
 ## Model and dispatch
 
-Dispatch with the `pi-herdr-agents` role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review, `adversarial-reviewer` for adversarial review, and `visual-tester` for UI checks. Each role's model comes from `pi-herdr-agents` configuration, so omit `model` unless the user names one for the task. Set `thinking` for the work: `low` for bounded mechanical tasks, `medium` for ordinary implementation and review, `high` for architecture, security, or hard diagnosis.
+Dispatch with the `pi-herdr-agents` role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review (one reviewer per checkpoint), and `visual-tester` for UI checks. Use `adversarial-reviewer` only when the user names it. Each role's model comes from `pi-herdr-agents` configuration, so omit `model` unless the user names one for the task. Set `thinking` by the difficulty of the work, as `dispatching-work` describes.
 
-Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`: it resolves the app, names the graph and Reality anchor, dispatches Pi workers through `pi-herdr-agents`, and carries the git lifecycle through `shipping-task`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and thinking level.
+Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`; Straw Boss dispatch follows `dispatching-work`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and thinking level.
 
-In Herdr, use `dispatch_control` to list, reattach, or hand off dispatches, and `intercom` to find and message related main sessions. Outside Herdr, explain that pane dispatch is unavailable and continue in the current session. Report the worker's actual result after it arrives.
+In Herdr, use `dispatch_control` for dispatches and `intercom` for related main sessions; outside Herdr, continue in the current session. Report the worker's actual result after it arrives.
 
 `pi-herdr-agents` closes an ordinary worker's pane only after the worker delivers a result. Treat a worker as stalled when its session file has not changed for about 10 minutes while Herdr shows it idle or thinking: interrupt it once and ask it to write its result. If it does not recover, close its pane with `herdr pane close <pane_id>`; the "pane disappeared" failure that follows is expected, so respawn only what is still missing. A worktree worker's pane and workspace go away with `worktree_remove`, which you call once its branch is merged and verified. After any interrupt, failure, or merge, run `herdr pane list` and close the leftover panes of your own dispatches; leave panes the user opened.
 
@@ -42,4 +46,4 @@ Search with `memory_search` before assuming something was never recorded. When t
 
 ## Verification and delivery
 
-Follow `aaaav-do` through Align, Advance, Anchor, Act, and Verify. Its Verify section owns the evidence rules; report remaining gaps. Deliver complete code without TODOs, stubs, or mocks. Run relevant tests before deployment. Commit messages contain no AI tool attribution.
+Deliver complete code without TODOs, stubs, or mocks. Commit messages contain no AI tool attribution.

@@ -1,5 +1,4 @@
 # Dependencies
 
-- Always use the latest stable version of packages. Do not assume versions from training data.
-- Look up official documentation before using any library or framework to ensure current best practices.
+- When adding or upgrading a dependency, use the latest stable version and read its official documentation; do not assume versions from training data. Existing dependencies follow the version installed in the checkout.
 - When the user provides a URL for a tool or package, fetch that URL first — it is authoritative. PyPI/npm/crates search is a fallback only when no URL is given.

@@ -6,8 +6,7 @@
     "reviewer": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
     "adversarial-reviewer": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
     "visual-tester": "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6-astra",
-    "planner": "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6-astra",
-    "poteto": "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6.1-sol"
+    "planner": "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6-astra"
   },
   "tasks": {
     "coding": [

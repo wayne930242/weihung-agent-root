@@ -1,14 +1,7 @@
 # Clean Architecture
 
-## Refactoring Triggers
-
-Act on these immediately when spotted:
-
-- God object: class/module with 3+ unrelated responsibilities - split
-- Circular dependency: A imports B imports A - extract shared interface
-- Wrong abstraction level: UI logic in data layer or vice versa - move
-- Leaky abstraction: internal details exposed in public API - encapsulate
-- Dead code: unreachable functions or unused exports - report it, don't delete unless asked
+- Report these smells in code you touch instead of refactoring on sight: god object, circular dependency, wrong abstraction level, leaky abstraction, dead code.
+- Apply the structure rules below only where the repository already follows them; otherwise match its existing patterns.
 
 ## Structure Rules
 
