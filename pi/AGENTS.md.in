@@ -16,7 +16,7 @@ Use the current app's `AGENTS.md` or `GEMINI.md` before app-specific work. If ne
 
 On WSL, translate Windows attachment paths with `wslpath -u` when available and quote the translated path.
 
-Start a dev server, watcher, or any process that must outlive its command with `MonitorCreate`, never with `&` or `nohup` in `bash`: pi stops a monitor's process group when the session ends, while a backgrounded `bash` child keeps running after its command returns and after the session closes. Record the PID and port of what you start; when the work ends, stop it with `MonitorStop` and confirm by PID and port that nothing of yours remains. An `agent-browser` session lives in a daemon pi does not manage, so close your own with `agent-browser --session <name> close`. Put this rule in every dispatch task you write.
+Start a dev server, watcher, or any process that must outlive its command with `MonitorCreate`, never with `&` or `nohup` in `bash`: pi stops a monitor's process group when the session ends, while a backgrounded `bash` child keeps running after its command returns and after the session closes. Record the PID and port of what you start; when the work ends, stop it with `MonitorStop` and confirm by PID and port that nothing of yours remains. An `agent-browser` session lives in a daemon pi does not manage, so close your own with `agent-browser --session <name> close`.
 
 ## User rules
 
