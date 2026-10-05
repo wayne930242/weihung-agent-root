@@ -66,7 +66,7 @@ class PinTests(unittest.TestCase):
             self.assertIn("npm:pi-lens@9.9.9", text["pins.py"])
             self.assertNotIn("npm:pi-lens@4.3.0", text["install.sh"])
             self.assertIn("playwriter@8.8.8", text["README.md"])
-            self.assertIn("straw-boss@df2f3d1d", text["pins.py"])
+            self.assertIn("straw-boss@dd935247", text["pins.py"])
 
     def test_bump_updates_a_named_git_pin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -96,7 +96,7 @@ class PinTests(unittest.TestCase):
                     mock.patch.object(pins, "QUOTING_FILES", (copy,)), \
                     redirect_stdout(io.StringIO()):
                 pins.bump([])
-            self.assertIn("git:github.com/wayne930242/pi-herdr-agents@24a0eb3069f13dcee1b8bc15b180891d97063ac8", copy.read_text())
+            self.assertIn("git:github.com/wayne930242/pi-herdr-agents@5392355295c8e7e46859569bd2ad205c46817bda", copy.read_text())
 
     def test_bump_rejects_an_unpinned_name(self) -> None:
         with self.assertRaisesRegex(ValueError, "not a pinned package"):
@@ -161,7 +161,7 @@ class AutoUpdateTests(unittest.TestCase):
         self.assertEqual(self.commits()[0], "chore(pi): bump pinned packages")
         text = (self.repo / "scripts/pi_root/pins.py").read_text()
         self.assertIn("npm:pi-lens@9.9.9", text)
-        self.assertIn("git:github.com/wayne930242/pi-herdr-agents@24a0eb3069f13dcee1b8bc15b180891d97063ac8", text)
+        self.assertIn("git:github.com/wayne930242/pi-herdr-agents@5392355295c8e7e46859569bd2ad205c46817bda", text)
         self.assertNotIn('"npm:pi-herdr-agents@', text)
         self.assertEqual(self.calls.count(("install", str(self.repo / "scripts/install.sh"))), 1)
         self.assertEqual(self.smokes, 1)

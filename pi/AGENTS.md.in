@@ -12,7 +12,7 @@ Follow the user's chosen architecture and explain tradeoffs when they affect the
 
 For multi-step work, set a verifiable goal and track it with `todo`. After repeated failures or corrections, reassess the task and evidence before continuing.
 
-Check `.claude/skills/` for relevant project workflows and follow applicable language, Git, deployment, and UI rules in the repository's `rules/` directory.
+Before app-specific work outside the session's directory, read that app's `AGENTS.md`, or its `CLAUDE.md` when none exists. Check `.claude/skills/` for relevant project workflows and follow applicable language, Git, deployment, and UI rules in the repository's `rules/` directory.
 
 Start a dev server, watcher, or any process that must outlive its command with `MonitorCreate`, never with `&` or `nohup` in `bash`: pi stops a monitor's process group when the session ends, while a backgrounded `bash` child keeps running after its command returns and after the session closes. Record the PID and port of what you start; when the work ends, stop it with `MonitorStop` and confirm by PID and port that nothing of yours remains. An `agent-browser` session lives in a daemon pi does not manage, so close your own with `agent-browser --session <name> close`.
 
