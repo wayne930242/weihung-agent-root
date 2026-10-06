@@ -94,7 +94,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 24, settings
-    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@b2735123eb51862136667b5f829ce1343bb7f93b", settings
+    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@b76e5d84cf1f10b32d23efb60903ee00f2d2a051", settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
@@ -241,7 +241,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "git:github.com/wayne930242/pi-claude-bridge@old-commit" not in installed_packages, "an earlier revision of a git pin is retired"
-    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@b273512") for package in installed_packages), installed_packages
+    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@b76e5d8") for package in installed_packages), installed_packages
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
     assert json.loads((agent / "mcp.json").read_text()) == pi_mcp, "pi's mcp.json stays untouched"
     installed_mcp = json.loads((agent / "mcp-adapter.json").read_text())

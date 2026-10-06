@@ -27,10 +27,14 @@ PLAIN_NPM_PIN = re.compile(r"^([^/@:]+)@(.+)$")
 MAIN_BRANCH = "main"
 # npm pins `auto` leaves alone: bumping pi-herdr-agents also means re-deriving agents/ from its bundled roles.
 MANUAL_PINS = {"pi-herdr-agents"}
-# Fork pins follow an integration branch instead of the remote HEAD, so `outdated` and a named `bump` never move them
-# to the default branch. pi-herdr-agents is a fork pin until upstream merges giuseppecrj/pi-herdr-agents#66, #67, #68;
+# Fork pins follow an integration or PR branch instead of the remote HEAD, so `outdated` and a named `bump` never move
+# them to the default branch. pi-herdr-agents is a fork pin until upstream merges giuseppecrj/pi-herdr-agents#66, #67, #68;
 # then it returns to the npm release (and `auto` keeps leaving it alone through MANUAL_PINS).
-FORK_BRANCHES = {"github.com/wayne930242/pi-herdr-agents": "weihung/integration"}
+FORK_BRANCHES = {
+    "github.com/wayne930242/pi-claude-bridge": "weihung-integration",
+    "github.com/wayne930242/pi-herdr-agents": "weihung/integration",
+    "github.com/wayne930242/pi-quotas": "claude-bridge",
+}
 STATE_DIR = Path.home() / ".local/state/weihung-agent-root"
 STATE_FILE = STATE_DIR / "pi-autoupdate.json"
 LOG_FILE = STATE_DIR / "pi-autoupdate.log"
