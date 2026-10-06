@@ -60,7 +60,29 @@ if '--prefix' in args:
     # A company plugin whose `pi` calls fail must not stop the install or uninstall.
     write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{calls}'\ncase \"$*\" in */sdlc) exit 1;; esac\n", True)
     herdr_calls = base / "herdr-calls"
-    write(bin_dir / "herdr", f"#!/bin/sh\necho \"$@\" >> '{herdr_calls}'\n", True)
+    herdr_plugins = base / "herdr-plugins"
+    # Real herdr exits 0 after a failed plugin build and exits 1 when asked to remove a plugin it does not have,
+    # so the installed plugins decide what `plugin list` reports.
+    write(bin_dir / "herdr", f"""#!/bin/sh
+echo "$@" >> '{herdr_calls}'
+state='{herdr_plugins}'
+case "$1 $2" in
+  'plugin install')
+    if [ -n "${{TEST_HERDR_PLUGIN_BUILD_FAILS:-}}" ]; then
+      echo 'error: plugin build failed' >&2
+      echo 'Plugin was not installed.'
+      exit 0
+    fi
+    echo '{HERDR_WEB_UI_ID}' > "$state"
+    ;;
+  'plugin list')
+    if [ -f "$state" ]; then cat "$state"; else echo 'No plugins installed.'; fi
+    ;;
+  'plugin uninstall')
+    if [ -f "$state" ]; then rm -f "$state"; else echo "plugin not installed: $3" >&2; exit 1; fi
+    ;;
+esac
+""", True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
            "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"), "PI_SDLC_ROOT": str(base / "no-sdlc"),
            "TEST_TTT_FIXTURE": str(fixture), "PI_SKILLS_GIT": str(pi_skills), "TEST_NPM_CALLS": str(npm_calls)}
@@ -89,4 +111,16 @@ if '--prefix' in args:
     assert f"plugin uninstall {HERDR_WEB_UI_ID}" in herdr_calls.read_text().splitlines()
     assert f"remove {AAAAV_GIT}" in calls.read_text().splitlines()
     assert f"remove {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
+
+    # A plugin whose build fails is reported rather than taken for installed, and it does not stop the install.
+    failed_home = base / "home-plugin-build-fails"
+    failed_env = {**env, "HOME": str(failed_home), "TEST_HERDR_PLUGIN_BUILD_FAILS": "1"}
+    result = run("install.sh", failed_home, failed_env)
+    assert "herdr web ui is not installed" in result.stderr, result.stderr
+    assert AAAAV_GIT in json.loads((failed_home / ".pi/agent/settings.json").read_text())["packages"]
+    # Uninstall leaves a plugin that never installed alone; removing it fails and would stop the run.
+    logged = len(herdr_calls.read_text().splitlines())
+    run("uninstall.sh", failed_home, failed_env)
+    attempted = [line for line in herdr_calls.read_text().splitlines()[logged:] if line.startswith("plugin uninstall")]
+    assert not attempted, attempted
     print("pi fresh machine: pass")

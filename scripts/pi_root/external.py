@@ -6,11 +6,21 @@ import sys
 from pathlib import Path
 
 
-def run(args: list[str], home: Path) -> None:
+def environment(home: Path) -> dict[str, str]:
     env = os.environ.copy()
     env["HOME"] = str(home)
     env["PI_CODING_AGENT_DIR"] = str(home / ".pi/agent")
-    subprocess.run(args, check=True, env=env)
+    return env
+
+
+def run(args: list[str], home: Path) -> None:
+    subprocess.run(args, check=True, env=environment(home))
+
+
+def capture(args: list[str], home: Path) -> str:
+    """The stdout of a command that reports state; a failed call reports nothing."""
+    result = subprocess.run(args, capture_output=True, text=True, check=False, env=environment(home))
+    return result.stdout
 
 
 def run_company_plugin(action: str, home: Path, source: str) -> None:
