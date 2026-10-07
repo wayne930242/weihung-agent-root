@@ -1,37 +1,37 @@
 {
-  "default": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
+  "default": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
   "agents": {
-    "scout": "claude-bridge/claude-sonnet-5-5, openai-codex/gpt-6-luna",
-    "worker": "claude-bridge/claude-sonnet-5-5, openai-codex/gpt-6.1-sol",
-    "reviewer": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
-    "adversarial-reviewer": "claude-bridge/claude-opus-5-5, openai-codex/gpt-6.1-sol",
-    "visual-tester": "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6-astra",
-    "planner": "claude-bridge/claude-200k-opus-5-5, openai-codex/gpt-6-astra"
+    "scout": "claude-bridge/claude-sonnet-5-5, openai/gpt-6-luna",
+    "worker": "claude-bridge/claude-sonnet-5-5, openai/gpt-6.1-sol",
+    "reviewer": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
+    "adversarial-reviewer": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
+    "visual-tester": "claude-bridge/claude-200k-opus-5-5, openai/gpt-6-astra",
+    "planner": "claude-bridge/claude-200k-opus-5-5, openai/gpt-6-astra"
   },
   "tasks": {
     "coding": [
       "claude-bridge/claude-sonnet-5-5",
-      "openai-codex/gpt-6.1-sol"
+      "openai/gpt-6.1-sol"
     ],
     "review": [
       "claude-bridge/claude-opus-5-5",
-      "openai-codex/gpt-6.1-sol"
+      "openai/gpt-6.1-sol"
     ],
     "recon": [
       "claude-bridge/claude-sonnet-5-5",
-      "openai-codex/gpt-6-luna"
+      "openai/gpt-6-luna"
     ],
     "docs": [
       "claude-bridge/claude-haiku-4-5",
-      "openai-codex/gpt-6.1-sol"
+      "openai/gpt-6.1-sol"
     ],
     "qa": [
       "claude-bridge/claude-sonnet-5-5",
-      "openai-codex/gpt-6.1-sol"
+      "openai/gpt-6.1-sol"
     ],
     "architecture": [
       "claude-bridge/claude-200k-opus-5-5",
-      "openai-codex/gpt-6-astra"
+      "openai/gpt-6-astra"
     ]
   }
 }
