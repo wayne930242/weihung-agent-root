@@ -16,9 +16,10 @@ OPUS_1M = "claude-bridge/claude-opus-5-5"
 SONNET_1M = "claude-bridge/claude-sonnet-5-5"
 COMPACTION_OVERRIDES = {OPUS_1M: {"reserveTokens": 500_000}, SONNET_1M: {"reserveTokens": 500_000}}
 UI_SETTINGS = {"theme": "catppuccin-mocha", "editorPaddingX": 1, "collapseChangelog": True, "enableInstallTelemetry": False}
-# codebase-memory is no longer installed, but other agents' configs may still register its server;
-# keeping it disabled stops pi-mcp-adapter from importing it through host config discovery.
-MCP_DISABLED_SERVER = "codebase-memory-mcp"
+# install.sh puts codebase-memory-mcp in ~/.local/bin; registering it here replaces any copy imported from another
+# agent's config, so its tools stay behind the `mcp` gateway instead of joining every prompt.
+CODEBASE_MEMORY = "codebase-memory-mcp"
+CODEBASE_MEMORY_BINARY = Path(".local/bin/codebase-memory-mcp")
 MCP_SETTINGS = {"namespaceProxyTools": False}
 # Global research-hub; a project .mcp.json entry of the same name (knowledge-base) takes precedence.
 # Downloads use research-hub's default ~/downloads/papers.
@@ -143,23 +144,23 @@ def mcp_config_path(agent_dir: Path) -> Path:
 def apply_mcp(ctx: Context) -> None:
     path = mcp_config_path(ctx.agent_dir)
     mcp = read_json(path)
-    update_mcp(mcp, ctx.state)
+    update_mcp(mcp, ctx.state, ctx.home)
     write_json(path, mcp)
 
 
-def update_mcp(mcp: dict, state: State) -> None:
+def update_mcp(mcp: dict, state: State, home: Path) -> None:
     state.setdefault("previous_discovery", mcp.get("settings", {}).get("hostConfigDiscovery"))
     settings = mcp.setdefault("settings", {})
     state.setdefault("previous_mcp_settings", {key: deepcopy(settings[key]) for key in MCP_SETTINGS if key in settings})
     settings["hostConfigDiscovery"] = "on"
     settings.update(MCP_SETTINGS)
     servers = mcp.setdefault("mcpServers", {})
-    state.setdefault("previous_mcp_server", deepcopy(servers.get(MCP_DISABLED_SERVER)))
-    servers[MCP_DISABLED_SERVER] = {**servers.get(MCP_DISABLED_SERVER, {}), "disabled": True}
+    state.setdefault("previous_mcp_server", deepcopy(servers.get(CODEBASE_MEMORY)))
+    servers[CODEBASE_MEMORY] = {"command": str(home / CODEBASE_MEMORY_BINARY)}
     state.setdefault("previous_research_hub_server", deepcopy(servers.get(RESEARCH_HUB)))
     servers[RESEARCH_HUB] = deepcopy(RESEARCH_HUB_SERVER)
     state["installed_mcp_settings"] = dict(MCP_SETTINGS)
-    state["installed_mcp_server"] = deepcopy(servers[MCP_DISABLED_SERVER])
+    state["installed_mcp_server"] = deepcopy(servers[CODEBASE_MEMORY])
     state["installed_research_hub_server"] = deepcopy(servers[RESEARCH_HUB])
 
 
@@ -175,7 +176,7 @@ def restore_mcp(ctx: Context) -> None:
             mcp["settings"]["hostConfigDiscovery"] = previous
     restore_nested(mcp, "settings", state.get("installed_mcp_settings"), state.get("previous_mcp_settings"), tuple(MCP_SETTINGS))
     if "mcpServers" in mcp:
-        restore_nested(mcp["mcpServers"], MCP_DISABLED_SERVER, state.get("installed_mcp_server"), state.get("previous_mcp_server"), ("disabled",))
+        restore_value(mcp["mcpServers"], CODEBASE_MEMORY, state.get("installed_mcp_server"), state.get("previous_mcp_server"))
         restore_value(mcp["mcpServers"], RESEARCH_HUB, state.get("installed_research_hub_server"), state.get("previous_research_hub_server"))
         if not mcp["mcpServers"]:
             mcp.pop("mcpServers")

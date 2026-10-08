@@ -7,6 +7,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SKILLS_DIR="$REPO_ROOT/skills"
 RULES_DIR="$REPO_ROOT/rules"
 AGENTS_DIR="$REPO_ROOT/agents"
+CODEBASE_MEMORY_INSTALL_URL="https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh"
 
 TARGET_HOME="${HOME}"
 FORCE=0
@@ -21,6 +22,7 @@ Installs this repository's pi setup:
   - ~/.agents/skills/*/        links to skills/
   - ~/.pi/agent/rules          link to rules/
   - ~/.pi/agent/agents         link to agents/
+  - ~/.local/bin/codebase-memory-mcp when missing
   - everything scripts/pi-target.py install manages: pi itself, its Herdr
     integration, pi packages, aaaav, this repository's pi package, the
     generated ~/.pi/agent/AGENTS.md, model routing, UI settings,
@@ -135,6 +137,29 @@ retire_skill_copies() {
   done
 }
 
+install_codebase_memory_mcp() {
+  local bin_dir="$TARGET_HOME/.local/bin"
+
+  if [[ -x "$bin_dir/codebase-memory-mcp" ]]; then
+    log "OK: $bin_dir/codebase-memory-mcp"
+    return
+  fi
+
+  # The upstream installer downloads a large binary, so a sandboxed run skips it. pi-target.py registers the
+  # server with pi-mcp-adapter itself, which is why --skip-config keeps the installer out of other agents' configs.
+  if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then
+    log "Skipping codebase-memory-mcp: --skip-external installs configuration only."
+    return
+  fi
+
+  log "Installing codebase-memory-mcp from $CODEBASE_MEMORY_INSTALL_URL"
+  curl -fsSL "$CODEBASE_MEMORY_INSTALL_URL" | bash -s -- --dir "$bin_dir" --skip-config
+  if [[ ! -x "$bin_dir/codebase-memory-mcp" ]]; then
+    log "codebase-memory-mcp install did not produce $bin_dir/codebase-memory-mcp"
+    exit 1
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --home)
@@ -179,6 +204,7 @@ done
 install_link "$RULES_DIR" "$TARGET_HOME/.pi/agent/rules"
 install_link "$AGENTS_DIR" "$TARGET_HOME/.pi/agent/agents"
 
+install_codebase_memory_mcp
 
 pi_args=(install --home "$TARGET_HOME")
 if [[ "$SKIP_EXTERNAL" -eq 1 ]]; then pi_args+=(--skip-external); fi

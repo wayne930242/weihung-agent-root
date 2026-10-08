@@ -40,6 +40,8 @@ In Herdr, use `dispatch_control` for dispatches and `intercom` for related main 
 
 Use LSP navigation (`read_symbol`, `read_enclosing`) for symbols and `lens_diagnostics` for type checks after edits, and ast-grep for structural search and pattern rewrites. Use text search for prose, configuration, shell scripts, and exact literals.
 
+In a large project, search code through the `codebase-memory-mcp` server behind `mcp` before grepping: index the repository once, then use its graph search and call-path tools to find symbols, callers, and routes.
+
 ## Memory
 
 Search with `memory_search` before assuming something was never recorded. When the user asks you to remember something or corrects you, save it with `memory_write`: `global` for cross-project facts, `project` only for conventions the repository ships. Remove an outdated entry with `memory_forget`. Rules for every project go through `reflecting-to-root`, not memory.

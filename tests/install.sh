@@ -92,6 +92,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert all(word not in text for word in ("@shared/", "/codex:rescue"))
     assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
     assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
+    assert "In a large project, search code through the `codebase-memory-mcp` server" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 24, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@166d49e97bc3c298ed7f9c3aefa9c8c54d36bae5", settings
@@ -118,7 +119,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "powerline" not in settings and "npm:pi-open-tui@0.3.11" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp-adapter.json").read_text())
     assert mcp["settings"] == {"hostConfigDiscovery": "on", "namespaceProxyTools": False}, mcp
-    assert mcp["mcpServers"]["codebase-memory-mcp"] == {"disabled": True}, mcp
+    assert mcp["mcpServers"]["codebase-memory-mcp"] == {"command": str(home.resolve() / ".local/bin/codebase-memory-mcp")}, mcp
     assert mcp["mcpServers"]["research-hub"]["args"] == ["-y", "thesis-toolkit@0.1.3", "mcp", "research-hub"], mcp
     assert set(mcp["mcpServers"]) == {"codebase-memory-mcp", "research-hub"}, mcp
     lens = json.loads((home / ".pi-lens/config.json").read_text())
@@ -245,7 +246,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
     assert json.loads((agent / "mcp.json").read_text()) == pi_mcp, "pi's mcp.json stays untouched"
     installed_mcp = json.loads((agent / "mcp-adapter.json").read_text())
-    assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": "cbm", "disabled": True}, installed_mcp
+    assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": str(home.resolve() / ".local/bin/codebase-memory-mcp")}, installed_mcp
     assert installed_mcp["settings"]["namespaceProxyTools"] is False, installed_mcp
     assert json.loads(lens_path.read_text())["tools"]["symbol_search"] == {"enabled": False}
     installed_open_tui = json.loads(open_tui_path.read_text())
