@@ -1,6 +1,6 @@
 """Every pinned package source; `scripts/pi-pins.py` rewrites the versions in this file, so it imports nothing."""
 
-BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@b76e5d84cf1f10b32d23efb60903ee00f2d2a051"
+BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@166d49e97bc3c298ed7f9c3aefa9c8c54d36bae5"
 # Fork branch of upstream PR latentminds-ai/pi-quotas#51 (claude-bridge support); switch to
 # npm:@latentminds/pi-quotas once released.
 QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e8de1f856f7ee6b"
