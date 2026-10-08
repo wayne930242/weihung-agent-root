@@ -5,8 +5,8 @@
     "worker": "claude-bridge/claude-sonnet-5-5, openai/gpt-6.1-sol",
     "reviewer": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
     "adversarial-reviewer": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
-    "visual-tester": "claude-bridge/claude-200k-opus-5-5, openai/gpt-6-astra",
-    "planner": "claude-bridge/claude-200k-opus-5-5, openai/gpt-6-astra"
+    "visual-tester": "claude-bridge/claude-opus-5-5, openai/gpt-6-astra",
+    "planner": "claude-bridge/claude-opus-5-5, openai/gpt-6-astra"
   },
   "tasks": {
     "coding": [
@@ -22,7 +22,7 @@
       "openai/gpt-6-luna"
     ],
     "docs": [
-      "claude-bridge/claude-haiku-4-5",
+      "claude-bridge/claude-haiku-5-5",
       "openai/gpt-6.1-sol"
     ],
     "qa": [
@@ -30,7 +30,7 @@
       "openai/gpt-6.1-sol"
     ],
     "architecture": [
-      "claude-bridge/claude-200k-opus-5-5",
+      "claude-bridge/claude-opus-5-5",
       "openai/gpt-6-astra"
     ]
   }
