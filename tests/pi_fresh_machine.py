@@ -10,9 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
 STRAW_BOSS_GIT = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', (ROOT / "scripts/pi_root/pins.py").read_text()).group(1)
-PINS = (ROOT / "scripts/pi_root/pins.py").read_text()
-HERDR_WEB_UI_ID, HERDR_WEB_UI_REPO, HERDR_WEB_UI_REF = (re.search(rf'{name} = "([^"]+)"', PINS).group(1)
-                                                     for name in ("HERDR_WEB_UI_ID", "HERDR_WEB_UI_REPO", "HERDR_WEB_UI_REF"))
+HERDR_WEB_UI_ID = "devswha.herdr-web-ui"
 
 
 def write(path, content, executable=False):
@@ -61,20 +59,12 @@ if '--prefix' in args:
     write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{calls}'\ncase \"$*\" in */sdlc) exit 1;; esac\n", True)
     herdr_calls = base / "herdr-calls"
     herdr_plugins = base / "herdr-plugins"
-    # Real herdr exits 0 after a failed plugin build and exits 1 when asked to remove a plugin it does not have,
-    # so the installed plugins decide what `plugin list` reports.
+    # Real herdr exits 1 when asked to remove a plugin it does not have, so the installed plugins decide what
+    # `plugin list` reports.
     write(bin_dir / "herdr", f"""#!/bin/sh
 echo "$@" >> '{herdr_calls}'
 state='{herdr_plugins}'
 case "$1 $2" in
-  'plugin install')
-    if [ -n "${{TEST_HERDR_PLUGIN_BUILD_FAILS:-}}" ]; then
-      echo 'error: plugin build failed' >&2
-      echo 'Plugin was not installed.'
-      exit 0
-    fi
-    echo '{HERDR_WEB_UI_ID}' > "$state"
-    ;;
   'plugin list')
     if [ -f "$state" ]; then cat "$state"; else echo 'No plugins installed.'; fi
     ;;
@@ -97,7 +87,7 @@ esac
     assert f"install {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
     assert STRAW_BOSS_GIT in json.loads((agent / "settings.json").read_text())["packages"]
     assert "install -g playwriter@0.7.0" in npm_calls.read_text().splitlines()
-    assert f"plugin install {HERDR_WEB_UI_REPO} --ref {HERDR_WEB_UI_REF} --yes" in herdr_calls.read_text().splitlines()
+    assert not [line for line in herdr_calls.read_text().splitlines() if line.startswith("plugin ")]
 
     plugin = base / "plugins/sdlc"
     write(plugin / "package.json", "{}")
@@ -108,19 +98,21 @@ esac
     result = run("uninstall.sh", home, env)
     assert f"could not run pi remove for {plugin.resolve()}" in result.stderr, result.stderr
     assert "uninstall -g playwriter" in npm_calls.read_text().splitlines()
-    assert f"plugin uninstall {HERDR_WEB_UI_ID}" in herdr_calls.read_text().splitlines()
     assert f"remove {AAAAV_GIT}" in calls.read_text().splitlines()
     assert f"remove {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
 
-    # A plugin whose build fails is reported rather than taken for installed, and it does not stop the install.
-    failed_home = base / "home-plugin-build-fails"
-    failed_env = {**env, "HOME": str(failed_home), "TEST_HERDR_PLUGIN_BUILD_FAILS": "1"}
-    result = run("install.sh", failed_home, failed_env)
-    assert "herdr web ui is not installed" in result.stderr, result.stderr
-    assert AAAAV_GIT in json.loads((failed_home / ".pi/agent/settings.json").read_text())["packages"]
-    # Uninstall leaves a plugin that never installed alone; removing it fails and would stop the run.
-    logged = len(herdr_calls.read_text().splitlines())
-    run("uninstall.sh", failed_home, failed_env)
-    attempted = [line for line in herdr_calls.read_text().splitlines()[logged:] if line.startswith("plugin uninstall")]
-    assert not attempted, attempted
+    # herdr web ui is retired: an earlier install that added the plugin removes it once, one the user had stays.
+    marker = home / ".pi/agent/.weihung-agent-root.json"
+    for preinstalled, removed in ((False, True), (True, False)):
+        run("install.sh", home, env)
+        write(herdr_plugins, f"{HERDR_WEB_UI_ID}\n")
+        state = json.loads(marker.read_text())
+        marker.write_text(json.dumps({**state, "herdr_web_ui_preinstalled": preinstalled}))
+        logged = len(herdr_calls.read_text().splitlines())
+        run("install.sh", home, env)
+        uninstalled = f"plugin uninstall {HERDR_WEB_UI_ID}" in herdr_calls.read_text().splitlines()[logged:]
+        assert uninstalled == removed, (preinstalled, uninstalled)
+        assert "herdr_web_ui_preinstalled" not in json.loads(marker.read_text())
+        run("uninstall.sh", home, env)
+        herdr_plugins.unlink(missing_ok=True)
     print("pi fresh machine: pass")

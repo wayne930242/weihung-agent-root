@@ -1,7 +1,6 @@
 """Pi packages: identity, the packages this repository owns, and the install step that also brings the tools they need."""
 
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -10,7 +9,7 @@ from . import external, resources
 from .context import Context, State
 from .jsonfile import read_json, write_json
 from .paths import AAAAV, COMPANY_PLUGINS, HERDR_AGENTS_ROOT_VARIABLE, LOCAL_PACKAGE
-from .pins import (AAAAV_GIT, HERDR_AGENTS_SOURCE, HERDR_WEB_UI_ID, HERDR_WEB_UI_REF, HERDR_WEB_UI_REPO, PACKAGES, PINNED_GIT,
+from .pins import (AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT,
                    PLAYWRITER, RETIRED_SOURCES)
 
 Package = str | dict
@@ -114,30 +113,18 @@ def plan(ctx: Context) -> None:
     state.setdefault("integration_installed", not ctx.first_install)
 
 
-# herdr's server keeps the minimal PATH of the app that launched it, so its plugins only find tools in these directories.
-HERDR_SERVER_PATH = "/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
+# herdr web ui was the remote control until it was retired; an install that added the plugin removes it once.
+HERDR_WEB_UI_ID = "devswha.herdr-web-ui"
 
 
-def herdr_web_ui_installed(home: Path) -> bool:
-    return HERDR_WEB_UI_ID in external.capture(["herdr", "plugin", "list"], home)
-
-
-def install_herdr_web_ui(ctx: Context) -> None:
-    home, state = ctx.home, ctx.state
-    if "herdr_web_ui_preinstalled" not in state:
-        state["herdr_web_ui_preinstalled"] = herdr_web_ui_installed(home)
-        ctx.save()
-    external.run(["herdr", "plugin", "install", HERDR_WEB_UI_REPO, "--ref", HERDR_WEB_UI_REF, "--yes"], home)
-    missing = [tool for tool in ("bun", "node") if shutil.which(tool, path=HERDR_SERVER_PATH) is None]
-    if missing:
-        links = " && ".join(f"sudo ln -s \"$(command -v {tool})\" /usr/local/bin/{tool}" for tool in missing)
-        print(f"herdr web ui needs {', '.join(missing)} on herdr's PATH ({HERDR_SERVER_PATH}); run: {links}", file=sys.stderr)
-    # `herdr plugin install` exits 0 after a failed plugin build, so the plugin list decides whether it arrived.
-    # The remote control is optional: pi installs without it, and remote-control.ts reports it missing per session.
-    if not herdr_web_ui_installed(home):
-        print(f"herdr web ui is not installed: `herdr plugin install {HERDR_WEB_UI_REPO}` left {HERDR_WEB_UI_ID} out, "
-              "and its build output above names what to fix (its preflight wants Bun 1.4 or newer; `bun upgrade`). "
-              "/rc and the remote control stay unavailable until it installs; continuing.", file=sys.stderr)
+def retire_herdr_web_ui(ctx: Context) -> None:
+    if "herdr_web_ui_preinstalled" not in ctx.state:
+        return
+    # `herdr plugin uninstall` fails on a plugin that is not there, which an install with a failed build left behind.
+    if not ctx.state["herdr_web_ui_preinstalled"] and HERDR_WEB_UI_ID in external.capture(["herdr", "plugin", "list"], ctx.home):
+        external.run(["herdr", "plugin", "uninstall", HERDR_WEB_UI_ID], ctx.home)
+    ctx.state.pop("herdr_web_ui_preinstalled")
+    ctx.save()
 
 
 def apply(ctx: Context) -> None:
@@ -157,7 +144,7 @@ def apply(ctx: Context) -> None:
         external.run(["herdr", "integration", "install", "pi"], home)
         state["integration_installed"] = True
         ctx.save()
-        install_herdr_web_ui(ctx)
+        retire_herdr_web_ui(ctx)
         for package in pinned:
             external.run(["pi", "install", package_source(package)], home)
         for package in state["retired_packages"]:
@@ -221,9 +208,7 @@ def restore(ctx: Context) -> None:
                     external.run(["pi", "remove", package_source(package)], home)
         if state.get("integration_installed", True):
             external.run(["herdr", "integration", "uninstall", "pi"], home)
-        # `herdr plugin uninstall` fails on a plugin that is not there, which an install with a failed build leaves behind.
-        if not state.get("herdr_web_ui_preinstalled", True) and herdr_web_ui_installed(home):
-            external.run(["herdr", "plugin", "uninstall", HERDR_WEB_UI_ID], home)
+        retire_herdr_web_ui(ctx)
         if not state.get("playwriter_preinstalled", True):
             external.run(["npm", "uninstall", "-g", "playwriter"], home)
     settings = read_json(settings_path)
