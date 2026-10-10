@@ -1,37 +1,31 @@
 {
-  "default": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
+  "default": "claude-bridge/claude-opus-5-5",
   "agents": {
-    "scout": "claude-bridge/claude-sonnet-5-5, openai/gpt-6-luna",
-    "worker": "claude-bridge/claude-sonnet-5-5, openai/gpt-6.1-sol",
-    "reviewer": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
-    "adversarial-reviewer": "claude-bridge/claude-opus-5-5, openai/gpt-6.1-sol",
-    "visual-tester": "claude-bridge/claude-sonnet-5-5, openai/gpt-6-astra",
-    "planner": "claude-bridge/claude-opus-5-5, openai/gpt-6-astra"
+    "scout": "claude-bridge/claude-sonnet-5-5",
+    "worker": "claude-bridge/claude-sonnet-5-5",
+    "reviewer": "claude-bridge/claude-opus-5-5",
+    "adversarial-reviewer": "claude-bridge/claude-opus-5-5",
+    "visual-tester": "claude-bridge/claude-sonnet-5-5",
+    "planner": "claude-bridge/claude-opus-5-5"
   },
   "tasks": {
     "coding": [
-      "claude-bridge/claude-sonnet-5-5",
-      "openai/gpt-6.1-sol"
+      "claude-bridge/claude-sonnet-5-5"
     ],
     "review": [
-      "claude-bridge/claude-opus-5-5",
-      "openai/gpt-6.1-sol"
+      "claude-bridge/claude-opus-5-5"
     ],
     "recon": [
-      "claude-bridge/claude-sonnet-5-5",
-      "openai/gpt-6-luna"
+      "claude-bridge/claude-sonnet-5-5"
     ],
     "docs": [
-      "claude-bridge/claude-haiku-5-5",
-      "openai/gpt-6.1-sol"
+      "claude-bridge/claude-sonnet-5-5"
     ],
     "qa": [
-      "claude-bridge/claude-sonnet-5-5",
-      "openai/gpt-6.1-sol"
+      "claude-bridge/claude-sonnet-5-5"
     ],
     "architecture": [
-      "claude-bridge/claude-opus-5-5",
-      "openai/gpt-6-astra"
+      "claude-bridge/claude-opus-5-5"
     ]
   }
 }
