@@ -94,8 +94,10 @@ with tempfile.TemporaryDirectory() as directory:
     assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
     assert "In a large project, search code through the `codebase-memory-mcp` server" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
-    assert len(settings["packages"]) == 24, settings
+    assert len(settings["packages"]) == 25, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@166d49e97bc3c298ed7f9c3aefa9c8c54d36bae5", settings
+    assert settings["packages"][1:3] == ["git:github.com/wayne930242/pi-herdr-agents@1616f37ab270b22caefd8cccb1f7bc3f793e67b2",
+                                         {"source": "npm:pi-herdr-roles@0.1.0", "skills": ["!orchestrate"]}], settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry

@@ -25,14 +25,15 @@ NPM_PIN = re.compile(r"^(npm:(?:@[^/@]+/)?[^/@]+)@(.+)$")
 GIT_PIN = re.compile(r"^(git:[^@]+)@([0-9a-f]{7,40})$")
 PLAIN_NPM_PIN = re.compile(r"^([^/@:]+)@(.+)$")
 MAIN_BRANCH = "main"
-# npm pins `auto` leaves alone: bumping pi-herdr-agents also means re-deriving agents/ from its bundled roles.
-MANUAL_PINS = {"pi-herdr-agents"}
+# npm pins `auto` leaves alone: bumping pi-herdr-agents or pi-herdr-roles also means re-deriving agents/ from the pack's
+# roles, and a 0.x pi-herdr-roles bump can change the planner role and the /plan skill.
+MANUAL_PINS = {"pi-herdr-agents", "pi-herdr-roles"}
 # Fork pins follow an integration or PR branch instead of the remote HEAD, so `outdated` and a named `bump` never move
-# them to the default branch. pi-herdr-agents is a fork pin until upstream merges giuseppecrj/pi-herdr-agents#66, #67, #68;
+# them to the default branch. pi-herdr-agents is a fork pin until upstream releases giuseppecrj/pi-herdr-agents#84;
 # then it returns to the npm release (and `auto` keeps leaving it alone through MANUAL_PINS).
 FORK_BRANCHES = {
     "github.com/wayne930242/pi-claude-bridge": "weihung-integration",
-    "github.com/wayne930242/pi-herdr-agents": "weihung/integration",
+    "github.com/wayne930242/pi-herdr-agents": "weihung/v3-integration",
     "github.com/wayne930242/pi-quotas": "claude-bridge",
 }
 STATE_DIR = Path.home() / ".local/state/weihung-agent-root"
@@ -163,8 +164,9 @@ def bump(names: list[str]) -> None:
     if not bumped:
         print("Nothing to bump.")
         return
-    if any(name.endswith("pi-herdr-agents") for name in bumped):
-        print("pi-herdr-agents changed: diff its agents/ against ours, re-derive any changed role, and update the pin quoted in README.md.")
+    if any(name.endswith(("pi-herdr-agents", "pi-herdr-roles")) for name in bumped):
+        print("pi-herdr-agents or pi-herdr-roles changed: diff the pi-herdr-roles roles/ against our agents/, re-derive any changed role, "
+              "compare its skills/orchestrate with ours, and update the pins quoted in README.md.")
     if not names:
         print("Git pins were left alone; name them explicitly to bump them.")
     print("Review `git diff`, run the tests, then `bash scripts/install.sh` and reload pi.")

@@ -7,11 +7,15 @@ QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e
 WEB_ACCESS_SOURCE = "npm:pi-web-access@0.35.0"
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.4.1"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
-STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@f27d35a283fc61def79159419de13a5311ffa41d"
-# Fork pin of giuseppecrj/pi-herdr-agents: upstream v2.0.5 plus PRs #66, #67, #68 and a local orchestrate trim (branch weihung/integration).
-# Once upstream merges them, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
+STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@136341444b51305bab4581380c68280050ff24b6"
+# Fork pin of giuseppecrj/pi-herdr-agents: upstream v3.2.0 plus PR #84 (branch weihung/v3-integration).
+# Once upstream releases #84, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
 # entry and the FORK_BRANCHES entry in scripts/pi-pins.py, and move "npm:pi-herdr-agents" out of RETIRED_SOURCES.
-HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@bdf34d567e3c99ab77c435b48a32ede47f0dea55"
+HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@1616f37ab270b22caefd8cccb1f7bc3f793e67b2"
+# The pi-herdr-agents v3 role pack: planner, /plan, and /skill:plan. Its orchestrate skill is filtered out because
+# skills/orchestrate owns our trimmed version. Pinned by hand (MANUAL_PINS) since a 0.x bump can change the planner.
+HERDR_ROLES_SOURCE = "npm:pi-herdr-roles@0.1.0"
+HERDR_ROLES_PACKAGE = {"source": HERDR_ROLES_SOURCE, "skills": ["!orchestrate"]}
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 PINNED_GIT = {
     BRIDGE_SOURCE: ("git:github.com/wayne930242/pi-claude-bridge@",),
@@ -32,6 +36,7 @@ CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extension
 PACKAGES = [
     BRIDGE_SOURCE,
     HERDR_AGENTS_SOURCE,
+    HERDR_ROLES_PACKAGE,
     STRAW_BOSS_SOURCE,
     "npm:pi-mcp-adapter@5.0.0",
     "npm:pi-intercom@0.16.0",
