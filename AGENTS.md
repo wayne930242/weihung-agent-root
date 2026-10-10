@@ -22,7 +22,7 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 - Source changes go through `aaaav-do` with an Alignment and Reality anchor before the first production edit.
 - Keep the user-root layer thin: manage only behavior that is stable across projects and worth versioning. Machine credentials, login state, and project-specific workflows stay outside this repository.
 - Installers never overwrite user files silently. A conflict fails unless `--force` is passed, which moves the old target to `~/.local/state/weihung-agent-root/backups/`, and uninstall restores what install replaced.
-- Run the tests that cover a change before committing: `bash tests/install.sh`, `bash tests/uninstall.sh`, `python3 tests/<name>.py`, and `node --experimental-strip-types --test tests/<name>.mjs`. Exercise installer changes with `--home` pointing at a temporary directory before running them on the real home.
+- Before committing, run the quick tests that assert the files you changed (`python3 tests/<name>.py`, `node --experimental-strip-types --test tests/<name>.mjs`). Run the end-to-end installer tests (`bash tests/install.sh`, `bash tests/uninstall.sh`, `tests/pi_fresh_machine.py`) only when the install or uninstall flow, the state file, or what gets written to the real home changes in substance; they take minutes, and a small change does not need them.
 - After changing `pi/AGENTS.md.in` or `pi/herdr-agents-models.json`, run `bash scripts/install.sh` and reload pi. Change role models in `pi/herdr-agents-models.json`, not in the home config: an install stops when the home `models` was edited since the last install.
 
 ## Commits
