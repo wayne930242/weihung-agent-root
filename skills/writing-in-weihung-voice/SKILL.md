@@ -35,8 +35,10 @@ The text should read as Wei-Hung wrote it: native Taiwanese Traditional Chinese,
 - **Reconstruct before criticising**: state the other view in its strongest form, grant what it gets right (「這方案的優點是…，缺點是…」), then intervene.
 - **Own the claim**: 「我主張」「我認為」「初步來說…進一步來說」 where he actually commits. Hedges follow the evidence — 可能、似乎、至少、不見得、條件句 stay when the stronger claim does not hold.
 - **Dry asides are allowed** in parentheses, sparingly: 「（開玩笑的）」「（除非你是客服人員）」. Humour, bold, quotes, lists, and tables are tools used when they help, never quotas.
+- **Short, open paragraphs.** One point per paragraph, usually one to three sentences. Let a turning point or a key claim stand alone as a one-line paragraph. Prefer concise sentences that land firmly over long, dense paragraphs; merging sections never means merging paragraphs.
 - **Stop when the work is done.** The last paragraph states how far the piece got, or ends on the practical point. No recap, uplift, moral, or lyrical closing.
-- **Technical terms** keep their original form, glossed once in parentheses where the reader needs it: 語言行動（speech act）、智慧體（agent）.
+- **Technical terms** are written in Chinese with the original once in parentheses at first mention, then Chinese only: 語言行動（speech act）、智慧體（agent）. Keep acronyms such as AI and LLM as they are; never mix English words into a Chinese sentence otherwise.
+- **Keep the original of anything that has one**: book and article titles, quotations, and coined phrases get the original in parentheses after the Chinese at first mention, e.g. 《機率的哲學論》（*Essai philosophique sur les probabilités*）; a long quotation keeps its full original in the footnote.
 - **Other authors keep their voice** in translations, quotations, and faithful summaries.
 
 ## Chinese rules
