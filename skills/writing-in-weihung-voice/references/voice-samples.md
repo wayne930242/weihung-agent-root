@@ -1,6 +1,6 @@
 # Voice Samples
 
-Excerpts from Wei-Hung's published posts (`wayne930242/blog`, `src/content/posts/`), each labelled with the move it shows. Match the moves, not the words: reusing these phrases is surface imitation.
+Excerpts from Wei-Hung's published posts (`wayne930242/knowledge-base`, `blog/src/content/posts/`), each labelled with the move it shows. Match the moves, not the words: reusing these phrases is surface imitation.
 
 ## Opening on a concrete case, then a claim
 
@@ -76,3 +76,31 @@ From 〈AI 體又如何？〉:
 > 本來，AI 動搖的就不只是文風，也是文字長久以來的稀缺性，以及依此而來的，我們公共參與的習慣。如今我們得想想，我們該如何適應－－我們得自己好好想想。
 
 The conclusion restates what the argument established and stops; the last line is short and hands the question back without uplift.
+
+## How he rewrote our draft
+
+From 〈拉普拉斯的語言機器——AI 侵略與學術倫理危機〉 (`phlosophy/comments/拉普拉斯的語言機器-ai-侵略與學術危機.md`, 2026-10-12). We drafted it; he rewrote it before publishing. Each pair shows a correction to make before he has to.
+
+An abstract justification became an everyday analogy:
+
+> Ours: 它把倫理問題押在技術水準上，模型再進步一代，論點就失效，我們又得重新吵一次。
+> His: 用技術答案回答倫理問題，就像是拿「槍手考得不夠好」來回答為什麼反對代考。
+
+A careful concession became a personal, slightly self-mocking image:
+
+> Ours: 這種事後認可是我的能力，我得認得出好東西；它同時也是我受到幫助的實績。
+> His: 我第一次看到維根斯坦的文章，我可能在心中吶喊「這就是我的想法」，但我總不能無恥地說你看我的才華和他差不多。
+
+Standalone slogan lines (「作者從創作者，退成了擔保者。」「隱瞞拿紅利，揭露沒好處。」「這是『真理越多越好』漏算的成本。」) were all deleted; the paragraph around each already made the point.
+
+A firm stance became a conditional, systemic one:
+
+> Ours: 所以我支持 PPA 的禁令。它保守，也沒解決鑑識的問題，但它在很大程度上守住了承諾。
+> His: PPA 的政策不見得真的很糟，它可能適度包容了 AI 輔助，並要求人類至少應該「做點事」。但我想指出，這項政策要帶來好的影響，前提恰好是對 AI 態度更開放的學界。
+
+The ending stopped claiming authority:
+
+> Ours: 等到品質夠了才開始談……到那時再問作者的學術榮譽在哪裡，恐怕也輪不到學界回答。
+> His: 這篇文章只想拋磚引玉。……我提出的擔保只是一個可能的方向，希望能引來更多人一起討論。
+
+He also cut a whole section of ours (a four-layer model of the writing loop), a paragraph of statistical-mechanics exposition (kept as one parenthetical), a Brandom reference he had not asked for, and a paragraph defending the other side that the argument did not need. Section headings became questions: 〈為什麼工程師不隱瞞使用 AI？〉〈更嚴格的限制和倫理有用嗎？〉.
