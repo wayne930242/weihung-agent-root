@@ -14,7 +14,7 @@ The text should read as Wei-Hung wrote it: native Taiwanese Traditional Chinese,
 - **Revise or review**: read the whole text, then steps 1 and 5; report before changing anything substantive.
 - **Polish in his voice**: steps 5 and 6 on the whole text; keep every claim and every source.
 - **Proofread**: wording, punctuation, terminology, and Markdown only; flag argument or structure problems instead of fixing them.
-- **Short prose** (a message, a note entry, a summary): the voice and Chinese rules below apply; skip the steps.
+- **Short prose** (a message, a note entry, a summary, a box or paragraph added to a longer text): skip steps 1–5; before handing it over, read every sentence against the Chinese rules below and do step 6.
 
 ## Steps
 
@@ -54,9 +54,9 @@ The text should read as Wei-Hung wrote it: native Taiwanese Traditional Chinese,
 ## Chinese rules
 
 - Native Taiwanese Traditional Chinese, never translated-sounding and never Simplified forms or Mainland usage.
-- State relations only where they hold: 並、也、而、則、因此、然而、進而、也就是說、總結來說 only with the matching logical relation; otherwise state it plainly or split the sentence.
-- Contrast only where the argument turns on it (「讓他們困擾的是垃圾，而不是 AI」); drop contrast set-ups that only add rhythm. Split parallel phrases whose subjects or relations differ instead of forcing a triplet.
-- Say what the relation is: replace 接上、接得上、對接、串接、銜接 between ideas with the actual relation — 考慮哪些實例、由哪些前提推出、支持哪項主張、如何回答問題.
+- Mark each relation a sentence holds to what precedes it, with the connective that matches: 像是、例如 for an instance of a general claim; 但、卻、不過、反而 for contrast, concession, or an overturned expectation; 所以、因此 for a consequence; 進而 for a further step; 也就是說 for a restatement; 總結來說 for a summary; 甚至 for escalation. Bare juxtaposition leaves the reader to infer the relation and flattens the argument. Where no connective fits the actual relation, state it plainly or split the sentence.
+- Contrast only where the argument turns on it (「讓他們困擾的是垃圾，而不是 AI」); drop contrast set-ups that only add rhythm, and pre-emptive denials of claims no reader made (「X 不是新詞」「這沒有嚴格界線」). Split parallel phrases whose subjects or relations differ instead of forcing a triplet.
+- Say what the relation is: a colloquial action verb standing in for a relation between ideas (接上、對接、銜接、撐、扛、卡在、吃掉、打掉) hides the argument; write the actual relation — 考慮哪些實例、由哪些前提推出、支持哪項主張、反駁哪個前提、如何回答問題.
 - Use 「規則摘要」 or 「規則整理」 for rule summaries, and a measure word other than 套 for systems and methods.
 - Leave out stock AI phrasing: filler transitions (此外、值得注意的是), empty intensifiers, poetic clichés, 彷彿-style hedges.
 - Cut words that add nothing: a redundant 了 or 過 after a verb (「前面說」, 「寫二十萬行程式」).
