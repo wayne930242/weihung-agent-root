@@ -53,7 +53,10 @@ def apply_ui(ctx: Context) -> None:
     state.setdefault("previous_terminal", deepcopy(settings.get("terminal")))
     state.setdefault("previous_panes", deepcopy(config.get("panes")))
     settings.update(UI_SETTINGS)
-    settings.setdefault("terminal", {})["showTerminalProgress"] = True
+    terminal = settings.setdefault("terminal", {})
+    terminal["showTerminalProgress"] = True
+    # pi treats TERM_PROGRAM=herdr as unable to show images, but herdr forwards kitty graphics to Ghostty.
+    terminal["images"] = "kitty"
     disable_builtin_mcp(settings, state)
     config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
     write_json(ctx.settings_path, settings)
@@ -67,7 +70,7 @@ def restore_ui(ctx: Context) -> None:
     state = ctx.state
     settings = read_json(ctx.settings_path)
     restore_keys(state, "ui_settings", settings, UI_SETTINGS)
-    restore_nested(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress",))
+    restore_nested(settings, "terminal", state.get("installed_terminal"), state.get("previous_terminal"), ("showTerminalProgress", "images"))
     restore_builtin_mcp(settings, state)
     write_json(ctx.settings_path, settings)
     config = read_json(ctx.herdr_config_path)

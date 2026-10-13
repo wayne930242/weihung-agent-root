@@ -117,6 +117,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert settings["editorPaddingX"] == 1, settings
     assert settings["collapseChangelog"] is True, settings
     assert settings["terminal"]["showTerminalProgress"] is True, settings
+    assert settings["terminal"]["images"] == "kitty", settings
     assert settings["compaction"] == {"modelOverrides": {"claude-bridge/claude-opus-5-5": {"reserveTokens": 500000}, "claude-bridge/claude-sonnet-5-5": {"reserveTokens": 500000}}}, settings
     assert "powerline" not in settings and "npm:pi-open-tui@0.3.11" in settings["packages"], settings
     mcp = json.loads((home / ".pi/agent/mcp-adapter.json").read_text())
