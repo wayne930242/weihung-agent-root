@@ -58,8 +58,8 @@ The text should read as Wei-Hung wrote it: native Taiwanese Traditional Chinese,
 - Contrast only where the argument turns on it (「讓他們困擾的是垃圾，而不是 AI」); drop contrast set-ups that only add rhythm, and pre-emptive denials of claims no reader made (「X 不是新詞」「這沒有嚴格界線」). Split parallel phrases whose subjects or relations differ instead of forcing a triplet.
 - Say what the relation is: a colloquial action verb standing in for a relation between ideas (接上、對接、銜接、撐、扛、卡在、吃掉、打掉) hides the argument; write the actual relation — 考慮哪些實例、由哪些前提推出、支持哪項主張、反駁哪個前提、如何回答問題.
 - Use 「規則摘要」 or 「規則整理」 for rule summaries, and a measure word other than 套 for systems and methods.
-- Leave out stock AI phrasing: filler transitions (此外、值得注意的是), empty intensifiers, poetic clichés, 彷彿-style hedges.
-- Cut words that add nothing: a redundant 了 or 過 after a verb (「前面說」, 「寫二十萬行程式」).
+- Leave out stock AI phrasing (filler transitions such as 此外、值得注意的是, empty intensifiers, poetic clichés, 彷彿-style hedges) and words that add nothing, like a redundant 了 or 過 after a verb (「前面說」).
+- Give a predicate its full Chinese frame instead of attaching a bare clause: a judgment takes 「是……的」 (「卻完全合理」→「卻是完全合理的」), and an embedded question after 是 takes a colon and a question mark (「問題是哪裡不好」→「問題是：哪裡不好？」), because a bare clause reads as translated.
 - A correction states the right content directly; the path to it belongs in working notes, not the body.
 - Keep his own wording and idioms as he wrote them.
 - In fiction, show emotion through action, body, and setting instead of naming it.
