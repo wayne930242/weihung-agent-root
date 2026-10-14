@@ -11,7 +11,7 @@ STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@7addb06e6a9703d86d200
 # Fork pin of giuseppecrj/pi-herdr-agents: upstream v3.2.0 plus PR #84 (branch weihung/v3-integration).
 # Once upstream releases #84, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
 # entry and the FORK_BRANCHES entry in scripts/pi-pins.py, and move "npm:pi-herdr-agents" out of RETIRED_SOURCES.
-HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@112d6c4dbf2082141afe17a517eb02ad8ba9bbfc"
+HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@1616f37ab270b22caefd8cccb1f7bc3f793e67b2"
 # The pi-herdr-agents v3 role pack: planner, /plan, and /skill:plan. Its orchestrate skill is filtered out because
 # skills/orchestrate owns our trimmed version. Pinned by hand (MANUAL_PINS) since a 0.x bump can change the planner.
 HERDR_ROLES_SOURCE = "npm:pi-herdr-roles@0.1.0"
