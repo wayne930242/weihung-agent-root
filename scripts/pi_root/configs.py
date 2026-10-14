@@ -58,7 +58,9 @@ def apply_ui(ctx: Context) -> None:
     # pi treats TERM_PROGRAM=herdr as unable to show images, but herdr forwards kitty graphics to Ghostty.
     terminal["images"] = "kitty"
     disable_builtin_mcp(settings, state)
-    config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
+    # Grouped placement opens workers in Agents tabs of the workspace owning their checkout, such as a
+    # Straw Boss worktree's Herdr sub workspace, instead of splitting the caller's tab.
+    config["panes"] = {**config.get("panes", {}), "mode": "grouped", "direction": "right"}
     write_json(ctx.settings_path, settings)
     write_json(ctx.herdr_config_path, config)
     record_keys(state, "ui_settings", settings, UI_SETTINGS)
