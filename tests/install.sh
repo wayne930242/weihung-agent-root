@@ -95,7 +95,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "In a large project, search code through the `codebase-memory-mcp` server" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 25, settings
-    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@166d49e97bc3c298ed7f9c3aefa9c8c54d36bae5", settings
+    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@923c16c0fc6e61bcf27d6e5ba3e5ba0ae37d0062", settings
     assert settings["packages"][1:3] == ["git:github.com/wayne930242/pi-herdr-agents@1616f37ab270b22caefd8cccb1f7bc3f793e67b2",
                                          {"source": "npm:pi-herdr-roles@0.1.0", "skills": ["!orchestrate"]}], settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
@@ -245,7 +245,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(install, home, "--force")
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "git:github.com/wayne930242/pi-claude-bridge@old-commit" not in installed_packages, "an earlier revision of a git pin is retired"
-    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@166d49e") for package in installed_packages), installed_packages
+    assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@923c16c") for package in installed_packages), installed_packages
     assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
     assert json.loads((agent / "mcp.json").read_text()) == pi_mcp, "pi's mcp.json stays untouched"
     installed_mcp = json.loads((agent / "mcp-adapter.json").read_text())
