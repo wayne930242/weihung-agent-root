@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PINNED_SPEC = "git:github.com/wayne930242/pi-herdr-agents@19adeecfb964fa4fd6cf4ca8af8419901e04b74d"
+PINNED_SPEC = "git:github.com/wayne930242/pi-herdr-agents@112d6c4dbf2082141afe17a517eb02ad8ba9bbfc"
 RETIRED_NPM = "npm:pi-herdr-agents@2.0.4"
 VARIABLE = "PI_HERDR_AGENTS_ROOT"
 
