@@ -56,6 +56,8 @@ PACKAGES = [
     "npm:pi-loop-monitor@0.2.1",
     "npm:@narumitw/pi-goal@0.54.8",
     "npm:pi-phoenix-otel@0.2.0",
+    # Antigravity (agy) Google login: /login antigravity, plus the google_search and generate_image tools.
+    "npm:pi-antigravity@0.10.0",
     CLAUDE_RULES_PACKAGE,
 ]
 # The Playwriter CLI drives the user's own Chrome through its extension; playwriter-relay.ts starts its relay.
