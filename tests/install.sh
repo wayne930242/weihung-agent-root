@@ -96,7 +96,7 @@ with tempfile.TemporaryDirectory() as directory:
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 25, settings
     assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@923c16c0fc6e61bcf27d6e5ba3e5ba0ae37d0062", settings
-    assert settings["packages"][1:3] == ["git:github.com/wayne930242/pi-herdr-agents@1616f37ab270b22caefd8cccb1f7bc3f793e67b2",
+    assert settings["packages"][1:3] == ["git:github.com/wayne930242/pi-herdr-agents@19adeecfb964fa4fd6cf4ca8af8419901e04b74d",
                                          {"source": "npm:pi-herdr-roles@0.1.0", "skills": ["!orchestrate"]}], settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
