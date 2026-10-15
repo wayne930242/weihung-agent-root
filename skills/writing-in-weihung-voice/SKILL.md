@@ -63,6 +63,7 @@ The text should read as Wei-Hung wrote it: native Taiwanese Traditional Chinese,
 - Use 「規則摘要」 or 「規則整理」 for rule summaries, and a measure word other than 套 for systems and methods.
 - Leave out stock AI phrasing (filler transitions such as 此外、值得注意的是, empty intensifiers, poetic clichés, 彷彿-style hedges) and words that add nothing, like a redundant 了 or 過 after a verb (「前面說」).
 - Give a predicate its full Chinese frame instead of attaching a bare clause: a judgment takes 「是……的」 (「卻完全合理」→「卻是完全合理的」), and an embedded question after 是 takes a colon and a question mark (「問題是哪裡不好」→「問題是：哪裡不好？」), because a bare clause reads as translated.
+- Keep the subjects and objects a reader needs. Restore an omitted 受詞 or subject whenever the reader would have to guess what a verb acts on or what 它／那／這 refers to (「我得認真接下這一擊」, not「我得認真接」; 「證明不了我有意識」, not「證明不了我有」). Telegraphic sentences sound clever and read hard.
 - A correction states the right content directly; the path to it belongs in working notes, not the body.
 - Keep his own wording and idioms as he wrote them.
 - In fiction, show emotion through action, body, and setting instead of naming it.
