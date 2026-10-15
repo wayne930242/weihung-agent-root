@@ -62,9 +62,9 @@ cd ~/projects/<name> && npm publish --access public --auth-type=web
 Run `npm whoami` first; on a 401, hand over `npm login` before the publish.
 
 A new package's first publish goes through npm staging and leaves a public `0.0.0-stage` placeholder beside the real version, and the registry takes a few minutes to show the real one.
-`pi-auto-tab-name` with the placeholder stayed out of npm search, which the gallery appears to draw from, so hand over `npm unpublish <name>@0.0.0-stage --auth-type=web` once the real version shows.
+The placeholder is harmless; removing it with `npm unpublish <name>@0.0.0-stage --auth-type=web` within 72 hours only tidies the version list.
 
-**Complete when:** `npm view <name> versions` lists the released version and no `0.0.0-stage`.
+**Complete when:** `npm view <name> version` prints the released version.
 
 ### 6. Trusted publishing
 
@@ -82,7 +82,10 @@ npx -y npm@latest trust github <name> --repo wayne930242/<name> --file publish.y
 - After release, `pi remove ~/projects/<name>` then `pi install npm:<name>@<version>`, and the user runs `/reload`.
 - To install it on every machine, add the pinned spec to `PACKAGES` in `scripts/pi_root/pins.py`; this is the user's call.
 
-**Complete when:** `~/.pi/agent/settings.json` lists `npm:<name>@<version>` and `curl -sL -o /dev/null -w '%{http_code}' https://pi.dev/packages/<name>` returns `200`.
+**Complete when:** `~/.pi/agent/settings.json` lists `npm:<name>@<version>`.
+
+The gallery finds packages only through npm's `keywords:pi-package` search, which pages no deeper than 5000 results while more than 10,000 packages carry the keyword, so a new package can stay unlisted for days or indefinitely ([earendil-works/pi#7885](https://github.com/earendil-works/pi/issues/7885)).
+Report the gallery page's status to the user without waiting on it or polling for it; republishing does not help.
 
 ## New release
 
