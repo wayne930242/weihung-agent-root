@@ -29,7 +29,7 @@ MAIN_BRANCH = "main"
 # roles, and a 0.x pi-herdr-roles bump can change the planner role and the /plan skill.
 MANUAL_PINS = {"pi-herdr-agents", "pi-herdr-roles"}
 # Fork pins follow an integration or PR branch instead of the remote HEAD, so `outdated` and a named `bump` never move
-# them to the default branch. pi-herdr-agents is a fork pin until upstream releases giuseppecrj/pi-herdr-agents#84;
+# them to the default branch. pi-herdr-agents is a fork pin until upstream releases giuseppecrj/pi-herdr-agents#84 and #87;
 # then it returns to the npm release (and `auto` keeps leaving it alone through MANUAL_PINS).
 FORK_BRANCHES = {
     "github.com/wayne930242/pi-claude-bridge": "weihung-integration",

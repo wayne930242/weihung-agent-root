@@ -8,8 +8,8 @@ WEB_ACCESS_SOURCE = "npm:pi-web-access@0.41.0"
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.5.2"
 # Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
 STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@d6d64addc56cdd0a2af2717289bfa6ea4d15f70f"
-# Fork pin of giuseppecrj/pi-herdr-agents: upstream v3.2.0 plus PR #84 (branch weihung/v3-integration).
-# Once upstream releases #84, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
+# Fork pin of giuseppecrj/pi-herdr-agents: upstream v3.2.0 plus PRs #84 and #87 (branch weihung/v3-integration).
+# Once upstream releases both, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
 # entry and the FORK_BRANCHES entry in scripts/pi-pins.py, and move "npm:pi-herdr-agents" out of RETIRED_SOURCES.
 HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@ac809ab26c999f7e4e97db82746b8468ad2dadf9"
 # The pi-herdr-agents v3 role pack: planner, /plan, and /skill:plan. Its orchestrate skill is filtered out because
