@@ -62,6 +62,6 @@ export default function herdrTabName(pi: ExtensionAPI, run: HerdrRun = defaultRu
     shortLabel(name || firstUserText(ctx) || prompt);
 
   pi.on("session_start", (_event, ctx) => sync(labelFor(ctx, pi.getSessionName())));
-  pi.on("before_agent_start", (event, ctx) => sync(labelFor(ctx, pi.getSessionName(), event.prompt)));
+  pi.on("before_agent_start", (event, ctx) => sync(labelFor(ctx, pi.getSessionName(), "prompt" in event ? event.prompt : "")));
   pi.on("session_info_changed", (event, ctx) => sync(labelFor(ctx, event.name)));
 }
