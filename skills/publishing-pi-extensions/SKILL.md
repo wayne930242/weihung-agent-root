@@ -31,10 +31,10 @@ Name choices belong to the user; offer candidates that pass this check.
 Run pi in tmux with only this extension loaded, then drive it with `tmux send-keys` and read it with `tmux capture-pane -p`:
 
 ```bash
-tmux new-session -d -s ext -x 160 -y 50 "pi --no-session -ne -e $HOME/projects/<name>/src/index.ts --model openai-codex/gpt-6-luna; sleep 60"
+tmux new-session -d -s ext -x 160 -y 50 "pi --no-session -ne -e $HOME/projects/<name>/src/index.ts --model openai/gpt-6-luna; sleep 60"
 ```
 
-`-ne` also drops the claude-bridge extension, so pick an `openai-codex/*` model.
+`-ne` also drops the claude-bridge extension, so pick an `openai/gpt-6-*` model; the ChatGPT login serves them under the `openai` provider.
 The trailing `sleep` keeps the pane open long enough to read a startup error.
 Save and restore the user's clipboard (`pbpaste`/`pbcopy`) around clipboard checks.
 
