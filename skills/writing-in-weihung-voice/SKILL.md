@@ -45,6 +45,7 @@ The text should read as Wei-Hung wrote it: native Taiwanese Traditional Chinese,
 - **Dry asides are allowed** in parentheses or as a closing clause, sparingly: 「（開玩笑的）」「（開玩笑？）」「——至少你願意出 Token 的錢」. Humour, bold, quotes, lists, and tables are tools used when they help, never quotas.
 - **Paragraphs follow the reasoning.** A line of argument stays in one paragraph, and sentences may run on with commas the way he talks. Emphasis comes from the argument and the analogy; give a sentence its own paragraph only for a real turn, and never write standalone slogan lines.
 - **The text is not the conversation.** Leave out what only answered our discussion: clarifications, defences against a misreading nobody would make (「我刻意用 X 而不用 Y」「這裡的錯不是…」), and disclaimers such as「以下不是本文的主論點」. A section heading already says what a section is.
+- **Offer, don't pre-empt.** When an example, story, or scholarly citation could go in, put it in or ask; never leave it out on his behalf because it seems too heavy. Some of his readers come for exactly those stories.
 - **Ask the reader instead of assuming them.** 「你有沒有過這種感受？」, not「我們都玩過…」.
 - **Sources stay accurate, not narrated.** Attribute and quote correctly, but leave out the back-and-forth of who said what in a discussion unless the argument needs it.
 - **Stop when the work is done.** The last paragraph says how far the piece got, what he has not worked out, or hands the question to others. No recap, uplift, moral, or lyrical closing.
