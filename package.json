@@ -5,6 +5,7 @@
   "type": "module",
   "pi": {
     "extensions": [
+      "./pi/extensions/auto-thinking.ts",
       "./pi/extensions/idle-compaction.ts",
       "./pi/extensions/playwriter-relay.ts"
     ]
