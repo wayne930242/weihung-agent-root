@@ -33,6 +33,9 @@ RESEARCH_HUB_SERVER = {
 BUILTIN_MCP_OFF = "-builtin:mcp"
 # These pi-lens tools stay off to keep every prompt small; `read_symbol`, `read_enclosing`, and `lens_diagnostics` cover navigation.
 LENS_DISABLED_TOOLS = ("project_report", "symbol_search", "module_report")
+# pi-herdr-agents falls back to its config.json.example only while config.json is missing; once this install creates the
+# file, `status` is required, so a fresh machine gets the example's value (the other example sections have defaults).
+HERDR_STATUS = {"enabled": True}
 # pi-open-tui footer segments kept off to keep the footer to what gets read; `/open-tui` still owns every other setting.
 OPEN_TUI_HIDDEN_SEGMENTS = ("runtime", "cost", "extensionStatuses")
 
@@ -58,6 +61,9 @@ def apply_ui(ctx: Context) -> None:
     # pi treats TERM_PROGRAM=herdr as unable to show images, but herdr forwards kitty graphics to Ghostty.
     terminal["images"] = "kitty"
     disable_builtin_mcp(settings, state)
+    if "status" not in config:
+        config["status"] = deepcopy(HERDR_STATUS)
+        state["added_herdr_status"] = True
     # Split placement opens each worker beside its caller's pane, in the caller's own tab.
     config["panes"] = {**config.get("panes", {}), "mode": "split", "direction": "right"}
     write_json(ctx.settings_path, settings)
@@ -76,6 +82,8 @@ def restore_ui(ctx: Context) -> None:
     write_json(ctx.settings_path, settings)
     config = read_json(ctx.herdr_config_path)
     restore_nested(config, "panes", state.get("installed_panes"), state.get("previous_panes"), ("mode", "direction"))
+    if state.get("added_herdr_status") and config.get("status") == HERDR_STATUS:
+        del config["status"]
     write_or_remove(ctx.herdr_config_path, config)
 
 

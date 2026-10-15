@@ -79,6 +79,24 @@ class HerdrModelsTests(unittest.TestCase):
             run_script("uninstall.sh", home, "--skip-external")
             self.assertEqual(json.loads(config.read_text()), {"models": {"default": "user/model"}, "other": True})
 
+    def test_a_fresh_config_gets_the_status_section_pi_herdr_agents_requires(self):
+        # weihung-agent-root#1: a config.json without `status` stops pi-herdr-agents from loading.
+        user_status = {"enabled": False}
+        for before in (None, {"other": True}, {"status": user_status}):
+            with self.subTest(before=before), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory)
+                config = home / ".pi/agent/herdr-agents/config.json"
+                if before is not None:
+                    config.parent.mkdir(parents=True)
+                    config.write_text(json.dumps(before))
+                run_script("install.sh", home, "--skip-external")
+                installed = json.loads(config.read_text())
+                self.assertEqual(installed["status"], user_status if before and "status" in before else configs.HERDR_STATUS)
+                run_script("install.sh", home, "--skip-external")
+                self.assertEqual(json.loads(config.read_text()), installed)
+                run_script("uninstall.sh", home, "--skip-external")
+                self.assertEqual(json.loads(config.read_text()) if config.exists() else None, before)
+
     def test_a_hand_edit_since_install_stops_the_next_install(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
