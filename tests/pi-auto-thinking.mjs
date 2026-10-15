@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createAutoThinking, preprocessPrompt } from "../pi/extensions/auto-thinking.ts";
 
-function harness(classify, { isSubagent = false } = {}) {
+function harness(classify, { isSubagent = false, solutionSpace } = {}) {
   const handlers = new Map();
   const commands = new Map();
   const state = { level: "medium", statuses: [], notices: [], prompts: [] };
-  createAutoThinking(classify, isSubagent)({
+  createAutoThinking(classify, { isSubagent, solutionSpace })({
     on: (event, fn) => handlers.set(event, fn),
     registerCommand: (name, options) => commands.set(name, options),
     setThinkingLevel: (level) => { state.level = level === "max" ? "xhigh" : level; },
@@ -26,10 +26,10 @@ function harness(classify, { isSubagent = false } = {}) {
 
 test("classified level becomes the thinking level", async () => {
   const seen = [];
-  const h = harness(async (request) => { seen.push(request); return "xhigh"; });
+  const h = harness(async (input) => { seen.push(input); return "xhigh"; });
   await h.prompt("diagnose an intermittent deadlock");
   assert.equal(h.state.level, "xhigh");
-  assert.deepEqual(seen, ["diagnose an intermittent deadlock"]);
+  assert.deepEqual(seen, [{ request: "diagnose an intermittent deadlock" }]);
   assert.equal(h.state.statuses.at(-1), "auto:xhigh");
 });
 
@@ -72,9 +72,27 @@ test("manual level change turns auto off until /auto-thinking on", async () => {
   assert.equal(calls, 2);
 });
 
-test("subagents register nothing", () => {
+test("subagents without a solution space register nothing", () => {
   const h = harness(async () => "low", { isSubagent: true });
   assert.equal(h.handlers.size, 0);
+});
+
+test("a subagent classifies its solution space once, not its task", async () => {
+  const seen = [];
+  const h = harness(async (input) => { seen.push(input); return "high"; },
+    { isSubagent: true, solutionSpace: "Cause known; the fix needs one API choice." });
+  await h.prompt("a long task text that must not be classified");
+  await h.prompt("a follow-up task");
+  assert.equal(h.state.level, "high");
+  assert.deepEqual(seen, [{ solutionSpace: "Cause known; the fix needs one API choice." }]);
+  assert.deepEqual([...h.handlers.keys()], ["before_agent_start"]);
+});
+
+test("a failed solution space classification keeps the dispatcher's level", async () => {
+  const h = harness(async () => { throw new Error("no key"); }, { isSubagent: true, solutionSpace: "Open cause." });
+  await h.prompt("task");
+  assert.equal(h.state.level, "medium");
+  assert.match(h.state.notices.at(-1).message, /level unchanged: no key/);
 });
 
 test("prompt cleanup strips code, tags, hashes and bounds length", () => {

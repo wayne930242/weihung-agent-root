@@ -5,8 +5,12 @@
  * how open-ended the request is, and the answer becomes the session's thinking level for that
  * turn. The question, ladder, and xhigh ceiling follow oh-my-pi; `ultrathink` in the prompt
  * skips the classifier and asks for max. A failed classification keeps the last classified
- * level. Subagents keep the level their dispatcher chose. Choosing a level by hand turns auto
- * off for the session; `/auto-thinking on` turns it back on.
+ * level. Choosing a level by hand turns auto off for the session; `/auto-thinking on` turns it
+ * back on.
+ *
+ * A subagent launched with a `solutionSpace` (PI_SUBAGENT_SOLUTION_SPACE) classifies that
+ * description instead of its task, once, with oh-my-pi's solution-space question; without one
+ * it keeps the level its dispatcher chose.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -27,6 +31,13 @@ export const LEVEL_QUESTION = {
 		high: "Several viable designs or candidate causes: API shape, policy choice, a known cause whose fix needs a design choice.",
 		xhigh: "Open cause of flaky, concurrent, or stale behavior; solutions that are easy to get subtly wrong (races, invariants, cross-version compatibility).",
 	},
+};
+
+// oh-my-pi's `solutionSpace` question: same ladder, instructions for a delegator's description.
+export const SOLUTION_SPACE_QUESTION = {
+	...LEVEL_QUESTION,
+	instructions:
+		"The state describes how open-ended a coding subagent's problem is; the work itself is not shown. Choose the reasoning effort it needs. Volume of work and coordination with other agents never raise it. If torn between levels, choose the lower one.",
 };
 
 // Prompt cleanup ported from oh-my-pi tiny/message-preproc.ts.
@@ -71,14 +82,21 @@ export function preprocessPrompt(message: string): string {
 	return truncate(collapseWhitespace(cleaned));
 }
 
-export type Classifier = (request: string, signal: AbortSignal) => Promise<Level>;
+/** The turn to classify: the user's request, or a delegator's solution-space description. */
+export type DifficultyInput = { request: string } | { solutionSpace: string };
+
+export type Classifier = (input: DifficultyInput, signal: AbortSignal) => Promise<Level>;
 
 /**
  * One TypeSafe System One request, the call `@typesafe-ai/sdk` makes for `client.systemOne`.
  * Called through fetch because pi does not install dependencies for local packages.
  */
 export function jevClassifier(): Classifier {
-	return async (request, signal) => {
+	return async (input, signal) => {
+		const [state, question] =
+			"solutionSpace" in input
+				? [{ solution_space: input.solutionSpace }, SOLUTION_SPACE_QUESTION]
+				: [{ request: input.request }, LEVEL_QUESTION];
 		const apiKey = process.env.TYPESAFE_API_KEY;
 		if (!apiKey) throw new Error("TYPESAFE_API_KEY is not set");
 		const baseUrl = (process.env.TYPESAFE_BASE_URL ?? "https://api.typesafe.ai").replace(/\/+$/, "");
@@ -86,8 +104,8 @@ export function jevClassifier(): Classifier {
 			method: "POST",
 			headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", Accept: "application/json" },
 			body: JSON.stringify({
-				state: { request },
-				questions: { level: LEVEL_QUESTION },
+				state,
+				questions: { level: question },
 				model: process.env.TYPESAFE_DEFAULT_MODEL ?? "jev-latest",
 			}),
 			signal,
@@ -99,9 +117,36 @@ export function jevClassifier(): Classifier {
 	};
 }
 
-export function createAutoThinking(classify: Classifier, isSubagent: boolean) {
+export interface ChildContext {
+	isSubagent: boolean;
+	solutionSpace?: string;
+}
+
+/** Classify a subagent's solution space once, on its first prompt; failures keep the dispatcher's level. */
+function registerChild(pi: ExtensionAPI, classify: Classifier, solutionSpace: string): void {
+	let classified = false;
+	pi.on("before_agent_start", async (_event, ctx) => {
+		if (classified) return;
+		classified = true;
+		const signal = AbortSignal.timeout(CLASSIFY_TIMEOUT_MS);
+		try {
+			const level = await classify({ solutionSpace: preprocessPrompt(solutionSpace) }, signal);
+			pi.setThinkingLevel(level);
+			ctx.ui.setStatus(STATUS_KEY, `auto:${pi.getThinkingLevel()}`);
+		} catch (error) {
+			const reason = error instanceof Error ? error.message : String(error);
+			ctx.ui.notify(`auto-thinking: solution space classification failed, level unchanged: ${reason}`, "warning");
+		}
+	});
+}
+
+export function createAutoThinking(classify: Classifier, child: ChildContext) {
 	return function autoThinking(pi: ExtensionAPI): void {
-		if (isSubagent) return;
+		if (child.isSubagent) {
+			const solutionSpace = child.solutionSpace?.trim();
+			if (solutionSpace) registerChild(pi, classify, solutionSpace);
+			return;
+		}
 		let enabled = true;
 		let lastResolved: string | undefined;
 		let ownLevel: string | undefined;
@@ -126,7 +171,7 @@ export function createAutoThinking(classify: Classifier, isSubagent: boolean) {
 			const controller = new AbortController();
 			const timer = setTimeout(() => controller.abort(), CLASSIFY_TIMEOUT_MS);
 			try {
-				apply(ctx, await classify(preprocessPrompt(event.prompt), controller.signal), "");
+				apply(ctx, await classify({ request: preprocessPrompt(event.prompt) }, controller.signal), "");
 			} catch (error) {
 				const reason = error instanceof Error ? error.message : String(error);
 				if (lastResolved) apply(ctx, lastResolved, " (kept)");
@@ -159,4 +204,7 @@ export function createAutoThinking(classify: Classifier, isSubagent: boolean) {
 	};
 }
 
-export default createAutoThinking(jevClassifier(), Boolean(process.env.PI_SUBAGENT_SESSION));
+export default createAutoThinking(jevClassifier(), {
+	isSubagent: Boolean(process.env.PI_SUBAGENT_SESSION),
+	solutionSpace: process.env.PI_SUBAGENT_SOLUTION_SPACE,
+});

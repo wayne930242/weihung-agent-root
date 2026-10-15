@@ -66,7 +66,7 @@ class PinTests(unittest.TestCase):
             self.assertIn("npm:pi-lens@9.9.9", text["pins.py"])
             self.assertNotIn("npm:pi-lens@4.3.0", text["install.sh"])
             self.assertIn("playwriter@8.8.8", text["README.md"])
-            self.assertIn("straw-boss@1363414", text["pins.py"])
+            self.assertIn("straw-boss@d6d64ad", text["pins.py"])
 
     def test_bump_updates_a_named_git_pin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -96,7 +96,7 @@ class PinTests(unittest.TestCase):
                     mock.patch.object(pins, "QUOTING_FILES", (copy,)), \
                     redirect_stdout(io.StringIO()):
                 pins.bump([])
-            self.assertIn("git:github.com/wayne930242/pi-herdr-agents@1616f37ab270b22caefd8cccb1f7bc3f793e67b2", copy.read_text())
+            self.assertIn("git:github.com/wayne930242/pi-herdr-agents@ac809ab26c999f7e4e97db82746b8468ad2dadf9", copy.read_text())
 
     def test_role_pack_follows_the_host_with_its_orchestrate_skill_filtered_out(self) -> None:
         target = pins.load_target()
@@ -170,7 +170,7 @@ class AutoUpdateTests(unittest.TestCase):
         self.assertEqual(self.commits()[0], "chore(pi): bump pinned packages")
         text = (self.repo / "scripts/pi_root/pins.py").read_text()
         self.assertIn("npm:pi-lens@9.9.9", text)
-        self.assertIn("git:github.com/wayne930242/pi-herdr-agents@1616f37ab270b22caefd8cccb1f7bc3f793e67b2", text)
+        self.assertIn("git:github.com/wayne930242/pi-herdr-agents@ac809ab26c999f7e4e97db82746b8468ad2dadf9", text)
         self.assertNotIn('"npm:pi-herdr-agents@', text)
         self.assertIn("npm:pi-herdr-roles@0.1.0", text)
         self.assertEqual(self.calls.count(("install", str(self.repo / "scripts/install.sh"))), 1)

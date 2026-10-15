@@ -28,9 +28,9 @@ For Traditional Chinese articles and documents (not chat replies), load the `wri
 
 ## Model and dispatch
 
-Dispatch through `pi-herdr-agents` with the role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review (one reviewer per checkpoint), and `visual-tester` for UI checks. Use `adversarial-reviewer` only when the user names it. Each role's model comes from `pi-herdr-agents` configuration, so omit `model` unless the user names one for the task. Set `thinking` by the difficulty of the work, as `dispatching-work` describes.
+Dispatch through `pi-herdr-agents` with the role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review (one reviewer per checkpoint), and `visual-tester` for UI checks. Use `adversarial-reviewer` only when the user names it. Each role's model comes from `pi-herdr-agents` configuration, so omit `model` unless the user names one for the task. Give every subagent a `solutionSpace`: one or two sentences on how open-ended the work is (whether the fix or design is given, or which causes or designs remain open), not the work itself. The child's auto-thinking turns it into a thinking level, so omit `thinking` unless the user names one.
 
-Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`; Straw Boss dispatch follows `dispatching-work`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and thinking level.
+Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`; Straw Boss dispatch follows `dispatching-work`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and solution space.
 
 In Herdr, use `dispatch_control` for dispatches and `intercom` for related main sessions; outside Herdr, continue in the current session. Report the worker's actual result after it arrives.
 
