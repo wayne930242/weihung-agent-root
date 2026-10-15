@@ -64,7 +64,7 @@ class PinTests(unittest.TestCase):
                 pins.bump([])
             text = {original.name: copy.read_text() for original, copy in copies}
             self.assertIn("npm:pi-lens@9.9.9", text["pins.py"])
-            self.assertNotIn("npm:pi-lens@4.3.0", text["install.sh"])
+            self.assertNotIn("npm:pi-lens@4.4.3", text["install.sh"])
             self.assertIn("playwriter@8.8.8", text["README.md"])
             self.assertIn("straw-boss@d6d64ad", text["pins.py"])
 
@@ -77,7 +77,7 @@ class PinTests(unittest.TestCase):
                     redirect_stdout(io.StringIO()):
                 pins.bump(["github.com/wayne930242/straw-boss"])
             self.assertIn("straw-boss@" + "f" * 40, copy.read_text())
-            self.assertIn("npm:pi-lens@4.3.0", copy.read_text())
+            self.assertIn("npm:pi-lens@4.4.3", copy.read_text())
 
     def test_fork_pin_follows_its_integration_branch(self) -> None:
         pin = pins.Pin("git", "git:github.com/wayne930242/pi-herdr-agents", "a" * 40)
@@ -183,7 +183,7 @@ class AutoUpdateTests(unittest.TestCase):
         self.auto()
         self.assertEqual(self.commits()[:2], ["chore(pi): bump playwriter to 8.8.8", "base"])
         text = (self.repo / "scripts/pi_root/pins.py").read_text()
-        self.assertIn("npm:pi-lens@4.3.0", text)
+        self.assertIn("npm:pi-lens@4.4.3", text)
         self.assertIn("playwriter@8.8.8", text)
         self.assertEqual(json.loads((self.state / "state.json").read_text())["rejected"], {"pi-lens": "9.9.9"})
         installs = [call for call in self.calls if call[0] in ("install", "restore install")]

@@ -101,15 +101,15 @@ with tempfile.TemporaryDirectory() as directory:
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
     registry = [source.removeprefix("npm:") for source in sources if source.startswith("npm:")]
     assert registry and all("@" in name[1:] for name in registry), registry
-    assert {"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]} in settings["packages"], settings
-    assert "npm:@juicesharp/rpiv-todo@2.12.0" in sources and "npm:cc-safety-net@2.5.2" in sources, sources
-    assert "npm:pi-codex-image-gen@0.1.15" in sources and "npm:pi-web-access@0.35.0" in sources, sources
+    assert {"source": "npm:@sherif-fanous/pi-catppuccin@0.3.0", "themes": ["themes/catppuccin-mocha.json"]} in settings["packages"], settings
+    assert "npm:@juicesharp/rpiv-todo@2.13.8" in sources and "npm:cc-safety-net@2.6.12" in sources, sources
+    assert "npm:pi-codex-image-gen@0.2.0" in sources and "npm:pi-web-access@0.41.0" in sources, sources
     assert "npm:pi-robot-hand@0.2.2" in sources and not any("pi-secret-drop" in source for source in sources), sources
     assert "npm:pi-phoenix-otel@0.2.0" in sources, sources
-    assert "npm:@pify/memory@0.13.1" in sources, sources
-    assert "npm:pi-loop-monitor@0.2.1" in sources, sources
-    assert "npm:@narumitw/pi-goal@0.54.8" in sources, sources
-    assert {"source": "npm:pi-code@1.4.1", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
+    assert "npm:@pify/memory@0.14.0" in sources, sources
+    assert "npm:pi-loop-monitor@0.2.5" in sources, sources
+    assert "npm:@narumitw/pi-goal@0.54.11" in sources, sources
+    assert {"source": "npm:pi-code@1.5.2", "extensions": ["extensions/claude-rules.ts"]} in settings["packages"], settings
     assert not any("pi-todo" in source or "pi-curated-themes" in source for source in sources), sources
     assert not {"defaultProvider", "defaultModel", "defaultThinkingLevel", "enabledModels"} & set(settings), settings
     assert settings["theme"] == "catppuccin-mocha", settings
@@ -246,7 +246,7 @@ with tempfile.TemporaryDirectory() as directory:
     installed_packages = json.loads((agent / "settings.json").read_text())["packages"]
     assert "git:github.com/wayne930242/pi-claude-bridge@old-commit" not in installed_packages, "an earlier revision of a git pin is retired"
     assert any(isinstance(package, str) and package.startswith("git:github.com/wayne930242/pi-claude-bridge@923c16c") for package in installed_packages), installed_packages
-    assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.3.0"], installed_packages
+    assert [package for package in installed_packages if "pi-lens" in str(package)] == ["npm:pi-lens@4.4.3"], installed_packages
     assert json.loads((agent / "mcp.json").read_text()) == pi_mcp, "pi's mcp.json stays untouched"
     installed_mcp = json.loads((agent / "mcp-adapter.json").read_text())
     assert installed_mcp["mcpServers"]["codebase-memory-mcp"] == {"command": str(home.resolve() / ".local/bin/codebase-memory-mcp")}, installed_mcp

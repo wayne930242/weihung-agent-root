@@ -86,7 +86,7 @@ esac
     assert AAAAV_GIT in json.loads((agent / "settings.json").read_text())["packages"]
     assert f"install {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
     assert STRAW_BOSS_GIT in json.loads((agent / "settings.json").read_text())["packages"]
-    assert "install -g playwriter@0.7.0" in npm_calls.read_text().splitlines()
+    assert "install -g playwriter@0.8.0" in npm_calls.read_text().splitlines()
     assert not [line for line in herdr_calls.read_text().splitlines() if line.startswith("plugin ")]
 
     plugin = base / "plugins/sdlc"

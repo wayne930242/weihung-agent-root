@@ -35,7 +35,7 @@ The installer is idempotent; re-run it after pulling changes. `bash scripts/unin
 `scripts/install.sh` links the repository into the home directory and runs `scripts/pi-target.py install`, which:
 
 - installs or upgrades pi (`npm install -g @earendil-works/pi-coding-agent`) and runs `herdr integration install pi`, which reports each pi session's state to Herdr;
-- installs the pinned [Playwriter](https://github.com/remorses/playwriter) CLI (`npm install -g playwriter@0.7.0`), which drives the user's own Chrome through the Playwriter extension; uninstall removes it only when this install added it;
+- installs the pinned [Playwriter](https://github.com/remorses/playwriter) CLI (`npm install -g playwriter@0.8.0`), which drives the user's own Chrome through the Playwriter extension; uninstall removes it only when this install added it;
 - installs the pi packages below, aaaav, straw-boss, and this repository as a local pi package;
 - generates `~/.pi/agent/AGENTS.md` from [pi/AGENTS.md.in](pi/AGENTS.md.in);
 - sets UI settings, `pi-herdr-agents` pane placement and models, and MCP host-config discovery;

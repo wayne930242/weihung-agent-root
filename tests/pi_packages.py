@@ -17,7 +17,7 @@ from support.pi import PINS, fake_npm_install, run_script
 class PackageTests(unittest.TestCase):
     def test_package_identity_ignores_the_npm_version(self):
         agent = Path("/unused")
-        self.assertEqual(packages.package_id("npm:pi-lens@4.3.0", agent), "npm:pi-lens")
+        self.assertEqual(packages.package_id("npm:pi-lens@4.4.3", agent), "npm:pi-lens")
         self.assertEqual(packages.package_id("npm:@scope/name@1.0.0", agent), "npm:@scope/name")
         self.assertEqual(packages.package_id("npm:@scope/name", agent), "npm:@scope/name")
         self.assertEqual(packages.package_id({"source": "npm:pi-lens", "skills": []}, agent), "npm:pi-lens")
@@ -46,7 +46,7 @@ class PackageTests(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             installed = json.loads((agent / "settings.json").read_text())["packages"]
             self.assertNotIn(old, installed)
-            self.assertIn({"source": "npm:@sherif-fanous/pi-catppuccin@0.2.0", "themes": ["themes/catppuccin-mocha.json"]}, installed)
+            self.assertIn({"source": "npm:@sherif-fanous/pi-catppuccin@0.3.0", "themes": ["themes/catppuccin-mocha.json"]}, installed)
             self.assertIn("npm:user-package", installed)
             run_script("uninstall.sh", home, "--skip-external")
             self.assertEqual(json.loads((agent / "settings.json").read_text())["packages"], [old, "npm:user-package"])
@@ -100,9 +100,9 @@ class PackageTests(unittest.TestCase):
             run_script("install.sh", home, "--skip-external")
             upgraded = json.loads(settings.read_text())
             sources = [item["source"] if isinstance(item, dict) else item for item in upgraded["packages"]]
-            self.assertEqual([item for item in sources if "pi-lens" in item], ["npm:pi-lens@4.3.0"])
+            self.assertEqual([item for item in sources if "pi-lens" in item], ["npm:pi-lens@4.4.3"])
             self.assertEqual([item for item in sources if "pi-web-access" in item],
-                             ["npm:pi-web-access@0.35.0"])
+                             ["npm:pi-web-access@0.41.0"])
             self.assertIs(upgraded["enableInstallTelemetry"], False)
             run_script("uninstall.sh", home, "--skip-external")
             restored = json.loads(settings.read_text())
