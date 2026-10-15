@@ -61,7 +61,10 @@ cd ~/projects/<name> && npm publish --access public --auth-type=web
 
 Run `npm whoami` first; on a 401, hand over `npm login` before the publish.
 
-**Complete when:** `npm view <name> version` prints the released version.
+A new package's first publish goes through npm staging and leaves a public `0.0.0-stage` placeholder beside the real version, and the registry takes a few minutes to show the real one.
+`pi-auto-tab-name` with the placeholder stayed out of npm search, which the gallery appears to draw from, so hand over `npm unpublish <name>@0.0.0-stage --auth-type=web` once the real version shows.
+
+**Complete when:** `npm view <name> versions` lists the released version and no `0.0.0-stage`.
 
 ### 6. Trusted publishing
 
