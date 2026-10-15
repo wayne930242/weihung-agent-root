@@ -38,8 +38,12 @@ class StepTests(unittest.TestCase):
             self.assertEqual((home / ".agents/skills/providing-knowledge").readlink(), ROOT / "skills/providing-knowledge")
             instructions = (home / ".pi/agent/AGENTS.md").read_text()
             for rule in (ROOT / "rules").glob("*.md"):
+                text = rule.read_text()
+                if text.startswith("---"):
+                    # Stream rules are enforced by aaaav's TTSR extension, not read from the index.
+                    self.assertIn("\ncondition:", text.split("\n---", 1)[0], rule.name)
+                    continue
                 self.assertIn(f"`{rule.name}`", instructions)
-                self.assertFalse(rule.read_text().startswith("---"), rule.name)
             run_script("uninstall.sh", home, "--skip-external")
             self.assertFalse((home / ".pi/agent/rules").exists())
             self.assertFalse((home / ".agents").exists())

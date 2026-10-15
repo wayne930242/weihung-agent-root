@@ -14,7 +14,7 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 - `pi/extensions/`: this repository's pi package, registered through `package.json`. Dispatch recovery, handoff, and pane balancing live in straw-boss.
 - `skills/`: user skills linked into `~/.agents/skills/`. `skills/orchestrate` is our trimmed copy of the `pi-herdr-roles` orchestrate skill; the installed pack filters its own copy out.
 - `agents/`: global `pi-herdr-agents` role overrides linked to `~/.pi/agent/agents/`. Each derives from the `pi-herdr-roles` role of the same name without its `tools:` allowlist; `planner` comes from the pack unchanged. Re-derive them when the `pi-herdr-roles` pin changes.
-- `rules/`: user-global rules linked to `~/.pi/agent/rules/`. The template indexes every file by the work it covers, so a new rule also needs an entry there.
+- `rules/`: user-global rules linked to `~/.pi/agent/rules/`. The template indexes every prose rule by the work it covers, so a new prose rule also needs an entry there. A rule whose frontmatter has a `condition` regex is a stream rule: aaaav's TTSR extension enforces it on matching tool calls and output, so it stays out of the index.
 - `docs/specs/`: durable design records.
 
 ## Working here
