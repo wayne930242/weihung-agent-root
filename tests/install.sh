@@ -95,7 +95,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "In a large project, search code through the `codebase-memory-mcp` server" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 25, settings
-    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@923c16c0fc6e61bcf27d6e5ba3e5ba0ae37d0062", settings
+    assert settings["packages"][0] == "git:github.com/wayne930242/pi-claude-bridge@4de88a73e90cbce8b061fb17ccf250a90025eedf", settings
     assert settings["packages"][1:3] == ["git:github.com/wayne930242/pi-herdr-agents@ac809ab26c999f7e4e97db82746b8468ad2dadf9",
                                          {"source": "npm:pi-herdr-roles@0.1.0", "skills": ["!orchestrate"]}], settings
     sources = [package["source"] if isinstance(package, dict) else package for package in settings["packages"]]
