@@ -18,10 +18,11 @@ function harness(classify, { isSubagent = false, solutionSpace } = {}) {
       notify: (message, level) => state.notices.push({ message, level }),
     },
   };
-  const prompt = (text) => handlers.get("before_agent_start")({ prompt: text }, ctx);
+  const prompt = (text) => handlers.get("before_agent_start")({ type: "before_agent_start", messageType: "user", prompt: text }, ctx);
+  const custom = () => handlers.get("before_agent_start")({ type: "before_agent_start", messageType: "custom", message: { role: "custom" } }, ctx);
   const select = (level) => handlers.get("thinking_level_select")({ level, previousLevel: state.level }, ctx);
   const command = (args) => commands.get("auto-thinking").handler(args, ctx);
-  return { handlers, state, prompt, select, command };
+  return { handlers, state, prompt, custom, select, command };
 }
 
 test("classified level becomes the thinking level", async () => {
@@ -55,6 +56,17 @@ test("failure before any classification leaves the level unchanged", async () =>
   await h.prompt("anything");
   assert.equal(h.state.level, "medium");
   assert.match(h.state.notices.at(-1).message, /level unchanged: no key/);
+});
+
+test("a run started by a custom message keeps the level without classifying", async () => {
+  let calls = 0;
+  const h = harness(async () => { calls++; return "high"; });
+  await h.prompt("pick an API shape");
+  h.state.level = "low";
+  await h.custom();
+  assert.equal(calls, 1);
+  assert.equal(h.state.level, "low");
+  assert.equal(h.state.notices.length, 0);
 });
 
 test("manual level change turns auto off until /auto-thinking on", async () => {

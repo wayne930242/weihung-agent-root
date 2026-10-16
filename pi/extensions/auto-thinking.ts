@@ -3,7 +3,7 @@
  *
  * Before each user prompt in a main session, TypeSafe Jev answers one choice question about
  * how open-ended the request is, and the answer becomes the session's thinking level for that
- * turn. The question, ladder, and xhigh ceiling follow oh-my-pi; `ultrathink` in the prompt
+ * turn; a run started by an extension message keeps the current level. The question, ladder, and xhigh ceiling follow oh-my-pi; `ultrathink` in the prompt
  * skips the classifier and asks for max. A failed classification keeps the last classified
  * level. Choosing a level by hand turns auto off for the session; `/auto-thinking on` turns it
  * back on.
@@ -163,7 +163,8 @@ export function createAutoThinking(classify: Classifier, child: ChildContext) {
 		pi.on("session_start", (_event, ctx) => show(ctx, enabled ? "auto" : undefined));
 
 		pi.on("before_agent_start", async (event, ctx) => {
-			if (!enabled) return;
+			// Runs started by an extension message (intercom wakes, subagent results) carry no prompt to classify.
+			if (!enabled || event.messageType !== "user") return;
 			if (/\bultrathink\b/i.test(event.prompt)) {
 				apply(ctx, "max", "");
 				return;
