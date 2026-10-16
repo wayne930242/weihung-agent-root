@@ -48,4 +48,4 @@ Save cross-project facts to `global` memory and only conventions the repository 
 
 ## Verification and delivery
 
-Deliver complete code without TODOs, stubs, or mocks. Commit messages contain no AI tool attribution. When you want the user to read or approve a document (a spec, design, plan, report, or ADR), open it with `show_doc` instead of only naming its path, and keep working: the user's saved edits reach you as a diff.
+Deliver complete code without TODOs, stubs, or mocks. Commit messages contain no AI tool attribution. Whenever the user must review or confirm written material (a spec, plan, report, diff, or comparison), write it to a file and open it with `show_doc` before asking; the user's saved edits reach you as a diff.
