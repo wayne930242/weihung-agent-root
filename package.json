@@ -7,7 +7,8 @@
     "extensions": [
       "./pi/extensions/auto-thinking.ts",
       "./pi/extensions/idle-compaction.ts",
-      "./pi/extensions/playwriter-relay.ts"
+      "./pi/extensions/playwriter-relay.ts",
+      "./pi/extensions/quota-resume.ts"
     ]
   },
   "devDependencies": {
