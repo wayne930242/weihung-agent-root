@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
-STRAW_BOSS_GIT = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', (ROOT / "scripts/pi_root/pins.py").read_text()).group(1)
+STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss"
 HERDR_WEB_UI_ID = "devswha.herdr-web-ui"
 
 
@@ -74,7 +74,7 @@ case "$1 $2" in
 esac
 """, True)
     env = {**os.environ, "HOME": str(home), "PATH": f"{bin_dir}:{os.environ['PATH']}",
-           "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_AAAAV_ROOT": str(base / "no-aaaav"), "PI_SDLC_ROOT": str(base / "no-sdlc"),
+           "PI_MP_INFRA_ROOT": str(base / "no-mp-infra"), "PI_SDLC_ROOT": str(base / "no-sdlc"),
            "TEST_TTT_FIXTURE": str(fixture), "PI_SKILLS_GIT": str(pi_skills), "TEST_NPM_CALLS": str(npm_calls)}
     agent = home / ".pi/agent"
 

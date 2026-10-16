@@ -218,7 +218,7 @@ if '--prefix' in args:
         self.write(bin_dir / "pi", f"#!/bin/sh\necho \"$@\" >> '{self.calls}'\n")
         self.write(bin_dir / "herdr", "#!/bin/sh\nexit 0\n")
         self.env = {"PI_SKILLS_GIT": str(pi_skills), "PI_MP_INFRA_ROOT": str(self.base / "no-mp-infra"),
-                    "PI_SDLC_ROOT": str(self.base / "no-sdlc"), "PI_AAAAV_ROOT": str(self.base / "no-aaaav")}
+                    "PI_SDLC_ROOT": str(self.base / "no-sdlc")}
 
     @staticmethod
     def write(path, content):

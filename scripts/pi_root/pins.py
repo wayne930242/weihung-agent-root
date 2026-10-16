@@ -6,8 +6,6 @@ BRIDGE_SOURCE = "git:github.com/wayne930242/pi-claude-bridge@4de88a73e90cbce8b06
 QUOTAS_SOURCE = "git:github.com/wayne930242/pi-quotas@caa30da4f6d3d3e2a57edbb85e8de1f856f7ee6b"
 WEB_ACCESS_SOURCE = "npm:pi-web-access@0.41.0"
 CLAUDE_RULES_SOURCE = "npm:pi-code@1.5.2"
-# Straw Boss owns the Pi dispatch workflow: its skills, dispatch_control, and pane balancing.
-STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@6d86ba0394647d17a49d381bdd1e878fcdaede1a"
 # Fork pin of giuseppecrj/pi-herdr-agents: upstream v3.2.1 plus PRs #84 and #87 and the fork-only exit hold that
 # pi/extensions/quota-resume.ts uses (branch weihung/v3-integration).
 # Once upstream releases both, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
@@ -20,7 +18,6 @@ HERDR_ROLES_PACKAGE = {"source": HERDR_ROLES_SOURCE, "skills": ["!orchestrate"]}
 # Every other revision of a pinned git package, including an unpinned spec, is retired for the current pin.
 PINNED_GIT = {
     BRIDGE_SOURCE: ("git:github.com/wayne930242/pi-claude-bridge@",),
-    STRAW_BOSS_SOURCE: ("git:github.com/wayne930242/straw-boss",),
     QUOTAS_SOURCE: ("git:github.com/wayne930242/pi-quotas",),
     HERDR_AGENTS_SOURCE: ("git:github.com/wayne930242/pi-herdr-agents",),
 }
@@ -30,7 +27,9 @@ THEME_PACKAGE = {"source": "npm:@sherif-fanous/pi-catppuccin@0.3.0", "themes": [
 # Registry packages this setup installed before and now drops; install removes them from settings.
 # pi-curated-themes shipped a catppuccin-mocha with off-palette accents; pi-secret-drop is now part of pi-robot-hand;
 # the npm pi-herdr-agents release is replaced by the fork pin above, and pi must never load both.
-RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes", "npm:pi-secret-drop", "npm:pi-herdr-agents")
+# straw-boss now follows its latest commit, so every pinned revision is retired.
+RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes", "npm:pi-secret-drop", "npm:pi-herdr-agents",
+                   "git:github.com/wayne930242/straw-boss@")
 # pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
 # its other extensions duplicate the todo, MCP, subagent, and web packages below.
 CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}
@@ -38,7 +37,6 @@ PACKAGES = [
     BRIDGE_SOURCE,
     HERDR_AGENTS_SOURCE,
     HERDR_ROLES_PACKAGE,
-    STRAW_BOSS_SOURCE,
     "npm:pi-mcp-adapter@5.3.1",
     "npm:pi-intercom@0.17.1",
     "npm:pi-ask-user@0.16.0",
@@ -68,3 +66,5 @@ PLAYWRITER = "playwriter@0.8.0"
 # thesis-toolkit launches the research-hub MCP server (literature search, open-access download, bibliography saves).
 THESIS_TOOLKIT = "thesis-toolkit@0.1.3"
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
+# Straw Boss owns the Pi dispatch workflow (boss-say); like aaaav it follows the latest commit, unpinned.
+STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss"

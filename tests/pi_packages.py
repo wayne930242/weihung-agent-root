@@ -1,6 +1,7 @@
 """Pi package identity, pin rotation, company plugins, and the package step."""
 
 import json
+import os
 import re
 import sys
 import tempfile
@@ -22,19 +23,49 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(packages.package_id("npm:@scope/name", agent), "npm:@scope/name")
         self.assertEqual(packages.package_id({"source": "npm:pi-lens", "skills": []}, agent), "npm:pi-lens")
 
-    def test_earlier_straw_boss_revisions_are_retired_for_the_pin(self):
-        for earlier in ("git:github.com/wayne930242/straw-boss", "git:github.com/wayne930242/straw-boss@old-commit"):
-            with self.subTest(earlier=earlier), tempfile.TemporaryDirectory() as directory:
-                home = Path(directory)
-                agent = home / ".pi/agent"
-                agent.mkdir(parents=True)
-                (agent / "settings.json").write_text(json.dumps({"packages": [earlier]}))
+    def test_straw_boss_follows_the_latest_commit_and_retires_pinned_revisions(self):
+        earlier = "git:github.com/wayne930242/straw-boss@old-commit"
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            (agent / "settings.json").write_text(json.dumps({"packages": [earlier]}))
+            run_script("install.sh", home, "--skip-external")
+            installed = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertEqual([item for item in installed if "straw-boss" in item], ["git:github.com/wayne930242/straw-boss"],
+                             "the pinned revision gives way to the unpinned source")
+
+    def test_a_root_variable_swaps_the_latest_commit_for_a_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkout = Path(directory)
+            with mock.patch.dict("os.environ", {"PI_STRAW_BOSS_ROOT": str(checkout)}):
+                with self.assertRaisesRegex(ValueError, "has no package.json"):
+                    packages.straw_boss_source()
+                (checkout / "package.json").write_text("{}")
+                self.assertEqual(packages.straw_boss_source(), str(checkout.resolve()))
+        unset = {key: value for key, value in os.environ.items() if key not in ("PI_STRAW_BOSS_ROOT", "PI_AAAAV_ROOT")}
+        with mock.patch.dict("os.environ", unset, clear=True):
+            self.assertEqual(packages.aaaav_source(), "git:github.com/wayne930242/aaaav")
+            self.assertEqual(packages.straw_boss_source(), "git:github.com/wayne930242/straw-boss")
+
+    def test_leaving_a_checkout_override_removes_the_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / "home"
+            checkout = Path(directory) / "straw-boss"
+            checkout.mkdir()
+            (checkout / "package.json").write_text("{}")
+            agent = home / ".pi/agent"
+            agent.mkdir(parents=True)
+            (agent / "settings.json").write_text("{}")
+            run_script("install.sh", home, "--skip-external", env={"PI_STRAW_BOSS_ROOT": str(checkout)})
+            first = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertNotIn("git:github.com/wayne930242/straw-boss", first)
+            self.assertTrue(any("straw-boss" in item for item in first), first)
+            unset = {key: value for key, value in os.environ.items() if key != "PI_STRAW_BOSS_ROOT"}
+            with mock.patch.dict("os.environ", unset, clear=True):
                 run_script("install.sh", home, "--skip-external")
-                installed = json.loads((agent / "settings.json").read_text())["packages"]
-                declaration = re.search(r'STRAW_BOSS_SOURCE = "([^"]+)"', PINS.read_text())
-                if declaration is None:
-                    self.fail("STRAW_BOSS_SOURCE is not declared in pins.py")
-                self.assertEqual([item for item in installed if "straw-boss" in item], [declaration.group(1)])
+            second = json.loads((agent / "settings.json").read_text())["packages"]
+            self.assertEqual([item for item in second if "straw-boss" in item], ["git:github.com/wayne930242/straw-boss"])
 
     def test_retired_theme_package_is_replaced_and_restored(self):
         old = {"source": "npm:@victor-software-house/pi-curated-themes@0.2.1", "themes": ["themes/catppuccin-mocha.json"], "skills": []}

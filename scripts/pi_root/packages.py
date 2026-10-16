@@ -8,8 +8,8 @@ from pathlib import Path
 from . import external, resources
 from .context import Context, State
 from .jsonfile import read_json, write_json
-from .paths import AAAAV, COMPANY_PLUGINS, HERDR_AGENTS_ROOT_VARIABLE, LOCAL_PACKAGE
-from .pins import (AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT,
+from .paths import AAAAV_ROOT_VARIABLE, COMPANY_PLUGINS, HERDR_AGENTS_ROOT_VARIABLE, LOCAL_PACKAGE, STRAW_BOSS_ROOT_VARIABLE
+from .pins import (AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT, STRAW_BOSS_GIT,
                    PLAYWRITER, RETIRED_SOURCES)
 
 Package = str | dict
@@ -47,9 +47,23 @@ def obsolete_pin(value: Package) -> bool:
             or source.startswith(RETIRED_SOURCES))
 
 
+def latest_source(variable: str, git_source: str) -> str:
+    """The unpinned git source, which follows the latest commit, or the checkout the variable names for testing."""
+    value = os.environ.get(variable)
+    if not value:
+        return git_source
+    root = Path(value).expanduser().resolve()
+    if not (root / "package.json").is_file():
+        raise ValueError(f"{variable}={value} has no package.json; point it at a checkout or unset it to use {git_source}")
+    return str(root)
+
+
 def aaaav_source() -> str:
-    # A machine with an aaaav checkout beside this repo develops against it; any other installs the published repo.
-    return str(AAAAV) if AAAAV.exists() else AAAAV_GIT
+    return latest_source(AAAAV_ROOT_VARIABLE, AAAAV_GIT)
+
+
+def straw_boss_source() -> str:
+    return latest_source(STRAW_BOSS_ROOT_VARIABLE, STRAW_BOSS_GIT)
 
 
 def plugin_source(name: str, variable: str, default: Path) -> str | None:
@@ -83,14 +97,18 @@ def owned_packages(state: State) -> list[Package]:
 
 
 def local_packages(state: State) -> list[Package]:
-    return [state.get("aaaav", str(AAAAV)), LOCAL_PACKAGE, *(state[key] for key in COMPANY_PLUGINS if state.get(key))]
+    return [state.get("aaaav", AAAAV_GIT), state.get("straw_boss", STRAW_BOSS_GIT), LOCAL_PACKAGE, *(state[key] for key in COMPANY_PLUGINS if state.get(key))]
 
 
 def plan(ctx: Context) -> None:
     """Record which package sources this run uses and what settings held before the first install."""
     state = ctx.state
     herdr_root = ctx.herdr_root
-    state["aaaav"] = aaaav_source()
+    # A source that changed form (checkout to git or back) leaves settings like a displaced pi-herdr-agents root.
+    sources = {"aaaav": aaaav_source(), "straw_boss": straw_boss_source()}
+    state["latest_displaced"] = [old for old in dict.fromkeys([*state.get("latest_displaced", []),
+                                 *(state.get(key) for key in sources)]) if old and old not in sources.values()]
+    state.update(sources)
     # pi identifies an npm package by name but a local one by path, so whichever form the other mode used must leave settings.
     # Old checkouts stay recorded until a run completes, so a run that fails midway still removes them on the next one.
     state["herdr_agents_displaced"] = [root for root in dict.fromkeys([*state.get("herdr_agents_displaced", []), state.get("herdr_agents")])
@@ -129,7 +147,7 @@ def retire_herdr_web_ui(ctx: Context) -> None:
 def apply(ctx: Context) -> None:
     """Install pi, its tools, and every owned package, then write the package list in the order pi expects."""
     home, state, agent_dir, settings_path = ctx.home, ctx.state, ctx.agent_dir, ctx.settings_path
-    old_roots = state["herdr_agents_displaced"]
+    old_roots = state["herdr_agents_displaced"] + state["latest_displaced"]
     # The other form of pi-herdr-agents leaves settings even when the user had declared it first.
     retired_ids = {package_id(value, agent_dir) for value in old_roots + ([HERDR_AGENTS_SOURCE] if ctx.herdr_root else [])}
     pinned = owned_packages(state)
@@ -158,7 +176,11 @@ def apply(ctx: Context) -> None:
         for package in read_json(settings_path).get("packages", []):
             if package_id(package, agent_dir) in retired_ids:
                 external.run(["pi", "remove", package_source(package)], home)
-        external.run(["pi", "install", state["aaaav"]], home)
+        for source in (state["aaaav"], state["straw_boss"]):
+            external.run(["pi", "install", source], home)
+            # An unpinned git package stays at the commit it was cloned at until updated.
+            if source.startswith("git:"):
+                external.run(["pi", "update", "--extension", source], home)
         resources.install_ported_resources(home, state, ctx.force)
         ctx.save()
         external.run(["pi", "install", LOCAL_PACKAGE], home)
@@ -185,6 +207,7 @@ def apply(ctx: Context) -> None:
                             if package_id(value, agent_dir) not in gone_ids]
     write_json(settings_path, settings)
     state.pop("herdr_agents_displaced")
+    state.pop("latest_displaced")
 
 
 def restore(ctx: Context) -> None:

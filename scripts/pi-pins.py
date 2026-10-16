@@ -287,6 +287,15 @@ def auto() -> None:
     if reason := skip_reason():
         notify(f"Skipped: {reason}.")
         return
+    # aaaav and straw-boss follow their latest commit; a failed fetch is reported, and the pin bumps still run.
+    target = load_target()
+    installed = json.loads((Path.home() / ".pi/agent/settings.json").read_text()).get("packages", [])
+    for source in (target.AAAAV_GIT, target.STRAW_BOSS_GIT):
+        if source in installed:
+            try:
+                step(f"update {source}", ["pi", "update", "--extension", source])
+            except StepFailed as error:
+                print(error)
     state = load_state()
     candidates = [pin for pin in collect_pins() if pin.kind == "npm" and pin.name not in MANUAL_PINS]
     newest = dict(zip((pin.name for pin in candidates), latest_all(candidates), strict=True))
