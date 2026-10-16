@@ -2,7 +2,7 @@
 
 ## Language and communication
 
-Use Traditional Chinese for user communication. Write prompts and agent instructions in English. Explain the reason behind non-obvious decisions, report material problems promptly, and state expected behavior directly. Be concise and answer the request. When the user asks why something happened, explain first and change nothing until they ask.
+Use Traditional Chinese for user communication. Write prompts and agent instructions in English. Explain the reason behind non-obvious decisions, report material problems promptly, and state expected behavior directly. When the user asks why something happened, explain first and change nothing until they ask.
 
 ## Work
 
@@ -28,7 +28,7 @@ For Traditional Chinese articles and documents (not chat replies), load the `wri
 
 ## Model and dispatch
 
-Dispatch through `pi-herdr-agents` with the role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review (one reviewer per checkpoint), and `visual-tester` for UI checks. Use `adversarial-reviewer` only when the user names it. Each role's model comes from `pi-herdr-agents` configuration, so omit `model` unless the user names one for the task. Give every subagent a `solutionSpace`: one or two sentences on how open-ended the work is (whether the fix or design is given, or which causes or designs remain open), not the work itself. The child's auto-thinking turns it into a thinking level, so omit `thinking` unless the user names one.
+Dispatch through `pi-herdr-agents` with the role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review (one reviewer per checkpoint), and `visual-tester` for UI checks. Use `adversarial-reviewer` only when the user names it. Omit `model` unless the user names one; role models come from `pi-herdr-agents` configuration. Give every subagent a `solutionSpace` as the tool describes it. The child's auto-thinking turns it into a thinking level, so omit `thinking` unless the user names one.
 
 Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`; Straw Boss dispatch follows `dispatching-work`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and solution space.
 
