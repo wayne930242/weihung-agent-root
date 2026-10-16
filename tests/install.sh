@@ -90,8 +90,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert snapshot(home) == first
     text = (home / ".pi/agent/AGENTS.md").read_text()
     assert all(word not in text for word in ("@shared/", "/codex:rescue"))
-    assert "Straw Boss `boss-say`" in text and "dispatch_control" in text
-    assert "## Memory" in text and "memory_write" in text and "memory_search" in text, text
+    assert "## Memory" in text, text
     assert "In a large project, search code through the `codebase-memory-mcp` server" in text, text
     settings = json.loads((home / ".pi/agent/settings.json").read_text())
     assert len(settings["packages"]) == 25, settings

@@ -11,7 +11,7 @@ Communicate with the user in Traditional Chinese, never Simplified Chinese. Writ
 - `scripts/pi_root/`: the logic behind `scripts/pi-target.py`, one module per managed part; pinned package versions live in `pins.py`.
 - `pi/AGENTS.md.in`: the template for `~/.pi/agent/AGENTS.md`. It names `pi-herdr-agents` roles but no model.
 - `pi/herdr-agents-models.json`: the `pi-herdr-agents` `models` object (`default`, `agents` per role, `tasks` per category). The installer writes it into `~/.pi/agent/herdr-agents/config.json`. pi's default model stays in `~/.pi/agent/settings.json`, outside this repository. There is no model strategy profile or tier role; do not reintroduce one (`tests/pi_configs.py` guards this).
-- `pi/extensions/`: this repository's pi package, registered through `package.json`. Dispatch recovery, handoff, and pane balancing live in straw-boss.
+- `pi/extensions/`: this repository's pi package, registered through `package.json`.
 - `skills/`: user skills linked into `~/.agents/skills/`. `skills/orchestrate` is our trimmed copy of the `pi-herdr-roles` orchestrate skill; the installed pack filters its own copy out.
 - `agents/`: global `pi-herdr-agents` role overrides linked to `~/.pi/agent/agents/`. Each derives from the `pi-herdr-roles` role of the same name without its `tools:` allowlist; `planner` comes from the pack unchanged. Re-derive them when the `pi-herdr-roles` pin changes.
 - `rules/`: user-global rules linked to `~/.pi/agent/rules/`. The template indexes every prose rule by the work it covers, so a new prose rule also needs an entry there. A rule whose frontmatter has a `condition` regex is a stream rule: aaaav's TTSR extension enforces it on matching tool calls and output, so it stays out of the index.
