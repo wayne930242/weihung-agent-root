@@ -7,3 +7,6 @@ __pycache__/
 
 # Dependencies
 node_modules/
+
+# Machine-local pi state (project memory)
+.pi/
