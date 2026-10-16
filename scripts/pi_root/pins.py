@@ -12,7 +12,7 @@ STRAW_BOSS_SOURCE = "git:github.com/wayne930242/straw-boss@d6d64addc56cdd0a2af27
 # pi/extensions/quota-resume.ts uses (branch weihung/v3-integration).
 # Once upstream releases both, return to the npm release: set this to npm:pi-herdr-agents@<version>, drop the PINNED_GIT
 # entry and the FORK_BRANCHES entry in scripts/pi-pins.py, and move "npm:pi-herdr-agents" out of RETIRED_SOURCES.
-HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@5852a812ea20e59f8fa98e59acbc2241ca784110"
+HERDR_AGENTS_SOURCE = "git:github.com/wayne930242/pi-herdr-agents@a67851edb30a5b51797569a775c95c76f72ce773"
 # The pi-herdr-agents v3 role pack: planner, /plan, and /skill:plan. Its orchestrate skill is filtered out because
 # skills/orchestrate owns our trimmed version. Pinned by hand (MANUAL_PINS) since a 0.x bump can change the planner.
 HERDR_ROLES_SOURCE = "npm:pi-herdr-roles@0.1.0"
