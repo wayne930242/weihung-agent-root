@@ -12,14 +12,14 @@ Follow the user's chosen architecture and explain tradeoffs when they affect the
 
 For multi-step work, set a verifiable goal and track it with `todo`. After repeated failures or corrections, reassess the task and evidence before continuing.
 
-Before app-specific work outside the session's directory, read that app's `AGENTS.md`, or its `CLAUDE.md` when none exists. Check `.claude/skills/` for relevant project workflows and follow applicable language, Git, deployment, and UI rules in the repository's `rules/` directory. Keep skill requirements out of `CLAUDE.md` and `AGENTS.md`: a skill's trigger belongs in its own description, so never add a section that tells agents to load, check for, or apply a skill.
+Before app-specific work outside the session's directory, read that app's `AGENTS.md`, or its `CLAUDE.md` when none exists. Check `.claude/skills/` for relevant project workflows and follow applicable language, Git, deployment, and UI rules in the repository's `rules/` directory.
 
 Start a dev server, watcher, or any process that must outlive its command with `MonitorCreate`, never with `&` or `nohup` in `bash`: pi stops a monitor's process group when the session ends, while a backgrounded `bash` child keeps running after its command returns and after the session closes. Record the PID and port of what you start; when the work ends, stop it with `MonitorStop` and confirm by PID and port that nothing of yours remains. An `agent-browser` session lives in a daemon pi does not manage, so close your own with `agent-browser --session <name> close`.
 
 ## Git safety
 
 - Force push to any remote branch needs explicit user confirmation: state the exact command and target and wait.
-- Stage specific files by name; never `git add .` or `git add -A`, and keep machine-local state (plans, memory, analysis snapshots) out of commits.
+- Stage specific files by name, and keep machine-local state (plans, memory, analysis snapshots) out of commits.
 - Before committing a new `.gitignore` pattern, run `git check-ignore -v <tracked-file>` on tracked files it could match.
 
 ## User rules
@@ -30,11 +30,9 @@ For Traditional Chinese articles and documents (not chat replies), load the `wri
 
 Dispatch through `pi-herdr-agents` with the role that matches the work: `scout` for investigation, `planner` for planning and design, `worker` for implementation, `reviewer` for code review (one reviewer per checkpoint), and `visual-tester` for UI checks. Use `adversarial-reviewer` only when the user names it. Omit `model` unless the user names one; role models come from `pi-herdr-agents` configuration. Give every subagent a `solutionSpace` as the tool describes it. The child's auto-thinking turns it into a thinking level, so omit `thinking` unless the user names one.
 
-Carry bounded work in the current session. Route work that needs a separate app-rooted worker through Straw Boss `boss-say`; Straw Boss dispatch follows `dispatching-work`. Any other `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and solution space.
+Carry bounded work in the current session. Every `subagent` gets its objective, cwd, ownership, Reality anchor, role agent, and solution space.
 
-In Herdr, use `dispatch_control` for dispatches and `intercom` for related main sessions; outside Herdr, continue in the current session. Report the worker's actual result after it arrives.
-
-`pi-herdr-agents` closes an ordinary worker's pane only after the worker delivers a result. For a stalled worker, these steps take precedence over the `pi-herdr-agents` skill's general advice against reading session files and typing into panes. Treat a worker as stalled when its session file has not changed for about 10 minutes while Herdr shows it idle or thinking: interrupt it once with `subagent_interrupt` and ask for its result by typing into its pane with `herdr pane send-text <pane_id> "<request>"` and `herdr pane send-keys <pane_id> enter`, never through intercom. If it does not recover, end it with `subagent_cancel` and respawn only what is still missing. On macOS, cancelling a worktree worker reports `unconfirmed`: only then close its pane with `herdr pane close <pane_id>` and call `subagent_cancel` again. A worktree worker's pane and workspace go away with `worktree_remove` once its branch is merged and verified; when `worktree_remove` reports that worktree creation opened the source checkout's primary workspace, close that workspace with `herdr workspace close <workspace_id>` unless the user is using it. After any interrupt, failure, or merge, run `herdr pane list` and close the leftover panes of your own dispatches that already delivered a result; leave panes the user opened.
+Report the worker's actual result after it arrives.
 
 ## Code discovery
 
@@ -48,4 +46,4 @@ Save cross-project facts to `global` memory and only conventions the repository 
 
 ## Verification and delivery
 
-Deliver complete code without TODOs, stubs, or mocks. Commit messages contain no AI tool attribution. Whenever the user must review or confirm written material (a spec, plan, report, diff, or comparison), write it to a file and open it with `show_doc` before asking; the user's saved edits reach you as a diff.
+Deliver complete code without TODOs, stubs, or mocks. Commit messages contain no AI tool attribution. Before the user must understand or confirm a plan, report, comparison, or decision, open it with `show_doc`: an HTML page as `providing-knowledge` describes, or the document the user edits. Describe changes instead of opening diffs.
