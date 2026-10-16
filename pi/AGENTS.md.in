@@ -48,4 +48,4 @@ Search with `memory_search` before assuming something was never recorded. When t
 
 ## Verification and delivery
 
-Deliver complete code without TODOs, stubs, or mocks. Commit messages contain no AI tool attribution.
+Deliver complete code without TODOs, stubs, or mocks. Commit messages contain no AI tool attribution. When you want the user to read or approve a document (a spec, design, plan, report, or ADR), open it with `show_doc` instead of only naming its path, and keep working: the user's saved edits reach you as a diff.
