@@ -287,10 +287,10 @@ def auto() -> None:
     if reason := skip_reason():
         notify(f"Skipped: {reason}.")
         return
-    # aaaav and straw-boss follow their latest commit; a failed fetch is reported, and the pin bumps still run.
+    # aaaav follows its latest commit; a failed fetch is reported, and the pin bumps still run.
     target = load_target()
     installed = json.loads((Path.home() / ".pi/agent/settings.json").read_text()).get("packages", [])
-    for source in (target.AAAAV_GIT, target.STRAW_BOSS_GIT):
+    for source in (target.AAAAV_GIT,):
         if source in installed:
             try:
                 step(f"update {source}", ["pi", "update", "--extension", source])

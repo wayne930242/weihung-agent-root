@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
-STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss"
+STRAW_BOSS = re.search(r'"(npm:pi-straw-boss@[^"]+)"', (ROOT / "scripts/pi_root/pins.py").read_text()).group(1)
 HERDR_WEB_UI_ID = "devswha.herdr-web-ui"
 
 
@@ -84,8 +84,8 @@ esac
     assert "sdlc not found" in result.stderr, result.stderr
     assert f"install {AAAAV_GIT}" in calls.read_text().splitlines()
     assert AAAAV_GIT in json.loads((agent / "settings.json").read_text())["packages"]
-    assert f"install {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
-    assert STRAW_BOSS_GIT in json.loads((agent / "settings.json").read_text())["packages"]
+    assert f"install {STRAW_BOSS}" in calls.read_text().splitlines()
+    assert STRAW_BOSS in json.loads((agent / "settings.json").read_text())["packages"]
     assert "install -g playwriter@0.8.0" in npm_calls.read_text().splitlines()
     assert not [line for line in herdr_calls.read_text().splitlines() if line.startswith("plugin ")]
 
@@ -99,7 +99,7 @@ esac
     assert f"could not run pi remove for {plugin.resolve()}" in result.stderr, result.stderr
     assert "uninstall -g playwriter" in npm_calls.read_text().splitlines()
     assert f"remove {AAAAV_GIT}" in calls.read_text().splitlines()
-    assert f"remove {STRAW_BOSS_GIT}" in calls.read_text().splitlines()
+    assert f"remove {STRAW_BOSS}" in calls.read_text().splitlines()
 
     # herdr web ui is retired: an earlier install that added the plugin removes it once, one the user had stays.
     marker = home / ".pi/agent/.weihung-agent-root.json"

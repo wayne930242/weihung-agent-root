@@ -8,9 +8,8 @@ MARKER = Path(".pi/agent/.weihung-agent-root.json")
 LOCAL_PACKAGE = str(ROOT)
 # Testing an unreleased pi-herdr-agents fix: this variable names a checkout that replaces the pinned release.
 HERDR_AGENTS_ROOT_VARIABLE = "PI_HERDR_AGENTS_ROOT"
-# Testing an unpushed aaaav or straw-boss change: these variables name a checkout that replaces the latest commit.
+# Testing an unpushed aaaav change: this variable names a checkout that replaces the latest commit.
 AAAAV_ROOT_VARIABLE = "PI_AAAAV_ROOT"
-STRAW_BOSS_ROOT_VARIABLE = "PI_STRAW_BOSS_ROOT"
 # The pi-herdr-agents `models` object (role, default, and task models) this repository writes into its config.
 HERDR_MODELS = ROOT / "pi/herdr-agents-models.json"
 # The model strategy profile was removed; its generated tier roles and marker keys are retired on install.

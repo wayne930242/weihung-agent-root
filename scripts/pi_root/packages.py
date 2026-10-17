@@ -8,8 +8,8 @@ from pathlib import Path
 from . import external, resources
 from .context import Context, State
 from .jsonfile import read_json, write_json
-from .paths import AAAAV_ROOT_VARIABLE, COMPANY_PLUGINS, HERDR_AGENTS_ROOT_VARIABLE, LOCAL_PACKAGE, STRAW_BOSS_ROOT_VARIABLE
-from .pins import (AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT, STRAW_BOSS_GIT,
+from .paths import AAAAV_ROOT_VARIABLE, COMPANY_PLUGINS, HERDR_AGENTS_ROOT_VARIABLE, LOCAL_PACKAGE
+from .pins import (AAAAV_GIT, HERDR_AGENTS_SOURCE, PACKAGES, PINNED_GIT,
                    PLAYWRITER, RETIRED_SOURCES)
 
 Package = str | dict
@@ -62,9 +62,6 @@ def aaaav_source() -> str:
     return latest_source(AAAAV_ROOT_VARIABLE, AAAAV_GIT)
 
 
-def straw_boss_source() -> str:
-    return latest_source(STRAW_BOSS_ROOT_VARIABLE, STRAW_BOSS_GIT)
-
 
 def plugin_source(name: str, variable: str, default: Path) -> str | None:
     root = Path(os.environ.get(variable, default)).resolve()
@@ -97,16 +94,17 @@ def owned_packages(state: State) -> list[Package]:
 
 
 def local_packages(state: State) -> list[Package]:
-    return [state.get("aaaav", AAAAV_GIT), state.get("straw_boss", STRAW_BOSS_GIT), LOCAL_PACKAGE, *(state[key] for key in COMPANY_PLUGINS if state.get(key))]
+    return [state.get("aaaav", AAAAV_GIT), LOCAL_PACKAGE, *(state[key] for key in COMPANY_PLUGINS if state.get(key))]
 
 
 def plan(ctx: Context) -> None:
     """Record which package sources this run uses and what settings held before the first install."""
     state = ctx.state
     herdr_root = ctx.herdr_root
-    # A source that changed form (checkout to git or back) leaves settings like a displaced pi-herdr-agents root.
-    sources = {"aaaav": aaaav_source(), "straw_boss": straw_boss_source()}
-    state["latest_displaced"] = [old for old in dict.fromkeys([*state.get("latest_displaced", []),
+    # A source that changed form (checkout to git or back) leaves settings like a displaced pi-herdr-agents root;
+    # so does a straw-boss checkout from before Straw Boss moved to the pi-straw-boss npm package.
+    sources = {"aaaav": aaaav_source()}
+    state["latest_displaced"] = [old for old in dict.fromkeys([*state.get("latest_displaced", []), state.pop("straw_boss", None),
                                  *(state.get(key) for key in sources)]) if old and old not in sources.values()]
     state.update(sources)
     # pi identifies an npm package by name but a local one by path, so whichever form the other mode used must leave settings.
@@ -176,11 +174,10 @@ def apply(ctx: Context) -> None:
         for package in read_json(settings_path).get("packages", []):
             if package_id(package, agent_dir) in retired_ids:
                 external.run(["pi", "remove", package_source(package)], home)
-        for source in (state["aaaav"], state["straw_boss"]):
-            external.run(["pi", "install", source], home)
-            # An unpinned git package stays at the commit it was cloned at until updated.
-            if source.startswith("git:"):
-                external.run(["pi", "update", "--extension", source], home)
+        external.run(["pi", "install", state["aaaav"]], home)
+        # An unpinned git package stays at the commit it was cloned at until updated.
+        if state["aaaav"].startswith("git:"):
+            external.run(["pi", "update", "--extension", state["aaaav"]], home)
         resources.install_ported_resources(home, state, ctx.force)
         ctx.save()
         external.run(["pi", "install", LOCAL_PACKAGE], home)

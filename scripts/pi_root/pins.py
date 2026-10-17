@@ -27,9 +27,9 @@ THEME_PACKAGE = {"source": "npm:@sherif-fanous/pi-catppuccin@0.3.0", "themes": [
 # Registry packages this setup installed before and now drops; install removes them from settings.
 # pi-curated-themes shipped a catppuccin-mocha with off-palette accents; pi-secret-drop is now part of pi-robot-hand;
 # the npm pi-herdr-agents release is replaced by the fork pin above, and pi must never load both.
-# straw-boss now follows its latest commit, so every pinned revision is retired.
+# Straw Boss on pi moved from the straw-boss git repository to the pi-straw-boss npm package.
 RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes", "npm:pi-secret-drop", "npm:pi-herdr-agents",
-                   "git:github.com/wayne930242/straw-boss@")
+                   "git:github.com/wayne930242/straw-boss")
 # pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
 # its other extensions duplicate the todo, MCP, subagent, and web packages below.
 CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}
@@ -53,6 +53,8 @@ PACKAGES = [
     "npm:pi-robot-hand@0.2.2",
     "npm:pi-auto-tab-name@0.2.0",
     "npm:pi-herdr-doc-review@0.3.1",
+    # Straw Boss coordination in Herdr: opt-in main agents per tab, an on-demand tower per workspace, scoped broadcast.
+    "npm:pi-straw-boss@0.1.0",
     "npm:@pify/memory@0.14.0",
     "npm:pi-loop-monitor@0.2.5",
     "npm:@narumitw/pi-goal@0.54.11",
@@ -66,5 +68,3 @@ PLAYWRITER = "playwriter@0.8.0"
 # thesis-toolkit launches the research-hub MCP server (literature search, open-access download, bibliography saves).
 THESIS_TOOLKIT = "thesis-toolkit@0.1.3"
 AAAAV_GIT = "git:github.com/wayne930242/aaaav"
-# Straw Boss owns the Pi dispatch workflow (boss-say); like aaaav it follows the latest commit, unpinned.
-STRAW_BOSS_GIT = "git:github.com/wayne930242/straw-boss"
