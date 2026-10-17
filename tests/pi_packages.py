@@ -132,8 +132,7 @@ class PackageTests(unittest.TestCase):
             upgraded = json.loads(settings.read_text())
             sources = [item["source"] if isinstance(item, dict) else item for item in upgraded["packages"]]
             self.assertEqual([item for item in sources if "pi-lens" in item], ["npm:pi-lens@4.4.3"])
-            self.assertEqual([item for item in sources if "pi-web-access" in item],
-                             ["npm:pi-web-access@0.41.0"])
+            self.assertEqual([item for item in sources if "pi-web-access" in item], [], "a retired package is removed")
             self.assertIs(upgraded["enableInstallTelemetry"], False)
             run_script("uninstall.sh", home, "--skip-external")
             restored = json.loads(settings.read_text())
