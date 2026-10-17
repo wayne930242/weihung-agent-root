@@ -1,6 +1,6 @@
 ---
 name: going-to-sleep
-description: Use when the user is going to rest or sleep and leaves a last round of work (睡前最後一輪, 我要睡了, 準備休息, 做完就讓電腦睡).
+description: Use when the user is going to rest or sleep and leaves a last round of work (睡前最後一輪, 我要睡了, 準備休息, 做完就讓電腦睡), or says they are up again (我起床了, 我醒了, 早安).
 ---
 
 # Going to sleep
@@ -16,3 +16,9 @@ The user is gone until morning: finish the last round on your own, then put the 
 5. **Sleep**: broadcast that the Mac is going to sleep, wait up to five minutes for a session that must stop something first, delete the deadline loop, stop any `caffeinate` you started, then run `pmset sleepnow`.
 
 **Complete when:** the mandate is done or logged as left over, and the Mac is asleep or the user did not ask for sleep.
+
+## Waking up
+
+1. **Wake the other sessions** with the same broadcast: the user is back, so resume interrupted workers with `subagent_resume`, recheck monitors and services the sleep paused, and bring held decisions to the user.
+2. **Present the morning list** from the daily log: what landed, what is left over, and what needs the user.
+3. **Hand over cleanup** the tools refused (worktrees, panes, processes) as one command through `robot_hand`, after confirming each target is pushed or no longer needed.
