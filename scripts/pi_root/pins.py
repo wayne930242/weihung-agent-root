@@ -26,9 +26,10 @@ THEME_PACKAGE = {"source": "npm:@sherif-fanous/pi-catppuccin@0.3.0", "themes": [
 # Registry packages this setup installed before and now drops; install removes them from settings.
 # pi-curated-themes shipped a catppuccin-mocha with off-palette accents; pi-secret-drop is now part of pi-robot-hand;
 # the npm pi-herdr-agents release is replaced by the fork pin above, and pi must never load both.
-# Straw Boss on pi moved from the straw-boss git repository to the pi-straw-boss npm package; pi-web-access is no longer used.
+# Straw Boss on pi moved from the straw-boss git repository to the pi-straw-boss npm package; pi-web-access is no longer used;
+# pi-ask-user gave way to rpiv-ask-user-question, whose answer channel lets pi-straw-boss answer from the browser.
 RETIRED_SOURCES = ("npm:@victor-software-house/pi-curated-themes", "npm:pi-secret-drop", "npm:pi-herdr-agents",
-                   "git:github.com/wayne930242/straw-boss", "npm:pi-web-access")
+                   "git:github.com/wayne930242/straw-boss", "npm:pi-web-access", "npm:pi-ask-user")
 # pi-code loads only claude-rules.ts, which reads each project's .claude/rules as Claude Code does;
 # its other extensions duplicate the todo, MCP, subagent, and web packages below.
 CLAUDE_RULES_PACKAGE = {"source": CLAUDE_RULES_SOURCE, "extensions": ["extensions/claude-rules.ts"]}
@@ -38,7 +39,7 @@ PACKAGES = [
     HERDR_ROLES_PACKAGE,
     "npm:pi-mcp-adapter@5.3.1",
     "npm:pi-intercom@0.17.1",
-    "npm:pi-ask-user@0.16.0",
+    "npm:@juicesharp/rpiv-ask-user-question@2.13.9",
     "npm:@juicesharp/rpiv-todo@2.13.8",
     THEME_PACKAGE,
     "npm:pi-open-tui@0.3.11",

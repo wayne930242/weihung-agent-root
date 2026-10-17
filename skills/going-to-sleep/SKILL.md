@@ -12,7 +12,7 @@ The user is gone until morning: finish the last round on your own, then put the 
    `cli=~/.pi/agent/npm/node_modules/pi-intercom/cli.mjs; node $cli list --json | jq -r --arg me "$PI_SESSION_ID" '.sessions[] | select(.id != $me) | .id' | while read -r id; do node $cli send --to "$id" --text "<message>"; done`
    Ask them to reach a safe stopping point and keep user decisions for the morning.
 3. **Set a safety deadline** with a one-shot `LoopCreate` (about two hours) that pushes what is verified and sleeps the Mac, so a stuck worker cannot keep it awake all night.
-4. **Finish the round without the user**: no `ask_user`, `robot_hand`, or `secret_drop`. A failing test is yours to fix, not a reason to wait; work that still cannot be verified stays on its local branch and goes into the daily log. Push only what the mandate covers.
+4. **Finish the round without the user**: no `ask_user_question`, `robot_hand`, or `secret_drop`. A failing test is yours to fix, not a reason to wait; work that still cannot be verified stays on its local branch and goes into the daily log. Push only what the mandate covers.
 5. **Sleep**: broadcast that the Mac is going to sleep, wait up to five minutes for a session that must stop something first, delete the deadline loop, stop any `caffeinate` you started, then run `pmset sleepnow`.
 
 **Complete when:** the mandate is done or logged as left over, and the Mac is asleep or the user did not ask for sleep.

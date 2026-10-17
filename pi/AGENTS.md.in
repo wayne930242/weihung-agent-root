@@ -8,7 +8,7 @@ Use Traditional Chinese for user communication. Write prompts and agent instruct
 
 Before significant work, choose one owner: use the exact specialized skill for its task; use `providing-knowledge` for explanations and comparisons, `investigating` for research, `inspecting` for checks and reviews, `human-feedback` for feedback on working output, or `grilling` for unresolved user-owned decisions. Source changes use `aaaav-do`, including work handed back by another skill. State Alignment and Reality anchor before the first production edit.
 
-Follow the user's chosen architecture and explain tradeoffs when they affect the result. Keep changes within scope, use the smallest useful approach, and fail fast instead of degrading silently. Clean up only changes made by this work. Resolve execution choices within the assigned scope; bring user-owned decisions to the user with context and a recommendation. Ask the user every question through `ask_user`, never as plain chat text, and gather related pending questions into one round.
+Follow the user's chosen architecture and explain tradeoffs when they affect the result. Keep changes within scope, use the smallest useful approach, and fail fast instead of degrading silently. Clean up only changes made by this work. Resolve execution choices within the assigned scope; bring user-owned decisions to the user with context and a recommendation. Ask the user every question through `ask_user_question`, never as plain chat text, and gather related pending questions into one round.
 
 For multi-step work, set a verifiable goal and track it with `todo`. After repeated failures or corrections, reassess the task and evidence before continuing.
 
