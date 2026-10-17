@@ -18,6 +18,6 @@ submitForm            call tree        src/
 
 Use pseudocode for logic, `A → B: message` lines for interaction, and a table for options against criteria.
 
-When the answer has several parts, compares options, or needs the user's confirmation, write one HTML page at `/tmp/<task>-<topic>.html` and open it with `show_doc`; the chat then gives the conclusion in a line or two. The page renders in Chawan, about 80 columns wide: no JavaScript, images, or remote files, so draw diagrams in `<pre>`; tables of up to four columns with `th { white-space: nowrap }`. Put the conclusion first and end with any open questions and your recommendation.
+When the answer has several parts, compares options, or needs the user's confirmation, write one HTML page at `/tmp/<task>-<topic>.html` and open it with `show_doc`; the chat then gives the conclusion in a line or two. The page renders in Chawan, about 80 columns wide: no JavaScript, images, or remote files, so draw diagrams in `<pre>`; tables of up to four columns with `th { white-space: nowrap }`. Put the conclusion first. The page is for reading: ask the open questions with `ask_user` after opening it, each with your recommendation, never as a form on the page.
 
 Adapted from HumanLayer's [show-me](https://github.com/humanlayer/skills/tree/main/plugins/show-me) (MIT, © 2026 HumanLayer).
