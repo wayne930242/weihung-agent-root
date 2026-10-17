@@ -52,7 +52,7 @@ PACKAGES = [
     "npm:pi-auto-tab-name@0.2.0",
     "npm:pi-herdr-doc-review@0.3.2",
     # Straw Boss coordination in Herdr: opt-in main agents per tab, an on-demand tower per workspace, scoped broadcast.
-    "npm:pi-straw-boss@0.4.1",
+    "npm:pi-straw-boss@0.5.0",
     "npm:@pify/memory@0.14.0",
     "npm:pi-loop-monitor@0.2.5",
     "npm:@narumitw/pi-goal@0.54.11",
